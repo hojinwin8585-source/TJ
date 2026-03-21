@@ -934,6 +934,12 @@ function renderWorkspace() {
           <button class="btn btn-out btn-xs" onclick="openText('${p.id}')">🔤 텍스트</button>
           <button class="btn btn-out btn-xs" onclick="openAlibaba('${p.id}')">🌐 알리바바</button>
           ${p.url?`<a href="${p.url.replace(/'/g,'%27')}" target="_blank" class="btn btn-out btn-xs">🔗원본</a>`:''}
+          <button class="btn btn-xs sp-auto-btn" id="spbtn_${p.id}" style="background:rgba(0,229,160,.15);border:1px solid rgba(0,229,160,.4);color:var(--green)" onclick="searchSellerPickImg('${p.id}', parseInt(document.getElementById('spcnt_${p.id}').value))">🤖 셀러픽</button>
+          <select id="spcnt_${p.id}" style="background:var(--s2);border:1px solid var(--border2);color:var(--muted);border-radius:4px;font-size:10px;padding:2px 4px;cursor:pointer">
+            <option value="3">3개</option>
+            <option value="5" selected>5개</option>
+            <option value="10">10개</option>
+          </select>
         </div>
         <div class="shuffle-slots" id="slots_${p.id}">${slotsHtml}</div>
         <div class="slot-add-group">
@@ -1410,6 +1416,109 @@ function openAlibaba(id) {
   const p = getProduct(id);
   if (!p) return;
   window.open(`https://www.alibaba.com/trade/search?SearchText=${encodeURIComponent(p.name.slice(0,50))}`, '_blank');
+}
+
+// ── 셀러픽 이미지 자동검색 ──────────────────────────────
+const SELLERPICK_IMG_URL = 'https://www.sellerpick.co.kr/shopAdmin/?menuType=prodStock&mode=json&act=getListNewTaobao';
+
+async function imgToBase64(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const MAX = 600;
+        let w = img.naturalWidth, h = img.naturalHeight;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        c.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL('image/jpeg', 0.85));
+      } catch (e) { reject(e); }
+    };
+    img.onerror = () => reject(new Error('이미지 로드 실패'));
+    img.src = url;
+  });
+}
+
+function parseSellerPickHtml(html) {
+  const matches = [...html.matchAll(/prodNo=(\d+)/g)];
+  return [...new Set(matches.map(m => m[1]))]
+    .map(no => `https://item.taobao.com/item.htm?id=${no}`);
+}
+
+async function searchSellerPickImg(id, count) {
+  count = count || 5;
+  const p = getProduct(id);
+  if (!p || !p.imageUrl) { toast('⚠️ 이미지 URL 없음'); return; }
+  const btn = document.getElementById(`spbtn_${id}`);
+  const origText = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
+  try {
+    let result;
+    if (cookieMode === 'local') {
+      // 로컬 서버를 통해 이미지 fetch + SellerPick 호출
+      const payload = new URLSearchParams();
+      payload.set('imageUrl', p.imageUrl);
+      payload.set('count', count);
+      const r = await fetch(LOCAL_SERVER + '/sellerpick/img-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: payload.toString(),
+      });
+      if (!r.ok) throw new Error('로컬서버 오류 ' + r.status);
+      result = await r.json();
+    } else {
+      // 직접 모드: 브라우저 canvas로 base64 변환 후 직접 요청
+      let base64;
+      try { base64 = await imgToBase64(p.imageUrl); }
+      catch { toast('❌ 이미지 변환 실패 (CORS). 로컬서버 모드를 사용하세요.'); return; }
+      const payload = new URLSearchParams();
+      payload.set('menuType', 'prodStock');
+      payload.set('mode', 'json');
+      payload.set('act', 'getListNewTaobao');
+      payload.set('image', base64);
+      payload.set('type', 'imgSearch');
+      const r = await fetch(SELLERPICK_IMG_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'Accept': 'application/json, text/javascript, */*; q=0.01',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: payload.toString(),
+        credentials: 'include',
+      });
+      result = await r.json();
+    }
+    if (!result.success || !result.data) { toast('❌ 셀러픽 검색 실패'); return; }
+    const urls = parseSellerPickHtml(result.data).slice(0, count);
+    if (!urls.length) { toast('❌ 검색 결과 없음'); return; }
+    // 슬롯에 자동 채우기
+    if (!shuffleData[id]) shuffleData[id] = [];
+    while (shuffleData[id].length < urls.length) shuffleData[id].push({});
+    urls.forEach((url, i) => {
+      const parsed = parseTaobaoUrl(url);
+      const kw = shuffleData[id][i]?.keyword || '';
+      shuffleData[id][i] = { url, cleanUrl: parsed.cleanUrl, provider: parsed.provider, itemId: parsed.itemId, keyword: kw };
+    });
+    saveShuffles();
+    updateStats();
+    const filled = shuffleData[id].filter(s => s?.url);
+    const allFilled = filled.length === shuffleData[id].length && filled.length > 0;
+    if (allFilled) collapsedIds.add(id); else collapsedIds.delete(id);
+    renderWorkspace();
+    renderList();
+    toast(`✅ ${urls.length}개 타오바오 URL 자동 입력 완료!`);
+  } catch (e) {
+    console.error(e);
+    toast('❌ 오류: ' + e.message);
+  } finally {
+    if (btn) { btn.textContent = origText; btn.disabled = false; }
+  }
 }
 
 // ── 셀러픽 전송 ──────────────────────────────────────────
