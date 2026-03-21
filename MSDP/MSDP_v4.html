@@ -375,6 +375,12 @@ header{background:var(--s1);border-bottom:1px solid var(--border);padding:0 20px
       <div class="prog-txt" id="progTxt"></div>
     </div>
     <button class="btn btn-out btn-sm" onclick="clearAll()">✕ 초기화</button>
+    <select id="autoSlotCount" style="background:var(--s2);border:1px solid var(--border2);color:var(--text);border-radius:5px;font-size:11px;padding:4px 8px;cursor:pointer">
+      <option value="3">3개</option>
+      <option value="5" selected>5개</option>
+      <option value="10">10개</option>
+    </select>
+    <button class="btn btn-xs" id="btnAutomate" style="background:rgba(0,229,160,.2);border:1px solid rgba(0,229,160,.5);color:var(--green);font-size:11px;padding:6px 14px;border-radius:6px;font-weight:700" onclick="bulkAutomate()">🤖 전체 자동화</button>
     <button class="btn btn-green" id="btnExport" onclick="exportToSellerpickXlsx()">📥 셀러픽 엑셀 다운로드</button>
   </div>
 
@@ -1579,6 +1585,110 @@ async function doSellerpickRequest(payload) {
     const text = await r.text();
     try { return JSON.parse(text); } catch { return { ok: r.ok, raw: text.slice(0,200) }; }
   }
+}
+
+// ── 전체 자동화 (이미지검색 → URL입력 → 셀러픽전송) ────────
+let isAutomating = false;
+
+async function bulkAutomate() {
+  if (isAutomating || isBulkRunning) return;
+
+  const slotCount = parseInt(document.getElementById('autoSlotCount').value) || 5;
+  const targets = filtered.filter(p =>
+    checkedIds.has(p.id) &&
+    p.imageUrl &&
+    !shuffleData[p.id]?.some(s => s?.url) &&
+    !sentIds.has(p.id)
+  );
+
+  if (!targets.length) {
+    toast('⚠️ 자동화할 상품 없음 (체크 필요 또는 이미 URL 있음)');
+    return;
+  }
+
+  isAutomating = true;
+  const btn = document.getElementById('btnAutomate');
+  btn.disabled = true; btn.textContent = '⏳ 자동화 중...';
+
+  const progBg  = document.getElementById('progBg');
+  const progBar = document.getElementById('progBar');
+  const progTxt = document.getElementById('progTxt');
+  progBg.classList.add('show');
+
+  let done = 0, failed = 0;
+
+  for (let i = 0; i < targets.length; i++) {
+    const p = targets[i];
+    progBar.style.width = Math.round((i / targets.length) * 100) + '%';
+    progTxt.textContent = `🔍 이미지 검색 ${i + 1} / ${targets.length} — ${p.name.slice(0, 20)}...`;
+
+    try {
+      // 로컬서버 또는 직접 모드로 이미지 검색
+      let result;
+      if (cookieMode === 'local') {
+        const payload = new URLSearchParams();
+        payload.set('imageUrl', p.imageUrl);
+        payload.set('count', slotCount);
+        const r = await fetch(LOCAL_SERVER + '/sellerpick/img-search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: payload.toString(),
+        });
+        if (!r.ok) throw new Error('서버 오류 ' + r.status);
+        result = await r.json();
+      } else {
+        let base64;
+        try { base64 = await imgToBase64(p.imageUrl); }
+        catch { throw new Error('이미지 변환 실패'); }
+        const payload = new URLSearchParams();
+        payload.set('menuType', 'prodStock'); payload.set('mode', 'json');
+        payload.set('act', 'getListNewTaobao'); payload.set('image', base64);
+        payload.set('type', 'imgSearch');
+        const r = await fetch(SELLERPICK_IMG_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'Accept': 'application/json, text/javascript, */*; q=0.01', 'X-Requested-With': 'XMLHttpRequest' },
+          body: payload.toString(), credentials: 'include',
+        });
+        result = await r.json();
+      }
+
+      if (!result.success || !result.data) throw new Error('셀러픽 응답 실패');
+      const urls = parseSellerPickHtml(result.data).slice(0, slotCount);
+      if (!urls.length) throw new Error('검색 결과 없음');
+
+      // 슬롯에 저장
+      if (!shuffleData[p.id]) shuffleData[p.id] = [];
+      while (shuffleData[p.id].length < urls.length) shuffleData[p.id].push({});
+      urls.forEach((url, idx) => {
+        const parsed = parseTaobaoUrl(url);
+        const kw = shuffleData[p.id][idx]?.keyword || '';
+        shuffleData[p.id][idx] = { url, cleanUrl: parsed.cleanUrl, provider: parsed.provider, itemId: parsed.itemId, keyword: kw };
+      });
+      collapsedIds.add(p.id);
+      done++;
+    } catch (e) {
+      console.warn(`[자동화] ${p.name} 실패:`, e.message);
+      failed++;
+    }
+
+    saveShuffles();
+    if (i < targets.length - 1) await sleep(1500); // API 과부하 방지
+  }
+
+  progBar.style.width = '100%';
+  progTxt.textContent = `✅ 검색 완료 ${done}개 성공 / ${failed}개 실패 → 셀러픽 전송 중...`;
+  updateStats();
+  renderWorkspace();
+  renderList();
+
+  isAutomating = false;
+  btn.disabled = false; btn.textContent = '🤖 전체 자동화';
+
+  await sleep(800);
+  progBg.classList.remove('show');
+
+  // URL 채워진 상품 자동 전송
+  await bulkSend();
 }
 
 async function bulkSend() {
