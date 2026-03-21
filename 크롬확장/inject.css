@@ -1,0 +1,33 @@
+.nws-container-hl{outline:3px solid #03C75A!important;outline-offset:2px!important;background:rgba(3,199,90,.06)!important;}
+#nws-bot-overlay{position:fixed!important;inset:0!important;background:rgba(0,0,0,.6)!important;z-index:2147483647!important;display:none;align-items:center!important;justify-content:center!important;}
+#nws-bot-overlay.show{display:flex!important;}
+#nws-bot-box{background:#1a2332!important;border-radius:18px!important;padding:36px 48px!important;text-align:center!important;font-family:'Noto Sans KR',sans-serif!important;box-shadow:0 24px 60px rgba(0,0,0,.6)!important;}
+#nws-bot-box h3{color:#ff6b35!important;font-size:17px!important;margin-bottom:10px!important;}
+#nws-bot-box p{color:rgba(255,255,255,.6)!important;font-size:13px!important;margin-bottom:18px!important;}
+#nws-bot-cnt{color:#03C75A!important;font-size:60px!important;font-weight:800!important;line-height:1!important;}
+#nws-bot-sub{color:rgba(255,255,255,.4)!important;font-size:12px!important;margin-top:8px!important;}
+
+/* Next button highlight */
+.nws-next-hl {
+  outline: 3px solid #ff6b35 !important;
+  outline-offset: 3px !important;
+  background: rgba(255,107,53,.12) !important;
+  animation: nws-pulse 1s infinite !important;
+}
+@keyframes nws-pulse {
+  0%,100%{outline-color:#ff6b35}
+  50%{outline-color:#ffaa00}
+}
+
+/* Progress bar in page */
+#nws-progress-bar {
+  position: fixed !important;
+  top: 0 !important; left: 0 !important; right: 0 !important;
+  height: 3px !important;
+  background: linear-gradient(90deg,#03C75A,#00bcd4) !important;
+  z-index: 2147483646 !important;
+  transform-origin: left !important;
+  transition: transform .4s ease !important;
+  display: none !important;
+}
+#nws-progress-bar.show { display: block !important; }

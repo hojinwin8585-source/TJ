@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Naver Web Scraper</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --g:#03C75A;--gd:#029e4d;--navy:#1a2332;--bg:#eef2f7;
+  --card:#fff;--bdr:#dde3ec;--muted:#7a8799;
+  --or:#ff6b35;--blue:#2196f3;--teal:#00bcd4;--red:#e53935;
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--navy);font-size:13px;display:flex;flex-direction:column}
+
+.hdr{background:var(--navy);padding:11px 14px;display:flex;align-items:center;gap:9px;flex-shrink:0}
+.logo{width:28px;height:28px;background:var(--g);border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:15px}
+.hdr-t{color:#fff;font-size:14px;font-weight:700}
+.hdr-url{margin-left:auto;color:rgba(255,255,255,.38);font-size:10px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.scroll{flex:1;overflow-y:auto;padding:10px 10px 20px}
+.scroll::-webkit-scrollbar{width:4px}
+.scroll::-webkit-scrollbar-thumb{background:#cdd4de;border-radius:2px}
+
+/* Bot alert */
+#bot-alert{display:none;background:#fff4f0;border:1.5px solid var(--or);border-radius:10px;padding:12px 14px;margin-bottom:9px}
+#bot-alert.show{display:block}
+.ba-h{color:var(--or);font-weight:700;margin-bottom:4px}
+.ba-row{display:flex;align-items:center;gap:12px;margin-top:8px}
+.ba-num{font-size:42px;font-weight:800;color:var(--or);min-width:56px;text-align:center;line-height:1}
+.ba-bar-bg{flex:1;height:6px;background:#ffd5c4;border-radius:3px;overflow:hidden}
+.ba-bar{height:100%;background:var(--or);border-radius:3px;width:100%;transition:width 1s linear}
+.ba-sub{font-size:11px;color:#b54a1f;margin-top:4px}
+
+/* Step cards */
+.step{background:var(--card);border:1.5px solid var(--bdr);border-radius:10px;margin-bottom:8px;overflow:hidden}
+.step.active{border-color:var(--g)}
+.step.done{border-color:#b8e8cc}
+.step-hdr{display:flex;align-items:center;gap:8px;padding:11px 13px;cursor:pointer;user-select:none}
+.step-hdr:hover{background:#f8fafc}
+.snum{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:var(--bdr);color:var(--muted);flex-shrink:0}
+.step.active .snum{background:var(--g);color:#fff}
+.step.done .snum{background:#b8e8cc;color:var(--gd)}
+.slbl{font-weight:600;font-size:13px;flex:1}
+.step.done .slbl{color:var(--gd)}
+.chev{color:var(--muted);font-size:10px;transition:transform .2s}
+.chev.open{transform:rotate(180deg)}
+.sbody{display:none;padding:12px 13px;border-top:1px solid var(--bdr)}
+.sbody.open{display:block}
+
+/* Data table */
+.rec-count{font-size:12px;font-weight:600;margin-bottom:8px}
+.rec-count span{color:var(--teal)}
+.tbl-wrap{border:1px solid var(--bdr);border-radius:8px;overflow:auto;max-height:220px}
+.tbl-wrap::-webkit-scrollbar{height:4px;width:4px}
+.tbl-wrap::-webkit-scrollbar-thumb{background:#cdd4de;border-radius:2px}
+table.dt{width:100%;border-collapse:collapse;font-size:11.5px}
+table.dt th{background:#f0f4f8;padding:6px 10px;text-align:left;font-weight:600;color:var(--muted);border-bottom:1px solid var(--bdr);white-space:nowrap;position:sticky;top:0;z-index:1}
+table.dt th .x{cursor:pointer;color:#ccc;margin-left:4px;font-size:10px}
+table.dt th .x:hover{color:var(--red)}
+table.dt td{padding:5px 10px;border-bottom:1px solid #f0f2f5;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+table.dt tr:hover td{background:#f9fbff}
+table.dt td:first-child{color:var(--muted);font-size:10px;text-align:right;width:24px}
+
+/* Pagination section */
+.pg-box{background:#f8fafc;border:1.5px solid var(--bdr);border-radius:9px;padding:11px 13px;margin-top:10px}
+.pg-box.active{border-color:var(--g);background:#f4fff9}
+.pg-title{font-weight:600;font-size:12px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.pg-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.pg-label{font-size:11px;color:var(--muted);min-width:72px}
+.pg-val{font-size:12px;font-weight:600;flex:1;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pg-val.ok{color:var(--g)}
+.pg-val.none{color:var(--muted)}
+
+/* Progress */
+.pg-progress{background:#eef2f7;border-radius:8px;padding:10px 12px;margin-top:8px}
+.pg-prog-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.pg-prog-lbl{font-size:11px;color:var(--muted)}
+.pg-prog-val{font-size:13px;font-weight:700;color:var(--g)}
+.pg-bar-bg{height:8px;background:var(--bdr);border-radius:4px;overflow:hidden}
+.pg-bar{height:100%;background:linear-gradient(90deg,var(--g),var(--teal));border-radius:4px;width:0%;transition:width .5s ease}
+.pg-pages{font-size:11px;color:var(--muted);margin-top:5px;text-align:center}
+
+/* Buttons */
+.btn{border:none;border-radius:8px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;padding:8px 14px;transition:all .15s;display:inline-flex;align-items:center;justify-content:center;gap:5px}
+.btn-g{background:var(--g);color:#fff}
+.btn-g:hover:not(:disabled){background:var(--gd)}
+.btn-or{background:var(--or);color:#fff}
+.btn-or:hover:not(:disabled){background:#e55a25}
+.btn-out{background:#fff;color:var(--navy);border:1.5px solid var(--bdr)}
+.btn-out:hover:not(:disabled){border-color:#aaa}
+.btn-red{background:var(--red);color:#fff}
+.btn-red:hover:not(:disabled){background:#c62828}
+.btn-teal{background:var(--teal);color:#fff}
+.btn-teal:hover:not(:disabled){background:#0097a7}
+.btn-sm{padding:5px 10px;font-size:11px}
+.btn-full{width:100%;justify-content:center}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.brow{display:flex;gap:7px;margin-top:8px}
+.brow .btn{flex:1}
+
+/* Download buttons */
+.dl-row{display:flex;gap:8px;justify-content:center;margin-top:10px}
+.dlb{display:flex;align-items:center;gap:5px;padding:8px 18px;border-radius:9px;font-weight:700;font-size:13px;cursor:pointer;border:none;transition:all .15s}
+.dlb:hover:not(:disabled){transform:translateY(-1px)}
+.dl-x{background:#1a7a3f;color:#fff}
+.dl-x:hover:not(:disabled){background:#155c30}
+.dl-c{background:#2b5797;color:#fff}
+.dl-c:hover:not(:disabled){background:#1e3f70}
+.dlb:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
+
+/* Status */
+.stat{display:flex;align-items:center;gap:7px;margin-bottom:9px}
+.dot{width:8px;height:8px;border-radius:50%}
+.dot-no{background:#ccc}
+.dot-g{background:var(--g);box-shadow:0 0 5px var(--g)}
+.dot-or{background:var(--or);animation:blink .7s infinite}
+.dot-bl{background:var(--blue);animation:blink .7s infinite}
+.stxt{font-size:12px;font-weight:600}
+
+.big-num{font-size:40px;font-weight:800;color:var(--g);text-align:center;line-height:1;margin:6px 0 2px}
+.big-sub{text-align:center;font-size:11px;color:var(--muted);margin-bottom:10px}
+
+.notice{border-radius:7px;padding:8px 11px;font-size:11px;margin-top:8px;line-height:1.5;white-space:pre-wrap}
+.n-info{background:#e3f2fd;color:#1565c0}
+.n-ok{background:#f0fff6;color:#1b8a4a}
+.n-warn{background:#fff4f0;color:#b54a1f}
+
+.srow{display:flex;align-items:center;gap:8px;margin-top:6px}
+.srow input[type=range]{flex:1;accent-color:var(--g)}
+.sval{font-weight:700;color:var(--g);min-width:38px;text-align:right;font-size:13px}
+
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}
+.spinner-g{border-color:rgba(3,199,90,.3);border-top-color:var(--g)}
+
+.detect-area{border:2px dashed var(--bdr);border-radius:10px;padding:20px;text-align:center}
+.detect-area .ico{font-size:30px;margin-bottom:8px}
+
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0}
+.chip{display:inline-flex;align-items:center;gap:4px;background:#f0f4f8;border:1px solid var(--bdr);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600}
+.chip .cx{cursor:pointer;color:#bbb;font-size:12px}
+.chip .cx:hover{color:var(--red)}
+
+.num-inp{width:64px;padding:5px 8px;border:1.5px solid var(--bdr);border-radius:7px;font-family:inherit;font-size:12px;font-weight:600;text-align:center;outline:none}
+.num-inp:focus{border-color:var(--g)}
+
+.mt8{margin-top:8px}.mt4{margin-top:4px}.muted{color:var(--muted);font-size:11px}
+/* Live table */
+.live-section{margin-top:10px}
+.live-title{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;display:flex;align-items:center;gap:5px}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--g);animation:blink .7s infinite}
+.live-wrap{border:1px solid var(--bdr);border-radius:8px;overflow:auto;max-height:180px}
+.live-wrap::-webkit-scrollbar{height:4px;width:4px}
+.live-wrap::-webkit-scrollbar-thumb{background:#cdd4de;border-radius:2px}
+table.lt{width:100%;border-collapse:collapse;font-size:11px}
+table.lt th{background:#f0f4f8;padding:5px 8px;text-align:left;font-weight:600;color:var(--muted);border-bottom:1px solid var(--bdr);white-space:nowrap;position:sticky;top:0}
+table.lt td{padding:4px 8px;border-bottom:1px solid #f0f2f5;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+table.lt tr:hover td{background:#f9fbff}
+.pg-cell{color:var(--teal)!important;font-weight:700;text-align:center;width:36px}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="logo">N</div>
+  <div class="hdr-t">Naver Web Scraper</div>
+  <div class="hdr-url" id="hdr-url"></div>
+</div>
+
+<div class="scroll">
+
+  <!-- Bot alert -->
+  <div id="bot-alert">
+    <div class="ba-h">⚠️ 봇 감지 — 자동 대기 중</div>
+    <div class="muted">타이머 종료 후 자동으로 재시작합니다.</div>
+    <div class="ba-row">
+      <div class="ba-num" id="ba-num">60</div>
+      <div style="flex:1">
+        <div class="ba-bar-bg"><div class="ba-bar" id="ba-bar"></div></div>
+        <div class="ba-sub">초 후 자동 재시작</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP 1: Data Setup ── -->
+  <div class="step active" id="step1">
+    <div class="step-hdr"><div class="snum">1</div><div class="slbl">✅ Data Setup</div><div class="chev open">▼</div></div>
+    <div class="sbody open">
+
+      <div class="detect-area" id="detect-area">
+        <div class="ico">🔍</div>
+        <div style="font-weight:600;margin-bottom:4px">자동 상품 감지</div>
+        <div class="muted">현재 페이지의 상품 목록을 자동으로 분석합니다</div>
+        <button class="btn btn-g mt8" id="btn-detect" style="margin:10px auto 0;display:flex">
+          <span class="spinner" id="spin-detect" style="display:none"></span>
+          🚀 자동 감지 시작
+        </button>
+      </div>
+
+      <div id="detect-result" style="display:none">
+        <div class="rec-count">Showing <span id="rec-cnt">0</span> records</div>
+        <div class="tbl-wrap"><table class="dt"><thead><tr id="tbl-head"></tr></thead><tbody id="tbl-body"></tbody></table></div>
+        <div class="chips" id="chips"></div>
+        <div class="brow">
+          <button class="btn btn-out btn-sm" id="btn-regen">🔄 Re-generate</button>
+          <button class="btn btn-teal btn-sm" id="btn-to-step2">Continue →</button>
+        </div>
+        <div class="dl-row">
+          <button class="dlb dl-x" id="btn-dl-x1">⬇ .XLSX</button>
+          <button class="dlb dl-c" id="btn-dl-c1">⬇ .CSV</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP 2: Pagination ── -->
+  <div class="step" id="step2">
+    <div class="step-hdr"><div class="snum">2</div><div class="slbl">Pagination &amp; Scroll</div><div class="chev">▼</div></div>
+    <div class="sbody">
+
+      <!-- Next button detection -->
+      <div class="pg-box" id="pg-box">
+        <div class="pg-title">📄 다음 페이지 버튼</div>
+        <div class="pg-row">
+          <span class="pg-label">감지 상태</span>
+          <span class="pg-val none" id="pg-sel-txt">미감지</span>
+        </div>
+        <div class="brow">
+          <button class="btn btn-g btn-sm" id="btn-auto-next">🔍 자동 감지</button>
+          <button class="btn btn-or btn-sm" id="btn-pick-next">🖱 직접 선택</button>
+        </div>
+      </div>
+
+      <!-- Page count -->
+      <div class="pg-row mt8">
+        <span class="pg-label">수집 페이지 수</span>
+        <input type="number" class="num-inp" id="pg-count" value="5" min="1" max="100">
+        <span class="muted">페이지</span>
+      </div>
+
+      <!-- Bot wait -->
+      <div style="font-weight:600;font-size:12px;margin-top:12px">⏱ 봇 감지 대기 시간</div>
+      <div class="srow mt4">
+        <input type="range" id="wait-slider" min="10" max="300" value="60" step="5">
+        <span class="sval" id="wait-lbl">60초</span>
+      </div>
+      <div class="muted mt4">봇 감지 시 이 시간만큼 대기 후 자동 재시작</div>
+      <div class="notice n-info mt8">💡 네이버는 30~60초 대기하면 봇 감지가 보통 해제됩니다.</div>
+
+      <button class="btn btn-g btn-full mt8" id="btn-to-step3">다음: 스크래핑 시작 →</button>
+    </div>
+  </div>
+
+  <!-- ── STEP 3: Scrape ── -->
+  <div class="step" id="step3">
+    <div class="step-hdr"><div class="snum">3</div><div class="slbl">Scrape — 실행 &amp; 다운로드</div><div class="chev">▼</div></div>
+    <div class="sbody">
+
+      <div class="stat"><span class="dot dot-no" id="sdot"></span><span class="stxt" id="stxt">대기 중</span></div>
+
+      <!-- Pagination progress -->
+      <div class="pg-progress" id="pg-progress" style="display:none">
+        <div class="pg-prog-row">
+          <span class="pg-prog-lbl">수집 진행</span>
+          <span class="pg-prog-val" id="prog-val">0건</span>
+        </div>
+        <div class="pg-bar-bg"><div class="pg-bar" id="prog-bar"></div></div>
+        <div class="pg-pages" id="prog-pages">페이지 0 / 0</div>
+      </div>
+
+      <div class="big-num" id="big-num">0</div>
+      <div class="big-sub">건 수집됨</div>
+
+      <!-- Action buttons -->
+      <div class="brow">
+        <button class="btn btn-g" id="btn-scrape-once">📄 현재 페이지만</button>
+        <button class="btn btn-teal" id="btn-scrape-pages">▶ 연속 수집</button>
+      </div>
+      <button class="btn btn-red btn-full mt8" id="btn-stop" style="display:none">⏹ 중지</button>
+      <button class="btn btn-out btn-full mt8" id="btn-reset" style="font-size:11px">🔄 초기화</button>
+
+      <!-- 실시간 수집 목록 -->
+      <div class="live-section" id="live-wrap" style="display:none">
+        <div class="live-title"><span class="live-dot"></span> 실시간 수집 목록 (최근 15건)</div>
+        <div class="live-wrap">
+          <table class="lt"><thead><tr id="live-head"></tr></thead><tbody id="live-body"></tbody></table>
+        </div>
+      </div>
+
+      <div class="dl-row mt8">
+        <button class="dlb dl-x" id="btn-dl-x" disabled>⬇ .XLSX</button>
+        <button class="dlb dl-c" id="btn-dl-c" disabled>⬇ .CSV</button>
+      </div>
+
+      <div id="s-notice" class="notice" style="display:none"></div>
+    </div>
+  </div>
+
+</div>
+
+<script src="xlsx.min.js"></script>
+<script src="sidepanel.js"></script>
+</body>
+</html>
