@@ -382,6 +382,7 @@ header{background:var(--s1);border-bottom:1px solid var(--border);padding:0 20px
       <option value="10">10개</option>
     </select>
     <button class="btn btn-xs" id="btnAutomate" style="background:rgba(0,229,160,.2);border:1px solid rgba(0,229,160,.5);color:var(--green);font-size:11px;padding:6px 14px;border-radius:6px;font-weight:700" onclick="bulkAutomate()">🤖 전체 자동화</button>
+    <button class="btn btn-xs" id="btnPipeline" style="background:linear-gradient(135deg,#f5c842,#9b6dff);color:#000;font-size:11px;padding:6px 14px;border-radius:6px;font-weight:700" onclick="runFullPipeline()">🚀 원클릭 완성</button>
     <button class="btn btn-green" id="btnExport" onclick="exportToSellerpickXlsx()">📥 셀러픽 엑셀 다운로드</button>
   </div>
 
@@ -1695,8 +1696,8 @@ async function bulkAutomate() {
   await sleep(800);
   progBg.classList.remove('show');
 
-  // URL 채워진 상품 자동 전송
-  await bulkSend();
+  // 파이프라인 실행 중이면 bulkSend 건너뜀 (엑셀 다운로드가 목적)
+  if (!isPipelineRunning) await bulkSend();
 }
 
 async function bulkSend() {
@@ -1833,6 +1834,145 @@ function extractKeywords(name) {
     })
     .slice(0, 20)
     .join(',');
+}
+
+// ── 자동 카드 선택 (BEST 전체 + 리뷰 상위 N) ──────────────
+function autoSelectTopCards(reviewTopN) {
+  // BEST 뱃지 전체 선택
+  let bestCount = 0;
+  allProducts.forEach(p => {
+    if (p.badge === 'BEST') { checkedIds.add(p.id); bestCount++; }
+  });
+
+  // 리뷰순 정렬 후 상위 N개 추가 선택 (BEST 제외)
+  const nonBest = allProducts
+    .filter(p => p.badge !== 'BEST')
+    .slice()
+    .sort((a, b) => (b.reviewCount || 0) - (a.reviewCount || 0));
+  let reviewCount = 0;
+  for (let i = 0; i < Math.min(reviewTopN, nonBest.length); i++) {
+    checkedIds.add(nonBest[i].id);
+    reviewCount++;
+  }
+
+  renderList();
+  updateStats();
+  const total = checkedIds.size;
+  toast(`✅ 자동선택: BEST ${bestCount}개 + 리뷰상위 ${reviewCount}개 = 총 ${total}개`);
+  return { bestCount, reviewCount, total };
+}
+
+// ── 전체 키워드 일괄 생성 ─────────────────────────────────
+async function bulkGenerateKeywords() {
+  if (!claudeApiKey) {
+    toast('⚠️ AI키워드 버튼에서 Claude API 키를 먼저 설정해주세요');
+    return false;
+  }
+
+  const slotCount = parseInt(document.getElementById('autoSlotCount').value) || 5;
+  const targets = allProducts.filter(p =>
+    checkedIds.has(p.id) && shuffleData[p.id]?.some(s => s?.url)
+  );
+
+  if (!targets.length) {
+    toast('⚠️ 타오바오 URL이 매칭된 상품이 없어요');
+    return false;
+  }
+
+  const progBg  = document.getElementById('progBg');
+  const progBar = document.getElementById('progBar');
+  const progTxt = document.getElementById('progTxt');
+  progBg.classList.add('show');
+
+  let done = 0, failed = 0;
+  for (let i = 0; i < targets.length; i++) {
+    const p = targets[i];
+    progBar.style.width = Math.round((i / targets.length) * 100) + '%';
+    progTxt.textContent = `🤖 키워드 생성 ${i+1}/${targets.length} — ${p.name.slice(0,20)}...`;
+    try {
+      const kws = await fetchClaudeKeywords(p.name, p.platform, slotCount);
+      kws.forEach((kw, idx) => {
+        if (!shuffleData[p.id]) shuffleData[p.id] = [];
+        if (idx >= shuffleData[p.id].length) shuffleData[p.id].push({});
+        shuffleData[p.id][idx] = { ...(shuffleData[p.id][idx] || {}), keyword: kw };
+      });
+      done++;
+    } catch (e) {
+      console.warn(`[키워드] ${p.name}:`, e.message);
+      failed++;
+    }
+    saveShuffles();
+    if (i < targets.length - 1) await sleep(800); // API 속도 제한 방지
+  }
+
+  progBar.style.width = '100%';
+  progTxt.textContent = `✅ 키워드 생성 완료 ${done}개 / 실패 ${failed}개`;
+  await sleep(1000);
+  progBg.classList.remove('show');
+  renderWorkspace();
+  return done > 0;
+}
+
+// ── 원클릭 완성 파이프라인 ────────────────────────────────
+let isPipelineRunning = false;
+async function runFullPipeline() {
+  if (isPipelineRunning || isAutomating || isBulkRunning) {
+    toast('⚠️ 이미 실행 중입니다'); return;
+  }
+
+  const reviewTopN = parseInt(prompt('리뷰순 상위 몇 개를 선택할까요? (BEST 제품은 자동 포함)', '20') || '20');
+  if (isNaN(reviewTopN) || reviewTopN < 1) return;
+
+  isPipelineRunning = true;
+  const btn = document.getElementById('btnPipeline');
+  btn.disabled = true; btn.textContent = '⏳ 실행 중...';
+
+  const progBg  = document.getElementById('progBg');
+  const progBar = document.getElementById('progBar');
+  const progTxt = document.getElementById('progTxt');
+  progBg.classList.add('show');
+
+  try {
+    // ① 자동 카드 선택
+    progBar.style.width = '5%';
+    progTxt.textContent = '① BEST + 리뷰 상위 카드 자동 선택 중...';
+    const sel = autoSelectTopCards(reviewTopN);
+    await sleep(800);
+
+    // ② 타오바오 URL 매칭 (bulkAutomate 내부 로직 재사용)
+    progBar.style.width = '15%';
+    progTxt.textContent = '② 셀러픽 이미지검색 → 타오바오 URL 매칭 중...';
+    await bulkAutomate();
+    await sleep(1000);
+
+    // ③ 전체 키워드 생성
+    if (claudeApiKey) {
+      progBar.style.width = '70%';
+      progTxt.textContent = '③ 키워드 자동 생성 중...';
+      await bulkGenerateKeywords();
+      await sleep(800);
+    } else {
+      progTxt.textContent = '③ API 키 없음 — 키워드 생성 건너뜀';
+      await sleep(1000);
+    }
+
+    // ④ 엑셀 다운로드
+    progBar.style.width = '95%';
+    progTxt.textContent = '④ 셀러픽 엑셀 생성 중...';
+    await sleep(500);
+    exportToSellerpickXlsx();
+
+    progBar.style.width = '100%';
+    progTxt.textContent = `🎉 완성! BEST+리뷰 ${sel.total}개 → 타오바오 매칭 → 키워드 → 엑셀 다운로드`;
+    await sleep(3000);
+  } catch (e) {
+    toast('❌ 오류: ' + e.message);
+    console.error('[파이프라인]', e);
+  } finally {
+    isPipelineRunning = false;
+    btn.disabled = false; btn.textContent = '🚀 원클릭 완성';
+    progBg.classList.remove('show');
+  }
 }
 
 // ── 셀러픽 엑셀 내보내기 ─────────────────────────────────
