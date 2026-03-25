@@ -107,6 +107,9 @@ async function scrapeStore(tabId, storeId, storeName, maxPages) {
     const url = `https://smartstore.naver.com/${storeId}/category/ALL?cp=${page}`;
     await navAndWait(tabId, url, page === 1 ? 3500 : 2500, page === 1 ? 7000 : 5500);
 
+    // 탭 강제 활성화 (getActiveTab이 올바른 탭 반환하도록)
+    await chrome.tabs.update(tabId, { active: true });
+
     // 봇 감지 확인
     let botCheck;
     try { botCheck = await chrome.tabs.sendMessage(tabId, { type: 'CHECK_BOT' }); } catch {}
@@ -114,6 +117,7 @@ async function scrapeStore(tabId, storeId, storeName, maxPages) {
       updateAutoUI(`⚠️ 봇 감지! 5분 대기 후 재시도...`, storeName);
       await rDelay(5 * 60 * 1000, 5 * 60 * 1000 + 30000);
       await navAndWait(tabId, url, 3000, 6000);
+      await chrome.tabs.update(tabId, { active: true });
     }
 
     // 자동 감지 + 스크랩
@@ -174,6 +178,7 @@ async function runAutoMode() {
     );
     const searchUrl = `https://search.shopping.naver.com/search/all?query=${encodeURIComponent(keyword)}`;
     await navAndWait(tab.id, searchUrl, 4000, 8000);
+    await chrome.tabs.update(tab.id, { active: true });
 
     // ② 스토어 추출 + 필터링
     const allStores = await extractStores(tab.id);
