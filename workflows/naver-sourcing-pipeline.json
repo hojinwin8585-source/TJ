@@ -1,0 +1,233 @@
+{
+  "name": "네이버 소싱 자동화 파이프라인",
+  "nodes": [
+
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "naver-sourcing",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-receiver",
+      "name": "① 크롤러 데이터 수신",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "notes": "크롤러(auto_mode.js)에서 키워드별 수집 데이터를 POST로 전송받음\n{ keyword, count, timestamp, data: [ {상품명, 가격, 리뷰수, 뱃지, 이미지URL, URL, ...} ] }"
+    },
+
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "{\"ok\":true}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [{ "name": "Content-Type", "value": "application/json" }]
+          }
+        }
+      },
+      "id": "webhook-response",
+      "name": "웹훅 응답 (즉시 200 OK)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [460, 160]
+    },
+
+    {
+      "parameters": {
+        "jsCode": "// ── ② BEST + 리뷰 상위 필터링 ──────────────────────────\nconst body = $input.first().json.body || $input.first().json;\nconst keyword = body.keyword || '';\nconst products = body.data || [];\n\nconsole.log(`[필터] 키워드: \"${keyword}\" | 수신: ${products.length}개`);\n\n// BEST 뱃지 상품 전체\nconst bestItems = products.filter(p => (p.뱃지 || p.badge || '').toUpperCase() === 'BEST');\n\n// 나머지 리뷰 상위 20개\nconst nonBest = products\n  .filter(p => (p.뱃지 || p.badge || '').toUpperCase() !== 'BEST')\n  .sort((a, b) => (parseInt(b.리뷰수 || b.reviewCount || 0)) - (parseInt(a.리뷰수 || a.reviewCount || 0)))\n  .slice(0, 20);\n\nconst selected = [...bestItems, ...nonBest];\n\n// 이미지 없는 상품 제외 (이미지검색 불가)\nconst valid = selected.filter(p => p.이미지URL || p.imageUrl);\n\nconsole.log(`[필터] BEST ${bestItems.length}개 + 리뷰상위 ${nonBest.length}개 = ${valid.length}개 선택`);\n\nreturn valid.map(p => ({\n  json: {\n    keyword,\n    name:       p.상품명      || p.name      || '',\n    price:      parseInt(p.가격 || p.price || 0),\n    reviewCount:parseInt(p.리뷰수 || p.reviewCount || 0),\n    badge:      (p.뱃지 || p.badge || '').toUpperCase(),\n    imageUrl:   p.이미지URL   || p.imageUrl  || '',\n    productUrl: p.상품URL     || p.url       || '',\n    platform:   p.platform   || 'naver',\n    seller:     p.스토어명    || p.seller    || ''\n  }\n}));"
+      },
+      "id": "filter-products",
+      "name": "② BEST + 리뷰상위 필터",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+
+    {
+      "parameters": {
+        "url": "http://localhost:8765/sellerpick/img-search",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "imageUrl", "value": "={{ $json.imageUrl }}" },
+            { "name": "count",    "value": "5" }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "sellerpick-img-search",
+      "name": "③ 셀러픽 이미지검색 (타오바오 URL)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, 300],
+      "notes": "server.py (port 8765) 를 통해 셀러픽 이미지검색 API 호출\n응답: { success: true, data: '<html>타오바오 URL 목록</html>' }"
+    },
+
+    {
+      "parameters": {
+        "jsCode": "// ── ③-2 타오바오 URL 파싱 ────────────────────────────────\nconst item    = $('② BEST + 리뷰상위 필터').item;\nconst product = item.json;\nconst result  = $input.first().json;\n\nif (!result.success || !result.data) {\n  console.warn(`[URL파싱] ${product.name} — 셀러픽 응답 없음`);\n  return [{ json: { ...product, taobaoUrls: [], matched: false } }];\n}\n\n// HTML에서 타오바오/1688 URL 추출\nconst html = result.data || '';\nconst urlPattern = /https?:\\/\\/(?:item\\.taobao\\.com|detail\\.tmall\\.com|detail\\.1688\\.com)[^\"'\\s<>]+/g;\nconst rawUrls = [...new Set(html.match(urlPattern) || [])];\n\n// URL 정리 (id 파라미터만 추출)\nconst cleanUrls = rawUrls.map(url => {\n  try {\n    const u = new URL(url);\n    const id = u.searchParams.get('id');\n    if (id) return `${u.origin}/item.htm?id=${id}`;\n    return url.split('?')[0];\n  } catch { return url; }\n}).slice(0, 5);\n\nconsole.log(`[URL파싱] ${product.name} — ${cleanUrls.length}개 URL 추출`);\n\nreturn [{ json: { ...product, taobaoUrls: cleanUrls, matched: cleanUrls.length > 0 } }];"
+      },
+      "id": "parse-taobao-urls",
+      "name": "③-2 타오바오 URL 파싱",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [940, 300]
+    },
+
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false },
+          "conditions": [
+            {
+              "leftValue":  "={{ $json.matched }}",
+              "rightValue": true,
+              "operator":   { "type": "boolean", "operation": "equals" }
+            }
+          ]
+        }
+      },
+      "id": "filter-matched",
+      "name": "URL 매칭된 것만",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [1180, 300]
+    },
+
+    {
+      "parameters": {
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model",      "value": "claude-haiku-4-5-20251001" },
+            { "name": "max_tokens", "value": "600" },
+            {
+              "name": "messages",
+              "value": "=[{ \"role\": \"user\", \"content\": \"당신은 해외구매대행 전문 키워드 전략가입니다.\\n\\n상품명: \\\"\" + $json.name + \"\\\"\\n플랫폼: 네이버 스마트스토어\\n생성 개수: 5개\\n고정 접두어: \\\"Liverry \\\" (모든 키워드 앞에 반드시 포함)\\n최대 글자 수: 100자\\n\\n규칙:\\n1. 각 키워드는 반드시 \\\"Liverry \\\"로 시작\\n2. 100자에 최대한 가깝게 꽉 채울 것\\n3. 반드시 JSON 배열 형식으로만 응답: [\\\"키워드1\\\",\\\"키워드2\\\",...]\\n4. 정확히 5개 생성\" }]"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000,
+          "headers": {
+            "entries": [
+              { "name": "anthropic-version",                     "value": "2023-06-01" },
+              { "name": "anthropic-dangerous-direct-browser-access", "value": "true" }
+            ]
+          }
+        }
+      },
+      "id": "claude-keywords",
+      "name": "④ Claude 키워드 생성",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1420, 300],
+      "credentials": {
+        "httpHeaderAuth": { "id": "anthropic-api-key", "name": "Anthropic API Key" }
+      },
+      "notes": "credentials 설정: Name=anthropic-api-key, Header Name=x-api-key, Value=sk-ant-..."
+    },
+
+    {
+      "parameters": {
+        "jsCode": "// ── ④-2 키워드 파싱 + 최종 데이터 조합 ────────────────\nconst product  = $('URL 매칭된 것만').item.json;\nconst apiResp  = $input.first().json;\n\nlet keywords = [];\ntry {\n  const text = apiResp.content?.[0]?.text || '';\n  const match = text.match(/\\[[\\s\\S]*?\\]/);\n  if (match) keywords = JSON.parse(match[0]);\n  if (!Array.isArray(keywords)) keywords = [];\n  // prefix 보장\n  keywords = keywords.map(k => {\n    const s = String(k).trim();\n    return s.startsWith('Liverry ') ? s : 'Liverry ' + s;\n  }).slice(0, 5);\n} catch (e) {\n  console.warn('[키워드파싱] 실패:', e.message);\n}\n\nconst isBest      = product.badge === 'BEST';\nconst naverPrice  = product.price || 0;\nconst discountAmt = isBest && naverPrice > 0 ? Math.max(0, naverPrice - 3000) : null;\n\n// 타오바오 URL 5개 슬롯 (없으면 빈값)\nconst urls = product.taobaoUrls || [];\nconst rows = urls.map((url, i) => ({\n  상품URL:        url,\n  상품명:         product.name,\n  키워드:         keywords[i] || keywords[0] || '',\n  카테고리:       '',\n  배송방법:       '2',\n  무게:           '5',\n  경동택배:       '',\n  판매가추가금액: '',\n  메모:           product.seller ? `스토어:${product.seller}` : '',\n  비교상품URL:    isBest ? (product.productUrl || '') : '',\n  비교상품가격:   isBest ? (naverPrice || '')          : '',\n  비교대비할인액: isBest ? (discountAmt || '')          : '',\n  _keyword:       product.keyword,\n  _badge:         product.badge,\n  _reviewCount:   product.reviewCount\n}));\n\nreturn rows.map(r => ({ json: r }));"
+      },
+      "id": "build-final-data",
+      "name": "④-2 키워드 파싱 + 데이터 조합",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1660, 300]
+    },
+
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "id": "aggregate-all",
+      "name": "전체 데이터 취합",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [1900, 300]
+    },
+
+    {
+      "parameters": {
+        "jsCode": "// ── ⑤ 셀러픽 scrapyMulti 등록 [PLACEHOLDER] ────────────\n// scrapyMulti POST 형식 확인 후 아래 채워주세요\n//\n// 현재: 수집된 데이터를 로그로 출력 + 다음 단계로 전달\n\nconst items = $input.first().json.data || [];\nconsole.log(`[등록 준비] 총 ${items.length}행 → scrapyMulti 전송 예정`);\nconsole.log('샘플:', JSON.stringify(items[0] || {}, null, 2));\n\n// TODO: scrapyMulti 형식 파악 후 아래 HTTP Request 노드로 교체\n// POST https://www.sellerpick.co.kr/shopAdmin/?menuType=prodStock&mode=scrapyMulti\n// Cookie: [셀러픽 로그인 쿠키]\n// Body: ???\n\nreturn [{ json: { status: 'ready', count: items.length, items } }];"
+      },
+      "id": "sellerpick-register",
+      "name": "⑤ 셀러픽 등록 [PLACEHOLDER]",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2140, 300],
+      "notes": "scrapyMulti POST 형식 확인 후 HTTP Request 노드로 교체 예정"
+    },
+
+    {
+      "parameters": {
+        "jsCode": "// ── ⑥ 완료 알림 ──────────────────────────────────────────\nconst result = $input.first().json;\nconst msg = `✅ 소싱 완료\\n등록 준비: ${result.count}행\\n시각: ${new Date().toLocaleString('ko-KR')}`;\nconsole.log(msg);\nreturn [{ json: { message: msg, count: result.count, timestamp: new Date().toISOString() } }];"
+      },
+      "id": "done-log",
+      "name": "⑥ 완료 로그",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2380, 300]
+    }
+
+  ],
+
+  "connections": {
+    "① 크롤러 데이터 수신": {
+      "main": [
+        [
+          { "node": "웹훅 응답 (즉시 200 OK)", "type": "main", "index": 0 },
+          { "node": "② BEST + 리뷰상위 필터",  "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "② BEST + 리뷰상위 필터": {
+      "main": [[{ "node": "③ 셀러픽 이미지검색 (타오바오 URL)", "type": "main", "index": 0 }]]
+    },
+    "③ 셀러픽 이미지검색 (타오바오 URL)": {
+      "main": [[{ "node": "③-2 타오바오 URL 파싱", "type": "main", "index": 0 }]]
+    },
+    "③-2 타오바오 URL 파싱": {
+      "main": [[{ "node": "URL 매칭된 것만", "type": "main", "index": 0 }]]
+    },
+    "URL 매칭된 것만": {
+      "main": [[{ "node": "④ Claude 키워드 생성", "type": "main", "index": 0 }]]
+    },
+    "④ Claude 키워드 생성": {
+      "main": [[{ "node": "④-2 키워드 파싱 + 데이터 조합", "type": "main", "index": 0 }]]
+    },
+    "④-2 키워드 파싱 + 데이터 조합": {
+      "main": [[{ "node": "전체 데이터 취합", "type": "main", "index": 0 }]]
+    },
+    "전체 데이터 취합": {
+      "main": [[{ "node": "⑤ 셀러픽 등록 [PLACEHOLDER]", "type": "main", "index": 0 }]]
+    },
+    "⑤ 셀러픽 등록 [PLACEHOLDER]": {
+      "main": [[{ "node": "⑥ 완료 로그", "type": "main", "index": 0 }]]
+    }
+  },
+
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Seoul"
+  },
+
+  "meta": {
+    "description": "네이버 스마트스토어 자동 소싱 파이프라인\n\n[Import 후 설정 필요]\n1. ④ Claude 키워드 생성 노드 → credentials에 Anthropic API Key 등록\n   Header Name: x-api-key / Value: sk-ant-...\n2. server.py (port 8765) PC에서 실행 중이어야 함\n3. ⑤번 노드는 scrapyMulti 형식 확인 후 HTTP Request로 교체\n4. 웹훅 URL 복사 후 크롬 익스텐션 auto_mode.js의 webhook 입력란에 붙여넣기"
+  }
+}
