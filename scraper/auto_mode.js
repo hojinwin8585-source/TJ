@@ -117,10 +117,10 @@ async function scrapeStore(tabId, storeId, storeName, maxPages) {
     }
 
     // 자동 감지 + 스크랩
-    const detected = await chrome.runtime.sendMessage({ type: 'CMD_AUTO_DETECT' });
+    const detected = await sendBg({ type: 'CMD_AUTO_DETECT' });
     if (!detected?.ok || !detected.containerSel) break;
 
-    const r = await chrome.runtime.sendMessage({
+    const r = await sendBg({
       type: 'CMD_SCRAPE',
       config: { containerSel: detected.containerSel, fields: detected.fields, page }
     });
