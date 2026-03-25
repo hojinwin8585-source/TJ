@@ -1,0 +1,77 @@
+<!-- ★★★ sidepanel.html 의 <div class="scroll"> 바로 아래, bot-alert div 위에 삽입 ★★★ -->
+
+<!-- ── 자동화 모드 ── -->
+<div class="step active" id="step0">
+  <div class="step-hdr">
+    <div class="snum" style="background:#03C75A;color:#fff;font-size:13px">🤖</div>
+    <div class="slbl">자동화 모드</div>
+    <div class="chev open">▼</div>
+  </div>
+  <div class="sbody open">
+
+    <!-- 키워드 입력 -->
+    <div style="font-weight:600;font-size:12px;margin-bottom:5px">📝 키워드 (한 줄에 하나씩)</div>
+    <textarea id="auto-keywords" placeholder="미니냉장고&#10;캠핑의자&#10;접이식테이블"
+      style="width:100%;height:90px;background:#f0f4f8;border:1.5px solid var(--bdr);border-radius:8px;
+             padding:8px;font-family:inherit;font-size:12px;resize:vertical;outline:none;color:#1a2332"></textarea>
+
+    <!-- N8N 웹훅 -->
+    <div style="font-weight:600;font-size:12px;margin:7px 0 4px">🔗 N8N 웹훅 URL <span style="color:var(--muted);font-weight:400">(선택)</span></div>
+    <input id="auto-webhook" type="text" placeholder="http://localhost:5678/webhook/naver-scrape"
+      style="width:100%;background:#f0f4f8;border:1.5px solid var(--bdr);border-radius:8px;
+             padding:7px 10px;font-size:11px;font-family:monospace;outline:none;color:#1a2332">
+
+    <!-- 딜레이 설정 -->
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <div style="flex:1;background:#f8fafc;border:1px solid var(--bdr);border-radius:8px;padding:8px">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:5px;font-weight:600">🏪 스토어 간 대기 (초)</div>
+        <div style="display:flex;align-items:center;gap:4px">
+          <input id="delay-store-min" type="number" value="40" min="10"
+            style="width:46px;padding:4px;border:1.5px solid var(--bdr);border-radius:5px;font-size:11px;text-align:center;background:#fff">
+          <span style="color:var(--muted);font-size:10px">~</span>
+          <input id="delay-store-max" type="number" value="90" min="10"
+            style="width:46px;padding:4px;border:1.5px solid var(--bdr);border-radius:5px;font-size:11px;text-align:center;background:#fff">
+        </div>
+      </div>
+      <div style="flex:1;background:#f8fafc;border:1px solid var(--bdr);border-radius:8px;padding:8px">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:5px;font-weight:600">🔑 키워드 간 대기 (분)</div>
+        <div style="display:flex;align-items:center;gap:4px">
+          <input id="delay-kw-min" type="number" value="8" min="1"
+            style="width:46px;padding:4px;border:1.5px solid var(--bdr);border-radius:5px;font-size:11px;text-align:center;background:#fff">
+          <span style="color:var(--muted);font-size:10px">~</span>
+          <input id="delay-kw-max" type="number" value="20" min="1"
+            style="width:46px;padding:4px;border:1.5px solid var(--bdr);border-radius:5px;font-size:11px;text-align:center;background:#fff">
+        </div>
+      </div>
+    </div>
+
+    <!-- 스토어당 최대 페이지 -->
+    <div style="display:flex;align-items:center;gap:8px;margin-top:8px;
+                background:#f8fafc;border:1px solid var(--bdr);border-radius:8px;padding:8px">
+      <span style="font-size:11px;color:var(--muted);font-weight:600;flex:1">📄 스토어당 최대 페이지</span>
+      <input id="auto-max-pages" type="number" value="3" min="1" max="20"
+        style="width:50px;padding:4px;border:1.5px solid var(--bdr);border-radius:5px;font-size:11px;text-align:center;background:#fff">
+    </div>
+
+    <!-- 진행 상황 -->
+    <div id="auto-progress" style="display:none;margin-top:8px;background:#f0f4f8;border-radius:8px;padding:10px">
+      <div id="auto-status" style="font-size:11px;font-weight:600;margin-bottom:6px;color:#1a2332">대기 중</div>
+      <div style="height:7px;background:var(--bdr);border-radius:4px;overflow:hidden;margin-bottom:5px">
+        <div id="auto-prog-bar" style="height:100%;background:linear-gradient(90deg,#03C75A,#00bcd4);width:0%;transition:width .5s ease;border-radius:4px"></div>
+      </div>
+      <div id="auto-prog-detail" style="font-size:10px;color:var(--muted)"></div>
+      <div id="auto-collect-count" style="font-size:12px;font-weight:700;color:#03C75A;margin-top:4px">수집: 0건</div>
+    </div>
+
+    <!-- 버튼 -->
+    <div class="brow" style="margin-top:8px">
+      <button class="btn btn-g" id="btn-auto-start" style="flex:2">🚀 자동화 시작</button>
+      <button class="btn btn-red" id="btn-auto-stop" style="flex:1;display:none">⏹ 중지</button>
+    </div>
+    <div style="background:#e3f2fd;border-radius:7px;padding:8px 11px;font-size:10px;
+                color:#1565c0;margin-top:6px;line-height:1.6">
+      💡 <b>안전 모드</b>: 랜덤 딜레이 + 봇 감지 시 자동 대기<br>
+      밤새 or 낮에 놔두면 알아서 돌아가요
+    </div>
+  </div>
+</div>
