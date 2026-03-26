@@ -296,6 +296,14 @@ table.lt tr:hover td{background:#f9fbff}
         <button class="dlb dl-c" id="btn-dl-c" disabled>⬇ .CSV</button>
       </div>
 
+      <!-- N8N 웹훅 전송 -->
+      <div style="margin-top:12px;border-top:1px solid var(--bdr);padding-top:10px">
+        <div style="font-weight:600;font-size:12px;margin-bottom:6px">📡 N8N 웹훅 전송</div>
+        <input type="text" id="webhook-url" placeholder="http://localhost:5678/webhook/naver-sourcing" style="width:100%;padding:7px 9px;border:1.5px solid var(--bdr);border-radius:7px;font-size:11px;font-family:inherit;outline:none;margin-bottom:5px;color:var(--navy)">
+        <input type="text" id="webhook-keyword" placeholder="검색 키워드 (URL에서 자동 감지)" style="width:100%;padding:7px 9px;border:1.5px solid var(--bdr);border-radius:7px;font-size:11px;font-family:inherit;outline:none;margin-bottom:7px;color:var(--navy)">
+        <button class="btn btn-or btn-full" id="btn-send-webhook" disabled>📡 N8N으로 전송</button>
+      </div>
+
       <div id="s-notice" class="notice" style="display:none"></div>
     </div>
   </div>

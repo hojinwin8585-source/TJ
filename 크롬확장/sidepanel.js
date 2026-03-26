@@ -198,6 +198,7 @@ btnScrOnce.addEventListener('click',async()=>{
     allResults=allResults.concat(r.data);
     bigNum.textContent=allResults.length;
     btnDlX.disabled=false; btnDlC.disabled=false;
+    syncWebhookBtn();
     setStatus('done'); showNotice('ok',`✅ ${r.data.length}건 수집! 총 ${allResults.length}건`);
   } else { setStatus('ready'); showNotice('warn','0건 수집됨. 1단계 재실행을 시도해보세요.'); }
 });
@@ -287,6 +288,7 @@ chrome.runtime.onMessage.addListener(msg=>{
     progBar.style.width='100%';
     progVal.textContent=`총 ${msg.total}건 수집 완료`;
     stopPagination();
+    syncWebhookBtn();
     showNotice('ok',`✅ 완료! 총 ${msg.total}건 수집됨`);
     setStatus('done');
   }
@@ -340,6 +342,70 @@ function downloadCsv(data){
   });
   a.click(); URL.revokeObjectURL(a.href);
 }
+
+// ── N8N 웹훅 전송 ─────────────────────────────────────────────────
+const webhookUrlInput  = $('webhook-url');
+const webhookKwInput   = $('webhook-keyword');
+const btnSendWebhook   = $('btn-send-webhook');
+
+// localStorage에서 웹훅 URL 복원
+const savedUrl = localStorage.getItem('n8n_webhook_url');
+if(savedUrl) webhookUrlInput.value = savedUrl;
+
+// 수집 데이터 생길 때마다 전송 버튼 활성화
+function syncWebhookBtn(){
+  btnSendWebhook.disabled = allResults.length === 0 || !webhookUrlInput.value.trim();
+}
+webhookUrlInput.addEventListener('input', ()=>{
+  localStorage.setItem('n8n_webhook_url', webhookUrlInput.value.trim());
+  syncWebhookBtn();
+});
+
+// 현재 탭 URL에서 네이버 검색 키워드 자동 추출
+(async()=>{
+  const [t] = await chrome.tabs.query({active:true,currentWindow:true});
+  if(t?.url){
+    try{
+      const u = new URL(t.url);
+      const kw = u.searchParams.get('query') || u.searchParams.get('keyword') || '';
+      if(kw) webhookKwInput.value = decodeURIComponent(kw);
+    }catch{}
+  }
+})();
+
+btnSendWebhook.addEventListener('click', async()=>{
+  const url = webhookUrlInput.value.trim();
+  const keyword = webhookKwInput.value.trim();
+  if(!url){ showNotice('warn','웹훅 URL을 입력하세요.'); return; }
+  if(!allResults.length){ showNotice('warn','전송할 데이터가 없습니다.'); return; }
+
+  btnSendWebhook.disabled = true;
+  btnSendWebhook.textContent = '⏳ 전송 중...';
+  showNotice('info', `📡 ${allResults.length}건 전송 중...`);
+
+  try{
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        keyword,
+        count: allResults.length,
+        timestamp: new Date().toISOString(),
+        data: allResults
+      })
+    });
+    if(res.ok){
+      showNotice('ok', `✅ 전송 완료! ${allResults.length}건 → N8N`);
+    } else {
+      showNotice('warn', `전송 실패: HTTP ${res.status}`);
+    }
+  } catch(e){
+    showNotice('warn', '전송 오류: ' + e.message);
+  } finally{
+    btnSendWebhook.disabled = false;
+    btnSendWebhook.textContent = '📡 N8N으로 전송';
+  }
+});
 
 // ── Init ───────────────────────────────────────────────────────────
 sendBg({type:'GET_STATE'}).then(s=>{
