@@ -146,6 +146,19 @@ table.dt td:first-child{color:var(--muted);font-size:10px;text-align:right;width
 .num-inp:focus{border-color:var(--g)}
 
 .mt8{margin-top:8px}.mt4{margin-top:4px}.muted{color:var(--muted);font-size:11px}
+
+/* ── Sellerpick 모드 ── */
+#sp-panel{display:none}
+.sp-mode-badge{background:linear-gradient(135deg,#1a1a2e,#0f3460);color:#fff;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.sp-img-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin:8px 0;max-height:160px;overflow-y:auto;border:1px solid var(--bdr);border-radius:8px;padding:6px}
+.sp-img-grid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:4px;cursor:pointer;border:2px solid transparent;transition:border-color .15s}
+.sp-img-grid img.selected{border-color:var(--g)}
+.sp-img-grid img.excluded{opacity:0.3}
+.sp-opt-row{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid #f0f2f5}
+.sp-opt-row:last-child{border-bottom:none}
+.sp-opt-name{flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--navy)}
+.sp-w-inp{width:58px;padding:4px 6px;border:1.5px solid var(--bdr);border-radius:6px;font-family:inherit;font-size:12px;text-align:center;outline:none}
+.sp-w-inp:focus{border-color:var(--g)}
 /* Live table */
 .live-section{margin-top:10px}
 .live-title{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;display:flex;align-items:center;gap:5px}
@@ -300,7 +313,57 @@ table.lt tr:hover td{background:#f9fbff}
     </div>
   </div>
 
-</div>
+  <!-- ── SELLERPICK 패널 ── -->
+  <div id="sp-panel">
+    <div class="sp-mode-badge">🛒 셀러픽 상품 도구 <span style="margin-left:auto;font-size:10px;opacity:.6">Liverry</span></div>
+
+    <!-- 슬라이드 생성 -->
+    <div class="step active" id="sp-step1">
+      <div class="step-hdr"><div class="snum" style="font-size:15px;">🖼</div><div class="slbl">슬라이드 자동 생성</div><div class="chev open">▼</div></div>
+      <div class="sbody open">
+        <div id="sp-title-box" class="notice n-info" style="font-size:12px;font-weight:600;margin-bottom:8px;display:none;"></div>
+        <div id="sp-img-stat" class="muted" style="margin-bottom:8px;"></div>
+
+        <div style="background:#f8fafc;border-radius:8px;padding:10px;margin-bottom:10px;">
+          <div style="font-size:11px;font-weight:600;margin-bottom:7px;">슬라이드 옵션</div>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:5px;cursor:pointer;">
+            <input type="checkbox" id="sp-opt-title" checked> 타이틀 슬라이드 (브랜드 + 상품명)
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:5px;cursor:pointer;">
+            <input type="checkbox" id="sp-opt-shipping" checked> 배송안내 슬라이드 추가
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+            <input type="checkbox" id="sp-opt-ali"> 알리바바 원본 이미지도 포함
+          </label>
+        </div>
+
+        <div class="brow">
+          <button class="btn btn-out" id="sp-btn-load">📥 불러오기</button>
+          <button class="btn btn-g" id="sp-btn-apply" disabled>✅ 적용</button>
+        </div>
+        <div id="sp-slide-notice" class="notice" style="display:none;margin-top:8px;"></div>
+      </div>
+    </div>
+
+    <!-- 무게 입력 -->
+    <div class="step" id="sp-step2">
+      <div class="step-hdr"><div class="snum" style="font-size:15px;">⚖</div><div class="slbl">무게 입력</div><div class="chev">▼</div></div>
+      <div class="sbody">
+        <div id="sp-weight-list" style="margin-bottom:10px;"></div>
+        <div style="background:#f8fafc;border-radius:8px;padding:10px;">
+          <div style="font-size:11px;font-weight:600;margin-bottom:7px;">전체 일괄 입력</div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input type="number" id="sp-weight-bulk" class="sp-w-inp" step="0.1" min="0.1" max="30" placeholder="0.0">
+            <span class="muted">kg 전체 적용</span>
+            <button class="btn btn-or btn-sm" id="sp-btn-weight-bulk">적용</button>
+          </div>
+        </div>
+        <div id="sp-weight-notice" class="notice" style="display:none;margin-top:8px;"></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end .scroll -->
 
 <script src="xlsx.min.js"></script>
 <script src="sidepanel.js"></script>

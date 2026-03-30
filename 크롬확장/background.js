@@ -293,5 +293,38 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     handleBotDetected(sender.tab.id);
     sendResponse({ ok: true });
   }
+
+  // ── SELLERPICK 전용 ──────────────────────────────────────────
+  if (msg.type === 'CMD_SP_GET_DATA') {
+    (async () => {
+      const tab = await getActiveTab();
+      if (!tab) { sendResponse({ error: 'No tab' }); return; }
+      await injectIfNeeded(tab.id);
+      try { const r = await chrome.tabs.sendMessage(tab.id, { type: 'SP_GET_DATA' }); sendResponse(r); }
+      catch (e) { sendResponse({ error: e.message }); }
+    })();
+    return true;
+  }
+  if (msg.type === 'CMD_SP_SET_MAIN_HTML') {
+    (async () => {
+      const tab = await getActiveTab();
+      if (!tab) { sendResponse({ error: 'No tab' }); return; }
+      await injectIfNeeded(tab.id);
+      try { const r = await chrome.tabs.sendMessage(tab.id, { type: 'SP_SET_MAIN_HTML', html: msg.html }); sendResponse(r); }
+      catch (e) { sendResponse({ error: e.message }); }
+    })();
+    return true;
+  }
+  if (msg.type === 'CMD_SP_SET_WEIGHT') {
+    (async () => {
+      const tab = await getActiveTab();
+      if (!tab) { sendResponse({ error: 'No tab' }); return; }
+      await injectIfNeeded(tab.id);
+      try { const r = await chrome.tabs.sendMessage(tab.id, { type: 'SP_SET_WEIGHT', idx: msg.idx, weight: msg.weight, all: msg.all }); sendResponse(r); }
+      catch (e) { sendResponse({ error: e.message }); }
+    })();
+    return true;
+  }
+
   return true;
 });

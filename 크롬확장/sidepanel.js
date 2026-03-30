@@ -341,6 +341,97 @@ function downloadCsv(data){
   a.click(); URL.revokeObjectURL(a.href);
 }
 
+// ── SELLERPICK 모드 ────────────────────────────────────────────────
+let spData = null;
+
+async function checkSellerpickMode() {
+  const [t] = await chrome.tabs.query({active:true,currentWindow:true});
+  const isSP = t?.url && t.url.includes('sellerpick') && t.url.includes('shopAdmin');
+  const spPanel = document.getElementById('sp-panel');
+  document.querySelectorAll('#step1,#step2,#step3').forEach(s => s.style.display = isSP ? 'none' : '');
+  spPanel.style.display = isSP ? 'block' : 'none';
+  if (isSP) spLoad();
+}
+
+async function spLoad() {
+  const r = await sendBg({type:'CMD_SP_GET_DATA'});
+  if (!r?.ok) { spNotice('slide','warn','셀러픽 상품 편집 페이지를 열어주세요.'); return; }
+  spData = r;
+
+  const titleBox = document.getElementById('sp-title-box');
+  titleBox.textContent = r.title || '(상품명 없음)';
+  titleBox.style.display = 'block';
+  document.getElementById('sp-img-stat').textContent =
+    `셀러픽 이미지 ${r.dImgs.length}장 / 알리바바 원본 ${r.aliImgs.length}장 / 옵션 ${r.weights.length}개`;
+  document.getElementById('sp-btn-apply').disabled = false;
+
+  // 무게 목록
+  const wl = document.getElementById('sp-weight-list');
+  if (!r.weights.length) { wl.innerHTML = '<div class="muted">옵션 없음</div>'; }
+  else {
+    wl.innerHTML = r.weights.map((w,i) => `
+      <div class="sp-opt-row">
+        <span class="sp-opt-name" title="${w.optColor}">${w.optColor||'옵션'+(i+1)}</span>
+        <input type="number" step="0.1" min="0.1" max="30" value="${w.weight}"
+          class="sp-w-inp" data-idx="${i}">
+        <span class="muted">kg</span>
+        <button class="btn btn-g btn-sm sp-w-btn" data-idx="${i}">↑</button>
+      </div>`).join('');
+    wl.querySelectorAll('.sp-w-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const i = +btn.dataset.idx;
+        const val = wl.querySelector(`.sp-w-inp[data-idx="${i}"]`).value;
+        const r2 = await sendBg({type:'CMD_SP_SET_WEIGHT', idx:i, weight:val});
+        if (r2?.ok) { btn.textContent='✓'; btn.style.background='#27ae60'; }
+      });
+    });
+  }
+}
+
+function escH(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function buildMainHtml(title, images, shippingType, addTitle, addShipping) {
+  const days = shippingType === '해운' ? '7~14일' : '3~5일';
+  const tSlide = addTitle ? `<div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);padding:60px 30px;text-align:center;"><p style="color:rgba(255,255,255,0.45);font-size:11px;letter-spacing:5px;font-family:sans-serif;margin-bottom:14px;">LIVERRY GLOBAL</p><p style="color:#fff;font-size:20px;font-weight:800;line-height:1.5;font-family:sans-serif;margin-bottom:22px;">${escH(title)}</p><div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;"><span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);border-radius:20px;padding:5px 14px;color:#fff;font-size:11px;">해외직배송</span><span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);border-radius:20px;padding:5px 14px;color:#fff;font-size:11px;">정품보장</span><span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);border-radius:20px;padding:5px 14px;color:#fff;font-size:11px;">당일출고</span></div></div>` : '';
+  const imgs = images.map(u=>`<img style="max-width:800px;width:100%;display:block;" src="${u}">`).join('\n');
+  const sSlide = addShipping ? `<div style="background:#fff;padding:32px 20px;text-align:center;font-family:sans-serif;border-top:3px solid #1a1a2e;"><p style="font-size:16px;font-weight:800;color:#1a1a2e;margin-bottom:20px;">📦 배송 안내</p><div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;max-width:560px;margin:0 auto;"><div style="background:#f8f9fa;border-radius:10px;padding:16px 18px;min-width:100px;text-align:center;"><div style="font-size:20px;margin-bottom:6px;">✈️</div><div style="font-size:10px;color:#999;margin-bottom:3px;">배송방법</div><div style="font-size:13px;font-weight:700;color:#1a1a2e;">해외직배송</div></div><div style="background:#f8f9fa;border-radius:10px;padding:16px 18px;min-width:100px;text-align:center;"><div style="font-size:20px;margin-bottom:6px;">💸</div><div style="font-size:10px;color:#999;margin-bottom:3px;">배송비</div><div style="font-size:13px;font-weight:700;color:#1a1a2e;">무료배송</div></div><div style="background:#f8f9fa;border-radius:10px;padding:16px 18px;min-width:100px;text-align:center;"><div style="font-size:20px;margin-bottom:6px;">📅</div><div style="font-size:10px;color:#999;margin-bottom:3px;">배송기간</div><div style="font-size:13px;font-weight:700;color:#1a1a2e;">${days}</div></div><div style="background:#f8f9fa;border-radius:10px;padding:16px 18px;min-width:100px;text-align:center;"><div style="font-size:20px;margin-bottom:6px;">🛃</div><div style="font-size:10px;color:#999;margin-bottom:3px;">통관/세금</div><div style="font-size:13px;font-weight:700;color:#1a1a2e;">포함</div></div></div><p style="font-size:10px;color:#bbb;margin-top:14px;">* 배송 기간은 통관 상황에 따라 변동될 수 있습니다</p></div>` : '';
+  return `<div style="text-align:center;"><div style="padding:5% 0%;text-align:center;" name="titleWrap"><div style="font-size:1.3em;font-weight:bold;line-height:1.3em;text-align:center;">${escH(title)}</div></div>${tSlide}<div style="margin:auto;max-width:800px;">${imgs}</div>${sSlide}</div>`;
+}
+
+function spNotice(area, type, txt) {
+  const id = area==='slide' ? 'sp-slide-notice' : 'sp-weight-notice';
+  const el = document.getElementById(id);
+  el.className='notice n-'+type; el.textContent=txt; el.style.display='block';
+}
+
+document.getElementById('sp-btn-load')?.addEventListener('click', spLoad);
+
+document.getElementById('sp-btn-apply')?.addEventListener('click', async () => {
+  if (!spData) return;
+  const addTitle    = document.getElementById('sp-opt-title').checked;
+  const addShipping = document.getElementById('sp-opt-shipping').checked;
+  const addAli      = document.getElementById('sp-opt-ali').checked;
+  const images = addAli ? [...spData.dImgs, ...spData.aliImgs] : spData.dImgs;
+  const html = buildMainHtml(spData.title, images, spData.shippingType||'해운', addTitle, addShipping);
+  const r = await sendBg({type:'CMD_SP_SET_MAIN_HTML', html});
+  if (r?.ok) spNotice('slide','ok','✅ 슬라이드 적용 완료! 셀러픽에서 저장하세요.');
+  else spNotice('slide','warn','적용 실패: '+(r?.error||''));
+});
+
+document.getElementById('sp-btn-weight-bulk')?.addEventListener('click', async () => {
+  const w = document.getElementById('sp-weight-bulk').value;
+  if (!w||+w<=0) return;
+  const r = await sendBg({type:'CMD_SP_SET_WEIGHT', all:true, weight:w});
+  if (r?.ok) {
+    spNotice('weight','ok',`✅ 전체 ${r.count}개 옵션에 ${w}kg 적용 완료`);
+    if (spData) { spData.weights.forEach(x=>x.weight=w); }
+    document.querySelectorAll('.sp-w-inp').forEach(inp=>inp.value=w);
+  } else spNotice('weight','warn','실패: '+(r?.error||''));
+});
+
+chrome.tabs?.onActivated?.addListener(()=>checkSellerpickMode());
+chrome.tabs?.onUpdated?.addListener((id,info)=>{ if(info.status==='complete') checkSellerpickMode(); });
+
 // ── Init ───────────────────────────────────────────────────────────
 sendBg({type:'GET_STATE'}).then(s=>{
   if(!s)return;

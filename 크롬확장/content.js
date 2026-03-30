@@ -374,6 +374,43 @@
       sendResponse({text:getFirstItemText(msg.containerSel)});
       return true;
     }
+
+    // ── SELLERPICK 전용 ──────────────────────────────────────────
+    if(msg.type==='SP_GET_DATA'){
+      try{
+        const mainTA=document.querySelector('textarea[name="mainHtml"]');
+        const mainHtml=mainTA?.value||'';
+        const titleEl=document.querySelector('[name="titleWrap"] div');
+        const title=(titleEl?.innerText||titleEl?.textContent||'').trim();
+        const dImgs=[...mainHtml.matchAll(/src="(https?:\/\/img\.sellerpick\.shop\/[^"]*_D_\d+\.[a-zA-Z]+)"/g)].map(m=>m[1]);
+        const aliImgs=[...mainHtml.matchAll(/src="(https?:\/\/img\.alicdn\.com\/[^"]+)"/g)].map(m=>m[1]);
+        const wInputs=[...document.querySelectorAll('input[name="optWeight[]"]')];
+        const cInputs=[...document.querySelectorAll('input[name="optColor[]"]')];
+        const weights=wInputs.map((w,i)=>({idx:i,weight:w.value,optColor:cInputs[i]?.value||''}));
+        const shippingType=document.querySelector('span.prodArea.SH')?'해운':'항공';
+        sendResponse({ok:true,title,dImgs,aliImgs,weights,shippingType});
+      }catch(e){sendResponse({ok:false,error:e.message});}
+      return true;
+    }
+    if(msg.type==='SP_SET_MAIN_HTML'){
+      try{
+        const ta=document.querySelector('textarea[name="mainHtml"]');
+        if(ta){ta.value=msg.html;['input','change'].forEach(ev=>ta.dispatchEvent(new Event(ev,{bubbles:true})));}
+        sendResponse({ok:true});
+      }catch(e){sendResponse({ok:false,error:e.message});}
+      return true;
+    }
+    if(msg.type==='SP_SET_WEIGHT'){
+      try{
+        const inputs=[...document.querySelectorAll('input[name="optWeight[]"]')];
+        const apply=(inp,val)=>{inp.value=val;['input','change'].forEach(ev=>inp.dispatchEvent(new Event(ev,{bubbles:true})));};
+        if(msg.all){inputs.forEach(inp=>apply(inp,msg.weight));}
+        else if(msg.idx!=null&&inputs[msg.idx]){apply(inputs[msg.idx],msg.weight);}
+        sendResponse({ok:true,count:inputs.length});
+      }catch(e){sendResponse({ok:false,error:e.message});}
+      return true;
+    }
+
     return true;
   });
 
