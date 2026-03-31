@@ -379,9 +379,12 @@
     // 원본 소싱 URL 추출 (셀러픽 편집 페이지)
     if(msg.type==='SP_GET_SOURCE_URL'){
       try{
-        const a=[...document.querySelectorAll('a')].find(el=>
-          el.href&&(el.href.includes('taobao.com')||el.href.includes('tmall.com')||el.href.includes('1688.com'))
-        );
+        // 상품 URL만 매칭 (홈페이지/로고 링크 제외)
+        const isProductUrl = href =>
+          (href.includes('taobao.com')&&(href.includes('id=')||href.includes('/item'))) ||
+          (href.includes('tmall.com')&&href.includes('id=')) ||
+          href.includes('1688.com/offer/');
+        const a=[...document.querySelectorAll('a')].find(el=>el.href&&isProductUrl(el.href));
         if(a) { sendResponse({ok:true,url:a.href}); return true; }
         // 버튼/링크 텍스트로 찾기 (onclick, data-url, data-href 등 포함)
         const btn=[...document.querySelectorAll('a,button,span,div')].find(el=>
