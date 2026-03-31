@@ -384,6 +384,11 @@
           (href.includes('taobao.com')&&(href.includes('id=')||href.includes('/item'))) ||
           (href.includes('tmall.com')&&href.includes('id=')) ||
           href.includes('1688.com/offer/');
+        // 1순위: 셀러픽 편집 패널의 targetUrl 필드 (가장 정확)
+        const targetInp = document.querySelector('input[name="targetUrl"]');
+        if(targetInp?.value && isProductUrl(targetInp.value))
+          { sendResponse({ok:true,url:targetInp.value}); return true; }
+        // 2순위: <a> 태그에서 상품 URL 찾기
         const a=[...document.querySelectorAll('a')].find(el=>el.href&&isProductUrl(el.href));
         if(a) { sendResponse({ok:true,url:a.href}); return true; }
         // 버튼/링크 텍스트로 찾기 (onclick, data-url, data-href 등 포함)
