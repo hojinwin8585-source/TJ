@@ -405,11 +405,20 @@
           const nearby=btn.closest('a')||btn.querySelector('a');
           if(nearby?.href) { sendResponse({ok:true,url:nearby.href}); return true; }
         }
-        // 페이지 전체에서 input[value*=taobao] 형태 숨겨진 URL 탐색
-        const inp=[...document.querySelectorAll('input[type=hidden],input[type=text]')].find(el=>
-          el.value&&(el.value.includes('taobao.com')||el.value.includes('tmall.com')||el.value.includes('1688.com'))
+        // input/textarea/div 등 모든 요소에서 타오바오 URL 탐색
+        const inp=[...document.querySelectorAll('input,textarea')].find(el=>
+          el.value&&isProductUrl(el.value)
         );
         if(inp) { sendResponse({ok:true,url:inp.value}); return true; }
+        // 텍스트 노드나 data 속성에 URL이 있는 경우
+        const anyEl=[...document.querySelectorAll('[data-url],[data-src-url],[data-origin-url],[data-prod-url]')].find(el=>{
+          const v=el.dataset.url||el.dataset.srcUrl||el.dataset.originUrl||el.dataset.prodUrl||'';
+          return isProductUrl(v);
+        });
+        if(anyEl){
+          const v=anyEl.dataset.url||anyEl.dataset.srcUrl||anyEl.dataset.originUrl||anyEl.dataset.prodUrl;
+          sendResponse({ok:true,url:v}); return true;
+        }
         sendResponse({ok:false,error:'원본 링크 없음'});
       }catch(e){sendResponse({ok:false,error:e.message});}
       return true;
