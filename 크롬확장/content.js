@@ -433,14 +433,26 @@
       (async()=>{
         try{
           // 셀러픽 상세 API 호출 (같은 도메인이라 쿠키 자동 포함)
-          const res=await fetch('./?menuType=prodStock&mode=json&act=sharedProdNewController',{
-            method:'POST',
-            headers:{'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8','X-Requested-With':'XMLHttpRequest'},
-            body:`nat=${msg.nat}&prodNo=${msg.prodNo}`
-          });
-          const json=await res.json();
+          // prodNo / id / offerID 순서로 시도
+          let json=null;
+          for(const bodyStr of [
+            `nat=${msg.nat}&prodNo=${msg.prodNo}`,
+            `nat=${msg.nat}&id=${msg.prodNo}`,
+            `nat=${msg.nat}&offerID=${msg.prodNo}&prodNo=${msg.prodNo}`
+          ]){
+            const res=await fetch('./?menuType=prodStock&mode=json&act=sharedProdNewController',{
+              method:'POST',
+              headers:{'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8','X-Requested-With':'XMLHttpRequest'},
+              body:bodyStr
+            });
+            json=await res.json();
+            if(json.html||json.data) break;
+          }
           const html=json.html||json.data||'';
-          if(!html){sendResponse({ok:false,error:'API 응답 없음'});return;}
+          if(!html){
+            sendResponse({ok:false,error:`API 응답 없음 (success:${json.success}, keys:${Object.keys(json).join(',')}, html길이:${(json.html||'').length})`});
+            return;
+          }
 
           // HTML 파싱
           const doc=new DOMParser().parseFromString(html,'text/html');
