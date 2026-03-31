@@ -381,6 +381,7 @@ chrome.tabs?.onActivated?.addListener(()=>checkSellerpickMode());
 chrome.tabs?.onUpdated?.addListener((id,info)=>{ if(info.status==='complete') checkSellerpickMode(); });
 
 // ── Init ───────────────────────────────────────────────────────────
+checkSellerpickMode();
 sendBg({type:'GET_STATE'}).then(s=>{
   if(!s)return;
   if(s.waitSec){waitSlider.value=s.waitSec;waitLbl.textContent=s.waitSec+'초';}
