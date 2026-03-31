@@ -345,17 +345,18 @@ table.lt tr:hover td{background:#f9fbff}
       </div>
     </div>
 
-    <!-- 무게 입력 -->
+    <!-- 무게 자동조회 -->
     <div class="step" id="sp-step2">
-      <div class="step-hdr"><div class="snum" style="font-size:15px;">⚖</div><div class="slbl">무게 입력</div><div class="chev">▼</div></div>
+      <div class="step-hdr"><div class="snum" style="font-size:15px;">⚖</div><div class="slbl">무게 자동 조회</div><div class="chev">▼</div></div>
       <div class="sbody">
-        <div id="sp-weight-list" style="margin-bottom:10px;"></div>
-        <div style="background:#f8fafc;border-radius:8px;padding:10px;">
-          <div style="font-size:11px;font-weight:600;margin-bottom:7px;">전체 일괄 입력</div>
-          <div style="display:flex;gap:6px;align-items:center;">
-            <input type="number" id="sp-weight-bulk" class="sp-w-inp" step="0.1" min="0.1" max="30" placeholder="0.0">
-            <span class="muted">kg 전체 적용</span>
-            <button class="btn btn-or btn-sm" id="sp-btn-weight-bulk">적용</button>
+        <div class="muted" style="margin-bottom:10px;">원본 상품 링크(타오바오/티몰)에서 실무게·치수를 자동으로 가져옵니다.</div>
+        <button class="btn btn-g btn-full" id="sp-btn-weight-auto">🔍 무게 자동 조회</button>
+        <div id="sp-weight-result" style="display:none;margin-top:10px;background:#f8fafc;border-radius:8px;padding:10px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;">
+            <div><span class="muted">실무게</span><br><strong id="sp-w-actual">-</strong></div>
+            <div><span class="muted">부피무게</span><br><strong id="sp-w-vol">-</strong></div>
+            <div><span class="muted">치수 (cm)</span><br><strong id="sp-w-dims">-</strong></div>
+            <div><span class="muted">적용무게 ✓</span><br><strong id="sp-w-billing" style="color:var(--g);font-size:14px;">-</strong></div>
           </div>
         </div>
         <div id="sp-weight-notice" class="notice" style="display:none;margin-top:8px;"></div>

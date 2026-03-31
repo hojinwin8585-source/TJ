@@ -376,37 +376,65 @@
     }
 
     // ── SELLERPICK 전용 ──────────────────────────────────────────
-    if(msg.type==='SP_GET_DATA'){
+    // 원본 소싱 URL 추출 (셀러픽 편집 페이지)
+    if(msg.type==='SP_GET_SOURCE_URL'){
       try{
-        const mainTA=document.querySelector('textarea[name="mainHtml"]');
-        const mainHtml=mainTA?.value||'';
-        const titleEl=document.querySelector('[name="titleWrap"] div');
-        const title=(titleEl?.innerText||titleEl?.textContent||'').trim();
-        const dImgs=[...mainHtml.matchAll(/src="(https?:\/\/img\.sellerpick\.shop\/[^"]*_D_\d+\.[a-zA-Z]+)"/g)].map(m=>m[1]);
-        const aliImgs=[...mainHtml.matchAll(/src="(https?:\/\/img\.alicdn\.com\/[^"]+)"/g)].map(m=>m[1]);
-        const wInputs=[...document.querySelectorAll('input[name="optWeight[]"]')];
-        const cInputs=[...document.querySelectorAll('input[name="optColor[]"]')];
-        const weights=wInputs.map((w,i)=>({idx:i,weight:w.value,optColor:cInputs[i]?.value||''}));
-        const shippingType=document.querySelector('span.prodArea.SH')?'해운':'항공';
-        sendResponse({ok:true,title,dImgs,aliImgs,weights,shippingType});
+        const a=[...document.querySelectorAll('a')].find(el=>
+          el.href&&(el.href.includes('taobao.com')||el.href.includes('tmall.com')||el.href.includes('1688.com'))
+        );
+        if(a) { sendResponse({ok:true,url:a.href}); return true; }
+        // 버튼 텍스트로 찾기
+        const btn=[...document.querySelectorAll('a,button')].find(el=>
+          (el.innerText||'').includes('원본')
+        );
+        if(btn?.href) { sendResponse({ok:true,url:btn.href}); return true; }
+        sendResponse({ok:false,error:'원본 링크 없음'});
       }catch(e){sendResponse({ok:false,error:e.message});}
       return true;
     }
-    if(msg.type==='SP_SET_MAIN_HTML'){
+    // 타오바오/티몰 스펙 파싱 (새 탭에서 호출)
+    if(msg.type==='SP_SCRAPE_WEIGHT'){
       try{
-        const ta=document.querySelector('textarea[name="mainHtml"]');
-        if(ta){ta.value=msg.html;['input','change'].forEach(ev=>ta.dispatchEvent(new Event(ev,{bubbles:true})));}
+        let weight=null, dims=null;
+        const weightKeys=['商品重量','重量','克重','净重','毛重','产品重量'];
+        const dimKeys=['商品尺寸','尺寸','规格','包装尺寸','产品尺寸'];
+        // 모든 텍스트 노드 순회
+        document.querySelectorAll('li,tr,dd,div,span,td').forEach(el=>{
+          if(weight&&dims) return;
+          const txt=(el.innerText||'').trim();
+          if(!txt||txt.length>200) return;
+          if(!weight) {
+            for(const k of weightKeys){
+              if(txt.includes(k)){
+                const m=txt.match(/([\d.]+)\s*(kg|g|克|千克)/i);
+                if(m){let v=parseFloat(m[1]);if(m[2]==='g'||m[2]==='克')v/=1000;weight=v;break;}
+              }
+            }
+          }
+          if(!dims){
+            for(const k of dimKeys){
+              if(txt.includes(k)){
+                const m=txt.match(/([\d.]+)\s*[×xX*]\s*([\d.]+)\s*[×xX*]\s*([\d.]+)/);
+                if(m){dims={l:+m[1],w:+m[2],h:+m[3]};break;}
+              }
+            }
+          }
+        });
+        sendResponse({ok:true,weight,dims});
+      }catch(e){sendResponse({ok:false,error:e.message});}
+      return true;
+    }
+    // 셀러픽 무게 필드 입력
+    if(msg.type==='SP_SET_WEIGHT_FIELD'){
+      try{
+        const inp=document.querySelector('input[name="r_mpsmWeight"]')
+                ||document.querySelector('input[id*="weight" i]')
+                ||document.querySelector('input[placeholder*="무게"]')
+                ||document.querySelector('input[placeholder*="weight" i]');
+        if(!inp){sendResponse({ok:false,error:'무게 필드 없음'});return true;}
+        inp.value=msg.weight;
+        ['input','change'].forEach(ev=>inp.dispatchEvent(new Event(ev,{bubbles:true})));
         sendResponse({ok:true});
-      }catch(e){sendResponse({ok:false,error:e.message});}
-      return true;
-    }
-    if(msg.type==='SP_SET_WEIGHT'){
-      try{
-        const inputs=[...document.querySelectorAll('input[name="optWeight[]"]')];
-        const apply=(inp,val)=>{inp.value=val;['input','change'].forEach(ev=>inp.dispatchEvent(new Event(ev,{bubbles:true})));};
-        if(msg.all){inputs.forEach(inp=>apply(inp,msg.weight));}
-        else if(msg.idx!=null&&inputs[msg.idx]){apply(inputs[msg.idx],msg.weight);}
-        sendResponse({ok:true,count:inputs.length});
       }catch(e){sendResponse({ok:false,error:e.message});}
       return true;
     }

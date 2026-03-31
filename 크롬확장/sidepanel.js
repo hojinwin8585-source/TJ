@@ -418,15 +418,27 @@ document.getElementById('sp-btn-apply')?.addEventListener('click', async () => {
   else spNotice('slide','warn','적용 실패: '+(r?.error||''));
 });
 
-document.getElementById('sp-btn-weight-bulk')?.addEventListener('click', async () => {
-  const w = document.getElementById('sp-weight-bulk').value;
-  if (!w||+w<=0) return;
-  const r = await sendBg({type:'CMD_SP_SET_WEIGHT', all:true, weight:w});
-  if (r?.ok) {
-    spNotice('weight','ok',`✅ 전체 ${r.count}개 옵션에 ${w}kg 적용 완료`);
-    if (spData) { spData.weights.forEach(x=>x.weight=w); }
-    document.querySelectorAll('.sp-w-inp').forEach(inp=>inp.value=w);
-  } else spNotice('weight','warn','실패: '+(r?.error||''));
+document.getElementById('sp-btn-weight-auto')?.addEventListener('click', async () => {
+  const btn = document.getElementById('sp-btn-weight-auto');
+  btn.disabled = true; btn.textContent = '⏳ 조회 중...';
+  spNotice('weight','info','원본 페이지 열어서 스펙 파싱 중...');
+
+  const r = await sendBg({type:'CMD_SP_AUTO_WEIGHT'});
+  btn.disabled = false; btn.textContent = '🔍 무게 자동 조회';
+
+  if (!r?.ok) {
+    spNotice('weight','warn','❌ ' + (r?.error||'실패'));
+    return;
+  }
+
+  document.getElementById('sp-weight-result').style.display = 'block';
+  document.getElementById('sp-w-actual').textContent  = r.actual  ? r.actual+'kg'  : '정보 없음';
+  document.getElementById('sp-w-vol').textContent     = r.vol     ? r.vol+'kg'     : '정보 없음';
+  document.getElementById('sp-w-dims').textContent    = r.dims    ? `${r.dims.l}×${r.dims.w}×${r.dims.h}` : '정보 없음';
+  document.getElementById('sp-w-billing').textContent = r.billing + 'kg';
+
+  if (r.fieldSet) spNotice('weight','ok', `✅ ${r.billing}kg 자동 입력 완료`);
+  else spNotice('weight','warn', `조회 성공 (${r.billing}kg) 但 필드 입력 실패 — 수동 확인 필요`);
 });
 
 chrome.tabs?.onActivated?.addListener(()=>checkSellerpickMode());

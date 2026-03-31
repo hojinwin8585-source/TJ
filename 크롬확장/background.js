@@ -294,34 +294,59 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     sendResponse({ ok: true });
   }
 
-  // ── SELLERPICK 전용 ──────────────────────────────────────────
-  if (msg.type === 'CMD_SP_GET_DATA') {
+  // ── SELLERPICK 무게 자동조회 ──────────────────────────────────
+  if (msg.type === 'CMD_SP_AUTO_WEIGHT') {
     (async () => {
-      const tab = await getActiveTab();
-      if (!tab) { sendResponse({ error: 'No tab' }); return; }
-      await injectIfNeeded(tab.id);
-      try { const r = await chrome.tabs.sendMessage(tab.id, { type: 'SP_GET_DATA' }); sendResponse(r); }
-      catch (e) { sendResponse({ error: e.message }); }
-    })();
-    return true;
-  }
-  if (msg.type === 'CMD_SP_SET_MAIN_HTML') {
-    (async () => {
-      const tab = await getActiveTab();
-      if (!tab) { sendResponse({ error: 'No tab' }); return; }
-      await injectIfNeeded(tab.id);
-      try { const r = await chrome.tabs.sendMessage(tab.id, { type: 'SP_SET_MAIN_HTML', html: msg.html }); sendResponse(r); }
-      catch (e) { sendResponse({ error: e.message }); }
-    })();
-    return true;
-  }
-  if (msg.type === 'CMD_SP_SET_WEIGHT') {
-    (async () => {
-      const tab = await getActiveTab();
-      if (!tab) { sendResponse({ error: 'No tab' }); return; }
-      await injectIfNeeded(tab.id);
-      try { const r = await chrome.tabs.sendMessage(tab.id, { type: 'SP_SET_WEIGHT', idx: msg.idx, weight: msg.weight, all: msg.all }); sendResponse(r); }
-      catch (e) { sendResponse({ error: e.message }); }
+      const spTab = await getActiveTab();
+      if (!spTab) { sendResponse({ error: 'No tab' }); return; }
+      await injectIfNeeded(spTab.id);
+
+      // 1. 원본 URL 추출
+      const urlRes = await chrome.tabs.sendMessage(spTab.id, { type: 'SP_GET_SOURCE_URL' }).catch(() => ({ ok: false }));
+      if (!urlRes?.ok) { sendResponse({ error: urlRes?.error || '원본 링크 없음' }); return; }
+
+      // 2. 새 탭으로 열기 (백그라운드)
+      const srcTab = await chrome.tabs.create({ url: urlRes.url, active: false });
+
+      // 3. 로드 대기 (최대 12초)
+      await new Promise(resolve => {
+        const t = setTimeout(resolve, 12000);
+        const fn = (tabId, info) => {
+          if (tabId === srcTab.id && info.status === 'complete') {
+            clearTimeout(t); chrome.tabs.onUpdated.removeListener(fn); resolve();
+          }
+        };
+        chrome.tabs.onUpdated.addListener(fn);
+      });
+      await new Promise(r => setTimeout(r, 1500));
+
+      // 4. 스펙 파싱
+      await injectIfNeeded(srcTab.id);
+      const scrape = await chrome.tabs.sendMessage(srcTab.id, { type: 'SP_SCRAPE_WEIGHT' }).catch(() => ({ ok: false }));
+      chrome.tabs.remove(srcTab.id).catch(() => {});
+
+      if (!scrape?.ok) { sendResponse({ error: '스펙 파싱 실패' }); return; }
+
+      // 5. 부피무게 계산 (해운 기준 ÷6000)
+      const actual = scrape.weight || 0;
+      const vol = scrape.dims ? (scrape.dims.l * scrape.dims.w * scrape.dims.h) / 6000 : 0;
+      const billing = Math.max(actual, vol);
+
+      if (!billing) { sendResponse({ error: '무게/치수 데이터 없음' }); return; }
+
+      // 6. 셀러픽 무게 필드 입력
+      const setRes = await chrome.tabs.sendMessage(spTab.id, {
+        type: 'SP_SET_WEIGHT_FIELD', weight: billing.toFixed(2)
+      }).catch(() => ({ ok: false }));
+
+      sendResponse({
+        ok: true,
+        actual: actual || null,
+        vol: vol ? +vol.toFixed(2) : null,
+        billing: +billing.toFixed(2),
+        dims: scrape.dims,
+        fieldSet: setRes?.ok
+      });
     })();
     return true;
   }
