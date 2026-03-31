@@ -305,8 +305,17 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       const urlRes = await chrome.tabs.sendMessage(spTab.id, { type: 'SP_GET_SOURCE_URL' }).catch(() => ({ ok: false }));
       if (!urlRes?.ok) { sendResponse({ error: urlRes?.error || '원본 링크 없음' }); return; }
 
-      // 2. 새 탭으로 열기 (로그인 세션 유지를 위해 active:true)
-      const srcTab = await chrome.tabs.create({ url: urlRes.url, active: true });
+      // 2. 타오바오 URL → 셀러픽 소싱뷰 URL 변환 (봇 차단 우회)
+      // 예: https://item.taobao.com/item.htm?id=766151582350
+      //   → https://www.sellerpick.co.kr/shopAdmin/?menuType=prodStock&mode=sharedProdNewView&nat=taobao&prodNo=766151582350
+      let viewUrl = urlRes.url;
+      try {
+        const u = new URL(urlRes.url);
+        const itemId = u.searchParams.get('id') || (u.pathname.match(/\/(\d{10,})/) || [])[1];
+        const nat = u.hostname.includes('tmall') ? 'tmall' : u.hostname.includes('1688') ? '1688' : 'taobao';
+        if (itemId) viewUrl = `https://www.sellerpick.co.kr/shopAdmin/?menuType=prodStock&mode=sharedProdNewView&nat=${nat}&prodNo=${itemId}`;
+      } catch {}
+      const srcTab = await chrome.tabs.create({ url: viewUrl, active: false });
 
       // 3. 로드 대기 (최대 12초)
       await new Promise(resolve => {
