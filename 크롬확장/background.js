@@ -305,8 +305,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       const urlRes = await chrome.tabs.sendMessage(spTab.id, { type: 'SP_GET_SOURCE_URL' }).catch(() => ({ ok: false }));
       if (!urlRes?.ok) { sendResponse({ error: urlRes?.error || '원본 링크 없음' }); return; }
 
-      // 2. 새 탭으로 열기 (백그라운드)
-      const srcTab = await chrome.tabs.create({ url: urlRes.url, active: false });
+      // 2. 새 탭으로 열기 (로그인 세션 유지를 위해 active:true)
+      const srcTab = await chrome.tabs.create({ url: urlRes.url, active: true });
 
       // 3. 로드 대기 (최대 12초)
       await new Promise(resolve => {
