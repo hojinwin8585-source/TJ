@@ -432,25 +432,12 @@
     if(msg.type==='SP_FETCH_SPECS'){
       (async()=>{
         try{
-          // 셀러픽 상세 API 호출 (같은 도메인이라 쿠키 자동 포함)
-          // prodNo / id / offerID 순서로 시도
-          let json=null;
-          for(const bodyStr of [
-            `nat=${msg.nat}&prodNo=${msg.prodNo}`,
-            `nat=${msg.nat}&id=${msg.prodNo}`,
-            `nat=${msg.nat}&offerID=${msg.prodNo}&prodNo=${msg.prodNo}`
-          ]){
-            const res=await fetch('./?menuType=prodStock&mode=json&act=sharedProdNewController',{
-              method:'POST',
-              headers:{'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8','X-Requested-With':'XMLHttpRequest'},
-              body:bodyStr
-            });
-            json=await res.json();
-            if(json.html||json.data) break;
-          }
-          const html=json.html||json.data||'';
-          if(!html){
-            sendResponse({ok:false,error:`API 응답 없음 (success:${json.success}, keys:${Object.keys(json).join(',')}, html길이:${(json.html||'').length})`});
+          // 셀러픽 상품 상세 페이지 직접 fetch (쿠키 자동 포함, API 대신 페이지 직접)
+          const viewUrl=`/shopAdmin/?menuType=prodStock&mode=sharedProdNewView&nat=${msg.nat}&prodNo=${msg.prodNo}`;
+          const pageRes=await fetch(viewUrl,{credentials:'include'});
+          const html=await pageRes.text();
+          if(!html||html.length<200){
+            sendResponse({ok:false,error:`페이지 응답 없음 (길이:${html?.length||0})`});
             return;
           }
 
