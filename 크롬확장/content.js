@@ -383,11 +383,30 @@
           el.href&&(el.href.includes('taobao.com')||el.href.includes('tmall.com')||el.href.includes('1688.com'))
         );
         if(a) { sendResponse({ok:true,url:a.href}); return true; }
-        // 버튼 텍스트로 찾기
-        const btn=[...document.querySelectorAll('a,button')].find(el=>
-          (el.innerText||'').includes('원본')
+        // 버튼/링크 텍스트로 찾기 (onclick, data-url, data-href 등 포함)
+        const btn=[...document.querySelectorAll('a,button,span,div')].find(el=>
+          (el.innerText||el.textContent||'').trim().includes('원본')
         );
-        if(btn?.href) { sendResponse({ok:true,url:btn.href}); return true; }
+        if(btn){
+          // <a> href
+          if(btn.tagName==='A'&&btn.href) { sendResponse({ok:true,url:btn.href}); return true; }
+          // data-url / data-href / data-link
+          const du=btn.dataset.url||btn.dataset.href||btn.dataset.link||btn.dataset.src;
+          if(du&&(du.includes('taobao')||du.includes('tmall')||du.includes('1688')))
+            { sendResponse({ok:true,url:du}); return true; }
+          // onclick="...url..." 에서 URL 추출
+          const oc=btn.getAttribute('onclick')||'';
+          const om=oc.match(/https?:\/\/[^\s'"]+(?:taobao|tmall|1688)[^\s'"]+/);
+          if(om) { sendResponse({ok:true,url:om[0]}); return true; }
+          // 부모/자식 중 <a> 태그 확인
+          const nearby=btn.closest('a')||btn.querySelector('a');
+          if(nearby?.href) { sendResponse({ok:true,url:nearby.href}); return true; }
+        }
+        // 페이지 전체에서 input[value*=taobao] 형태 숨겨진 URL 탐색
+        const inp=[...document.querySelectorAll('input[type=hidden],input[type=text]')].find(el=>
+          el.value&&(el.value.includes('taobao.com')||el.value.includes('tmall.com')||el.value.includes('1688.com'))
+        );
+        if(inp) { sendResponse({ok:true,url:inp.value}); return true; }
         sendResponse({ok:false,error:'원본 링크 없음'});
       }catch(e){sendResponse({ok:false,error:e.message});}
       return true;
