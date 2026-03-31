@@ -315,48 +315,18 @@ table.lt tr:hover td{background:#f9fbff}
 
   <!-- ── SELLERPICK 패널 ── -->
   <div id="sp-panel">
-    <div class="sp-mode-badge">🛒 셀러픽 상품 도구 <span style="margin-left:auto;font-size:10px;opacity:.6">Liverry</span></div>
-
-    <!-- 슬라이드 생성 -->
-    <div class="step active" id="sp-step1">
-      <div class="step-hdr"><div class="snum" style="font-size:15px;">🖼</div><div class="slbl">슬라이드 자동 생성</div><div class="chev open">▼</div></div>
+    <div class="sp-mode-badge">🛒 셀러픽 무게 자동조회 <span style="margin-left:auto;font-size:10px;opacity:.6">Liverry</span></div>
+    <div class="step active" id="sp-step2">
+      <div class="step-hdr"><div class="snum" style="font-size:15px;">⚖</div><div class="slbl">무게 자동 조회</div><div class="chev open">▼</div></div>
       <div class="sbody open">
-        <div id="sp-title-box" class="notice n-info" style="font-size:12px;font-weight:600;margin-bottom:8px;display:none;"></div>
-        <div id="sp-img-stat" class="muted" style="margin-bottom:8px;"></div>
-
-        <div style="background:#f8fafc;border-radius:8px;padding:10px;margin-bottom:10px;">
-          <div style="font-size:11px;font-weight:600;margin-bottom:7px;">슬라이드 옵션</div>
-          <label style="display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:5px;cursor:pointer;">
-            <input type="checkbox" id="sp-opt-title"> 타이틀 슬라이드 추가 <span style="font-size:10px;color:#aaa;">(상단이미지 없을 때만)</span>
-          </label>
-          <label style="display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:5px;cursor:pointer;">
-            <input type="checkbox" id="sp-opt-shipping"> 배송안내 슬라이드 추가 <span style="font-size:10px;color:#aaa;">(하단이미지 없을 때만)</span>
-          </label>
-          <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
-            <input type="checkbox" id="sp-opt-ali"> 알리바바 원본 이미지도 포함
-          </label>
-        </div>
-
-        <div class="brow">
-          <button class="btn btn-out" id="sp-btn-load">📥 불러오기</button>
-          <button class="btn btn-g" id="sp-btn-apply" disabled>✅ 적용</button>
-        </div>
-        <div id="sp-slide-notice" class="notice" style="display:none;margin-top:8px;"></div>
-      </div>
-    </div>
-
-    <!-- 무게 자동조회 -->
-    <div class="step" id="sp-step2">
-      <div class="step-hdr"><div class="snum" style="font-size:15px;">⚖</div><div class="slbl">무게 자동 조회</div><div class="chev">▼</div></div>
-      <div class="sbody">
-        <div class="muted" style="margin-bottom:10px;">원본 상품 링크(타오바오/티몰)에서 실무게·치수를 자동으로 가져옵니다.</div>
+        <div class="muted" style="margin-bottom:10px;">원본 링크(타오바오/티몰)에서 실무게·치수 자동 파싱 후 입력합니다.</div>
         <button class="btn btn-g btn-full" id="sp-btn-weight-auto">🔍 무게 자동 조회</button>
         <div id="sp-weight-result" style="display:none;margin-top:10px;background:#f8fafc;border-radius:8px;padding:10px;">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
             <div><span class="muted">실무게</span><br><strong id="sp-w-actual">-</strong></div>
             <div><span class="muted">부피무게</span><br><strong id="sp-w-vol">-</strong></div>
             <div><span class="muted">치수 (cm)</span><br><strong id="sp-w-dims">-</strong></div>
-            <div><span class="muted">적용무게 ✓</span><br><strong id="sp-w-billing" style="color:var(--g);font-size:14px;">-</strong></div>
+            <div><span class="muted">적용무게 ✓</span><br><strong id="sp-w-billing" style="color:var(--g);font-size:15px;">-</strong></div>
           </div>
         </div>
         <div id="sp-weight-notice" class="notice" style="display:none;margin-top:8px;"></div>
