@@ -305,46 +305,30 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       const urlRes = await chrome.tabs.sendMessage(spTab.id, { type: 'SP_GET_SOURCE_URL' }).catch(() => ({ ok: false }));
       if (!urlRes?.ok) { sendResponse({ error: urlRes?.error || '원본 링크 없음' }); return; }
 
-      // 2. 타오바오 URL → 셀러픽 소싱뷰 URL 변환 (봇 차단 우회)
-      let viewUrl = urlRes.url;
-      let itemId = null;
+      // 2. 타오바오 URL에서 상품 ID·플랫폼 추출
+      let itemId = null, nat = 'taobao';
       try {
         const u = new URL(urlRes.url);
         itemId = u.searchParams.get('id') || (u.pathname.match(/\/(\d{8,})/) || [])[1];
-        const nat = u.hostname.includes('tmall') ? 'tmall' : u.hostname.includes('1688') ? '1688' : 'taobao';
-        if (itemId) viewUrl = `https://www.sellerpick.co.kr/shopAdmin/?menuType=prodStock&mode=sharedProdNewView&nat=${nat}&prodNo=${itemId}`;
+        nat = u.hostname.includes('tmall') ? 'tmall' : u.hostname.includes('1688') ? '1688' : 'taobao';
       } catch {}
-      // itemId 추출 실패 시 에러 반환 (타오바오 직접 접근 방지)
-      if (!itemId) { sendResponse({ error: '타오바오 상품 ID 추출 실패. 원본 URL: ' + urlRes.url }); return; }
-      const srcTab = await chrome.tabs.create({ url: viewUrl, active: true });
+      if (!itemId) { sendResponse({ error: '상품 ID 추출 실패. URL: ' + urlRes.url }); return; }
 
-      // 3. 로드 대기 (최대 12초)
-      await new Promise(resolve => {
-        const t = setTimeout(resolve, 12000);
-        const fn = (tabId, info) => {
-          if (tabId === srcTab.id && info.status === 'complete') {
-            clearTimeout(t); chrome.tabs.onUpdated.removeListener(fn); resolve();
-          }
-        };
-        chrome.tabs.onUpdated.addListener(fn);
-      });
-      await new Promise(r => setTimeout(r, 1500));
+      // 3. 셀러픽 API로 상품 스펙 조회 (탭 열지 않음, 봇차단 없음)
+      const scrape = await chrome.tabs.sendMessage(spTab.id, {
+        type: 'SP_FETCH_SPECS', prodNo: itemId, nat
+      }).catch(() => ({ ok: false }));
 
-      // 4. 스펙 파싱
-      await injectIfNeeded(srcTab.id);
-      const scrape = await chrome.tabs.sendMessage(srcTab.id, { type: 'SP_SCRAPE_WEIGHT' }).catch(() => ({ ok: false }));
-      chrome.tabs.remove(srcTab.id).catch(() => {});
+      if (!scrape?.ok) { sendResponse({ error: scrape?.error || '스펙 조회 실패' }); return; }
 
-      if (!scrape?.ok) { sendResponse({ error: '스펙 파싱 실패' }); return; }
-
-      // 5. 부피무게 계산 (해운 기준 ÷6000)
+      // 4. 부피무게 계산 (해운 기준 ÷6000)
       const actual = scrape.weight || 0;
       const vol = scrape.dims ? (scrape.dims.l * scrape.dims.w * scrape.dims.h) / 6000 : 0;
       const billing = Math.max(actual, vol);
 
-      if (!billing) { sendResponse({ error: '무게/치수 데이터 없음' }); return; }
+      if (!billing) { sendResponse({ error: '이 상품에 무게/치수 정보가 없습니다' }); return; }
 
-      // 6. 셀러픽 무게 필드 입력
+      // 5. 셀러픽 무게 필드 입력
       const setRes = await chrome.tabs.sendMessage(spTab.id, {
         type: 'SP_SET_WEIGHT_FIELD', weight: billing.toFixed(2)
       }).catch(() => ({ ok: false }));

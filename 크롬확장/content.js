@@ -411,13 +411,75 @@
       }catch(e){sendResponse({ok:false,error:e.message});}
       return true;
     }
-    // 타오바오/티몰 스펙 파싱 (새 탭에서 호출)
+    // 셀러픽 API로 타오바오 상품 스펙 조회 (탭 열지 않음)
+    if(msg.type==='SP_FETCH_SPECS'){
+      (async()=>{
+        try{
+          // 셀러픽 상세 API 호출 (같은 도메인이라 쿠키 자동 포함)
+          const res=await fetch('./?menuType=prodStock&mode=json&act=sharedProdNewController',{
+            method:'POST',
+            headers:{'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8','X-Requested-With':'XMLHttpRequest'},
+            body:`nat=${msg.nat}&prodNo=${msg.prodNo}`
+          });
+          const json=await res.json();
+          const html=json.html||json.data||'';
+          if(!html){sendResponse({ok:false,error:'API 응답 없음'});return;}
+
+          // HTML 파싱
+          const doc=new DOMParser().parseFromString(html,'text/html');
+          let weight=null, dims=null;
+
+          // 1차: prod-properties 테이블에서 찾기
+          doc.querySelectorAll('td,th,li,dd,div,span,tr').forEach(el=>{
+            if(weight&&dims) return;
+            const txt=(el.textContent||'').trim();
+            if(!txt||txt.length>300) return;
+            if(!weight){
+              const wKeys=['商品重量','重量','克重','净重','毛重','产品重量','包装重量'];
+              for(const k of wKeys){
+                if(txt.includes(k)){
+                  const m=txt.match(/([\d.]+)\s*(kg|g|克|千克)/i);
+                  if(m){let v=parseFloat(m[1]);if(m[2]==='g'||m[2]==='克')v/=1000;weight=v;break;}
+                }
+              }
+            }
+            if(!dims){
+              const dKeys=['商品尺寸','尺寸','规格','包装尺寸','产品尺寸','长宽高'];
+              for(const k of dKeys){
+                if(txt.includes(k)){
+                  const m=txt.match(/([\d.]+)\s*[×xX*cmCM\s]+\s*([\d.]+)\s*[×xX*cmCM\s]+\s*([\d.]+)/);
+                  if(m){dims={l:+m[1],w:+m[2],h:+m[3]};break;}
+                }
+              }
+            }
+          });
+
+          // 2차: 전체 텍스트에서 무게 패턴 스캔 (테이블 없을 때)
+          if(!weight){
+            const allTxt=html;
+            const wm=allTxt.match(/(?:重量|weight)[:\s：]*?([\d.]+)\s*(kg|g|克|千克)/i);
+            if(wm){let v=parseFloat(wm[1]);if(wm[2]==='g'||wm[2]==='克')v/=1000;weight=v;}
+          }
+          if(!dims){
+            const dm=html.match(/([\d.]+)\s*[×xX*]\s*([\d.]+)\s*[×xX*]\s*([\d.]+)\s*(?:cm|mm|CM|MM)/);
+            if(dm){
+              let l=+dm[1],w=+dm[2],h=+dm[3];
+              if(html.slice(Math.max(0,dm.index-20),dm.index).toLowerCase().includes('mm')){l/=10;w/=10;h/=10;}
+              dims={l,w,h};
+            }
+          }
+
+          sendResponse({ok:true,weight,dims});
+        }catch(e){sendResponse({ok:false,error:e.message});}
+      })();
+      return true;
+    }
+    // 타오바오/티몰 스펙 파싱 (직접 탭에서 호출 - 폴백용)
     if(msg.type==='SP_SCRAPE_WEIGHT'){
       try{
         let weight=null, dims=null;
         const weightKeys=['商品重量','重量','克重','净重','毛重','产品重量'];
         const dimKeys=['商品尺寸','尺寸','规格','包装尺寸','产品尺寸'];
-        // 모든 텍스트 노드 순회
         document.querySelectorAll('li,tr,dd,div,span,td').forEach(el=>{
           if(weight&&dims) return;
           const txt=(el.innerText||'').trim();
