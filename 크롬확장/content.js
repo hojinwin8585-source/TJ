@@ -445,7 +445,7 @@
           // 파싱 함수
           const wKeys=['商品重量','重量','克重','净重','毛重','产品重量','包装重量','무게','중량','무게(g)','무게(kg)'];
           const dKeys=['商品尺寸','尺寸','规格','包装尺寸','产品尺寸','长宽高','외관','가로','세로','높이','크기','사이즈','길이','치수'];
-          const parseWeight=t=>{const m=t.match(/([\d.]+)\s*(kg|g|克|千克|그램|킬로)/i);if(!m)return null;let v=parseFloat(m[1]);if(/g|克|그램/i.test(m[2]))v/=1000;return v;};
+          const parseWeight=t=>{const m=t.match(/([\d.]+)\s*(kg|g|克|千克|그램|킬로)/i);if(!m)return null;let v=parseFloat(m[1]);if(/^(g|克|그램)$/i.test(m[2]))v/=1000;return v;};
           const parseDims=t=>{const m=t.match(/([\d.]+)\s*[×xX*]\s*([\d.]+)\s*[×xX*]\s*([\d.]+)/);return m?{l:+m[1],w:+m[2],h:+m[3]}:null;};
 
           let weight=null, dims=null, optWeights=[];

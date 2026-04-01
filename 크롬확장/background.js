@@ -324,7 +324,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       // 4. 부피무게 계산 (해운 기준 ÷6000)
       const actual = scrape.weight || 0;
       const vol = scrape.dims ? (scrape.dims.l * scrape.dims.w * scrape.dims.h) / 6000 : 0;
-      const billing = Math.max(actual, vol);
+      // optWeights만 있고 단일 weight 없는 경우 → 옵션 중 최솟값 대표값으로 사용
+      const fallbackWeight = (!actual && scrape.optWeights?.length)
+        ? Math.min(...scrape.optWeights.map(o=>o.weight)) : 0;
+      const billing = Math.max(actual || fallbackWeight, vol);
 
       if (!billing) { sendResponse({ error: '이 상품에 무게/치수 정보가 없습니다' }); return; }
 
