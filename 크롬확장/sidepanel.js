@@ -343,7 +343,7 @@ function downloadCsv(data){
 
 // ── SELLERPICK 모드 ────────────────────────────────────────────────
 async function checkSellerpickMode() {
-  const [t] = await chrome.tabs.query({active:true,currentWindow:true});
+  const [t] = await chrome.tabs.query({active:true, lastFocusedWindow:true});
   const isSP = t?.url && t.url.includes('sellerpick') && t.url.includes('shopAdmin');
   document.querySelectorAll('#step1,#step2,#step3').forEach(s => s.style.display = isSP ? 'none' : '');
   document.getElementById('sp-panel').style.display = isSP ? 'block' : 'none';
