@@ -339,6 +339,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         vol: vol ? +vol.toFixed(2) : null,
         billing: +billing.toFixed(2),
         dims: scrape.dims,
+        optWeights: scrape.optWeights || null,
         fieldSet: setRes?.ok
       });
     })();

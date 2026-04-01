@@ -328,6 +328,13 @@ table.lt tr:hover td{background:#f9fbff}
             <div><span class="muted">치수 (cm)</span><br><strong id="sp-w-dims">-</strong></div>
             <div><span class="muted">적용무게 ✓</span><br><strong id="sp-w-billing" style="color:var(--g);font-size:15px;">-</strong></div>
           </div>
+          <!-- 옵션별 무게 테이블 (옵션 2개 이상일 때만 표시) -->
+          <div id="sp-opt-list" style="display:none;margin-top:10px;">
+            <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;">📦 옵션별 무게</div>
+            <div style="border:1px solid var(--bdr);border-radius:7px;overflow:auto;max-height:180px;">
+              <table class="dt"><thead><tr><th>옵션</th><th>실무게</th><th>부피무게</th><th style="color:var(--g)">적용무게</th></tr></thead><tbody id="sp-opt-tbody"></tbody></table>
+            </div>
+          </div>
         </div>
         <div id="sp-weight-notice" class="notice" style="display:none;margin-top:8px;"></div>
       </div>

@@ -458,6 +458,22 @@
             if(!dims){for(const k of dKeys){if(txt.includes(k)){const d=parseDims(txt);if(d){dims=d;break;}}}}
           });
 
+          // 옵션별 무게 수집 (tr/li 단위로 고유 무게값 추출, 2개 이상일 때만)
+          {
+            const seenW=new Set();
+            doc.querySelectorAll('tr,li').forEach(el=>{
+              if(el.children.length>8) return; // 컨테이너 행 제외
+              const txt=(el.textContent||'').trim();
+              if(!txt||txt.length>200) return;
+              const w=parseWeight(txt); if(!w) return;
+              const wKey=w.toFixed(2); if(seenW.has(wKey)) return;
+              seenW.add(wKey);
+              const label=txt.replace(/([\d.]+)\s*(kg|g|克|千克|그램|킬로)/gi,'').replace(/[:\s,;\-|]+/g,' ').trim().slice(0,35)||'옵션';
+              optWeights.push({label,weight:w});
+            });
+            if(optWeights.length<2) optWeights=[]; // 1개면 옵션별 의미 없음
+          }
+
           // 2차: 전체 HTML 패턴 스캔
           if(!weight){const m=html.match(/(?:重量|weight|무게|중량)[^0-9]{0,10}([\d.]+)\s*(kg|g|克|千克)/i);if(m)weight=parseWeight(m[0]);}
           if(!dims){

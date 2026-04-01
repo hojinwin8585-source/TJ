@@ -373,6 +373,25 @@ document.getElementById('sp-btn-weight-auto')?.addEventListener('click', async (
   document.getElementById('sp-w-dims').textContent    = r.dims    ? `${r.dims.l}×${r.dims.w}×${r.dims.h}` : '정보 없음';
   document.getElementById('sp-w-billing').textContent = r.billing + 'kg';
 
+  // 옵션별 무게 테이블
+  const optList = document.getElementById('sp-opt-list');
+  const optBody = document.getElementById('sp-opt-tbody');
+  if (r.optWeights && r.optWeights.length >= 2) {
+    optList.style.display = 'block';
+    const vol = r.vol || 0;
+    optBody.innerHTML = r.optWeights.map(opt => {
+      const billing = Math.max(opt.weight, vol);
+      return `<tr>
+        <td title="${opt.label}" style="max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${opt.label.slice(0,18)}</td>
+        <td>${opt.weight}kg</td>
+        <td>${vol ? vol+'kg' : '-'}</td>
+        <td style="color:var(--g);font-weight:700">${billing.toFixed(2)}kg</td>
+      </tr>`;
+    }).join('');
+  } else {
+    optList.style.display = 'none';
+  }
+
   if (r.fieldSet) spNotice('ok', `✅ ${r.billing}kg 자동 입력 완료`);
   else spNotice('warn', `조회 성공 (${r.billing}kg) — 필드 입력 실패, 수동 확인 필요`);
 });
