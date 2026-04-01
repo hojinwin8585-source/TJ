@@ -432,7 +432,6 @@
     if(msg.type==='SP_FETCH_SPECS'){
       (async()=>{
         try{
-          // 셀러픽 상품 상세 페이지 직접 fetch (쿠키 자동 포함, API 대신 페이지 직접)
           const viewUrl=`/shopAdmin/?menuType=prodStock&mode=sharedProdNewView&nat=${msg.nat}&prodNo=${msg.prodNo}`;
           const pageRes=await fetch(viewUrl,{credentials:'include'});
           const html=await pageRes.text();
@@ -441,51 +440,41 @@
             return;
           }
 
-          // HTML 파싱
           const doc=new DOMParser().parseFromString(html,'text/html');
-          let weight=null, dims=null;
 
-          // 1차: prod-properties 테이블에서 찾기
-          doc.querySelectorAll('td,th,li,dd,div,span,tr').forEach(el=>{
-            if(weight&&dims) return;
+          // 파싱 함수
+          const wKeys=['商品重量','重量','克重','净重','毛重','产品重量','包装重量','무게','중량','무게(g)','무게(kg)'];
+          const dKeys=['商品尺寸','尺寸','规格','包装尺寸','产品尺寸','长宽高','외관','가로','세로','높이','크기','사이즈','길이','치수'];
+          const parseWeight=t=>{const m=t.match(/([\d.]+)\s*(kg|g|克|千克|그램|킬로)/i);if(!m)return null;let v=parseFloat(m[1]);if(/g|克|그램/i.test(m[2]))v/=1000;return v;};
+          const parseDims=t=>{const m=t.match(/([\d.]+)\s*[×xX*]\s*([\d.]+)\s*[×xX*]\s*([\d.]+)/);return m?{l:+m[1],w:+m[2],h:+m[3]}:null;};
+
+          let weight=null, dims=null, optWeights=[];
+
+          // 1차: DOM 요소 순회 (한/중 키워드 모두)
+          doc.querySelectorAll('td,th,li,dd,div,span,tr,p').forEach(el=>{
             const txt=(el.textContent||'').trim();
-            if(!txt||txt.length>300) return;
-            if(!weight){
-              const wKeys=['商品重量','重量','克重','净重','毛重','产品重量','包装重量'];
-              for(const k of wKeys){
-                if(txt.includes(k)){
-                  const m=txt.match(/([\d.]+)\s*(kg|g|克|千克)/i);
-                  if(m){let v=parseFloat(m[1]);if(m[2]==='g'||m[2]==='克')v/=1000;weight=v;break;}
-                }
-              }
-            }
-            if(!dims){
-              const dKeys=['商品尺寸','尺寸','规格','包装尺寸','产品尺寸','长宽高'];
-              for(const k of dKeys){
-                if(txt.includes(k)){
-                  const m=txt.match(/([\d.]+)\s*[×xX*cmCM\s]+\s*([\d.]+)\s*[×xX*cmCM\s]+\s*([\d.]+)/);
-                  if(m){dims={l:+m[1],w:+m[2],h:+m[3]};break;}
-                }
-              }
-            }
+            if(!txt||txt.length>500) return;
+            if(!weight){for(const k of wKeys){if(txt.includes(k)){const v=parseWeight(txt);if(v){weight=v;break;}}}}
+            if(!dims){for(const k of dKeys){if(txt.includes(k)){const d=parseDims(txt);if(d){dims=d;break;}}}}
           });
 
-          // 2차: 전체 텍스트에서 무게 패턴 스캔 (테이블 없을 때)
-          if(!weight){
-            const allTxt=html;
-            const wm=allTxt.match(/(?:重量|weight)[:\s：]*?([\d.]+)\s*(kg|g|克|千克)/i);
-            if(wm){let v=parseFloat(wm[1]);if(wm[2]==='g'||wm[2]==='克')v/=1000;weight=v;}
-          }
+          // 2차: 전체 HTML 패턴 스캔
+          if(!weight){const m=html.match(/(?:重量|weight|무게|중량)[^0-9]{0,10}([\d.]+)\s*(kg|g|克|千克)/i);if(m)weight=parseWeight(m[0]);}
           if(!dims){
-            const dm=html.match(/([\d.]+)\s*[×xX*]\s*([\d.]+)\s*[×xX*]\s*([\d.]+)\s*(?:cm|mm|CM|MM)/);
-            if(dm){
-              let l=+dm[1],w=+dm[2],h=+dm[3];
-              if(html.slice(Math.max(0,dm.index-20),dm.index).toLowerCase().includes('mm')){l/=10;w/=10;h/=10;}
-              dims={l,w,h};
+            const m=html.match(/([\d.]+)\s*[×xX*]\s*([\d.]+)\s*[×xX*]\s*([\d.]+)\s*(?:cm|CM|mm|MM)/);
+            if(m){let d={l:+m[1],w:+m[2],h:+m[3]};if(/mm/i.test(m[0])){d.l/=10;d.w/=10;d.h/=10;}dims=d;}
+          }
+          // 3차: 외관길이 57cm / 가로 37CM / 세로 35CM 처럼 따로 나오는 경우
+          if(!dims){
+            const nums=[];
+            for(const m of html.matchAll(/(?:외관|길이|가로|세로|높이|폭|너비|长|宽|高)[^\d]{0,6}([\d.]+)\s*(?:cm|CM|mm|MM)/g)){
+              nums.push(/mm/i.test(m[0])?+m[1]/10:+m[1]);
+              if(nums.length===3)break;
             }
+            if(nums.length===3)dims={l:nums[0],w:nums[1],h:nums[2]};
           }
 
-          sendResponse({ok:true,weight,dims});
+          sendResponse({ok:true,weight,dims,optWeights:optWeights.length?optWeights:null});
         }catch(e){sendResponse({ok:false,error:e.message});}
       })();
       return true;
