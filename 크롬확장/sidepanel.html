@@ -146,6 +146,19 @@ table.dt td:first-child{color:var(--muted);font-size:10px;text-align:right;width
 .num-inp:focus{border-color:var(--g)}
 
 .mt8{margin-top:8px}.mt4{margin-top:4px}.muted{color:var(--muted);font-size:11px}
+
+/* ── Sellerpick 모드 ── */
+#sp-panel{display:none}
+.sp-mode-badge{background:linear-gradient(135deg,#1a1a2e,#0f3460);color:#fff;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.sp-img-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin:8px 0;max-height:160px;overflow-y:auto;border:1px solid var(--bdr);border-radius:8px;padding:6px}
+.sp-img-grid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:4px;cursor:pointer;border:2px solid transparent;transition:border-color .15s}
+.sp-img-grid img.selected{border-color:var(--g)}
+.sp-img-grid img.excluded{opacity:0.3}
+.sp-opt-row{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid #f0f2f5}
+.sp-opt-row:last-child{border-bottom:none}
+.sp-opt-name{flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--navy)}
+.sp-w-inp{width:58px;padding:4px 6px;border:1.5px solid var(--bdr);border-radius:6px;font-family:inherit;font-size:12px;text-align:center;outline:none}
+.sp-w-inp:focus{border-color:var(--g)}
 /* Live table */
 .live-section{margin-top:10px}
 .live-title{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;display:flex;align-items:center;gap:5px}
@@ -300,7 +313,35 @@ table.lt tr:hover td{background:#f9fbff}
     </div>
   </div>
 
-</div>
+  <!-- ── SELLERPICK 패널 ── -->
+  <div id="sp-panel">
+    <div class="sp-mode-badge">🛒 셀러픽 무게 자동조회 <span style="margin-left:auto;font-size:10px;opacity:.6">Liverry</span></div>
+    <div class="step active" id="sp-step2">
+      <div class="step-hdr"><div class="snum" style="font-size:15px;">⚖</div><div class="slbl">무게 자동 조회</div><div class="chev open">▼</div></div>
+      <div class="sbody open">
+        <div class="muted" style="margin-bottom:10px;">원본 링크(타오바오/티몰)에서 실무게·치수 자동 파싱 후 입력합니다.</div>
+        <button class="btn btn-g btn-full" id="sp-btn-weight-auto">🔍 무게 자동 조회</button>
+        <div id="sp-weight-result" style="display:none;margin-top:10px;background:#f8fafc;border-radius:8px;padding:10px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
+            <div><span class="muted">실무게</span><br><strong id="sp-w-actual">-</strong></div>
+            <div><span class="muted">부피무게</span><br><strong id="sp-w-vol">-</strong></div>
+            <div><span class="muted">치수 (cm)</span><br><strong id="sp-w-dims">-</strong></div>
+            <div><span class="muted">적용무게 ✓</span><br><strong id="sp-w-billing" style="color:var(--g);font-size:15px;">-</strong></div>
+          </div>
+          <!-- 옵션별 무게 테이블 (옵션 2개 이상일 때만 표시) -->
+          <div id="sp-opt-list" style="display:none;margin-top:10px;">
+            <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;">📦 옵션별 무게</div>
+            <div style="border:1px solid var(--bdr);border-radius:7px;overflow:auto;max-height:180px;">
+              <table class="dt"><thead><tr><th>옵션</th><th>실무게</th><th>부피무게</th><th style="color:var(--g)">적용무게</th></tr></thead><tbody id="sp-opt-tbody"></tbody></table>
+            </div>
+          </div>
+        </div>
+        <div id="sp-weight-notice" class="notice" style="display:none;margin-top:8px;"></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end .scroll -->
 
 <script src="xlsx.min.js"></script>
 <script src="sidepanel.js"></script>

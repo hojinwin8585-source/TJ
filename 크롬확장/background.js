@@ -293,5 +293,61 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     handleBotDetected(sender.tab.id);
     sendResponse({ ok: true });
   }
+
+  // ── SELLERPICK 무게 자동조회 ──────────────────────────────────
+  if (msg.type === 'CMD_SP_AUTO_WEIGHT') {
+    (async () => {
+      const spTab = await getActiveTab();
+      if (!spTab) { sendResponse({ error: 'No tab' }); return; }
+      await injectIfNeeded(spTab.id);
+
+      // 1. 원본 URL 추출
+      const urlRes = await chrome.tabs.sendMessage(spTab.id, { type: 'SP_GET_SOURCE_URL' }).catch(() => ({ ok: false }));
+      if (!urlRes?.ok) { sendResponse({ error: urlRes?.error || '원본 링크 없음' }); return; }
+
+      // 2. 타오바오 URL에서 상품 ID·플랫폼 추출
+      let itemId = null, nat = 'taobao';
+      try {
+        const u = new URL(urlRes.url);
+        itemId = u.searchParams.get('id') || (u.pathname.match(/\/(\d{8,})/) || [])[1];
+        nat = u.hostname.includes('tmall') ? 'tmall' : u.hostname.includes('1688') ? '1688' : 'taobao';
+      } catch {}
+      if (!itemId) { sendResponse({ error: '상품 ID 추출 실패. URL: ' + urlRes.url }); return; }
+
+      // 3. 셀러픽 API로 상품 스펙 조회 (탭 열지 않음, 봇차단 없음)
+      const scrape = await chrome.tabs.sendMessage(spTab.id, {
+        type: 'SP_FETCH_SPECS', prodNo: itemId, nat
+      }).catch(() => ({ ok: false }));
+
+      if (!scrape?.ok) { sendResponse({ error: scrape?.error || '스펙 조회 실패' }); return; }
+
+      // 4. 부피무게 계산 (해운 기준 ÷6000)
+      const actual = scrape.weight || 0;
+      const vol = scrape.dims ? (scrape.dims.l * scrape.dims.w * scrape.dims.h) / 6000 : 0;
+      // optWeights만 있고 단일 weight 없는 경우 → 옵션 중 최솟값 대표값으로 사용
+      const fallbackWeight = (!actual && scrape.optWeights?.length)
+        ? Math.min(...scrape.optWeights.map(o=>o.weight)) : 0;
+      const billing = Math.max(actual || fallbackWeight, vol);
+
+      if (!billing) { sendResponse({ error: '이 상품에 무게/치수 정보가 없습니다' }); return; }
+
+      // 5. 셀러픽 무게 필드 입력
+      const setRes = await chrome.tabs.sendMessage(spTab.id, {
+        type: 'SP_SET_WEIGHT_FIELD', weight: billing.toFixed(2)
+      }).catch(() => ({ ok: false }));
+
+      sendResponse({
+        ok: true,
+        actual: actual || null,
+        vol: vol ? +vol.toFixed(2) : null,
+        billing: +billing.toFixed(2),
+        dims: scrape.dims,
+        optWeights: scrape.optWeights || null,
+        fieldSet: setRes?.ok
+      });
+    })();
+    return true;
+  }
+
   return true;
 });

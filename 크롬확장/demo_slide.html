@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>상세페이지 슬라이드 예시 비교</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; background: #f0f0f0; }
+
+  .compare-wrap { display: flex; gap: 30px; padding: 30px; max-width: 1400px; margin: 0 auto; }
+  .col { flex: 1; }
+  .col h2 { text-align: center; padding: 15px; border-radius: 8px 8px 0 0; font-size: 16px; }
+  .col.bad h2  { background: #ff4444; color: #fff; }
+  .col.good h2 { background: #2ecc71; color: #fff; }
+  .slides { background: #fff; border: 2px solid #ddd; padding: 10px; }
+
+  /* ─── BAD: 셀러픽 번역 시뮬레이션 ─── */
+  .bad-slide {
+    position: relative;
+    width: 100%;
+    background: #fdf8f0;
+    margin-bottom: 8px;
+    min-height: 220px;
+    overflow: hidden;
+  }
+  .bad-slide img { width: 100%; display: block; }
+  .bad-text-float {
+    position: absolute;
+    font-size: 28px;
+    font-weight: bold;
+    color: #333;
+    white-space: nowrap;
+  }
+
+  /* ─── GOOD: 우리 방식 ─── */
+  .good-slide {
+    width: 100%;
+    background: #fff;
+    margin-bottom: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+  .good-slide img { width: 100%; display: block; }
+
+  /* 배지 오버레이 */
+  .badge-wrap {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+  }
+  .badge {
+    position: absolute;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 5px 12px;
+    letter-spacing: -0.3px;
+  }
+  .badge.free-ship  { background: #e74c3c; color: #fff; top: 14px; right: 14px; }
+  .badge.direct     { background: #2c3e50; color: #fff; top: 44px; right: 14px; }
+  .badge.as         { background: #27ae60; color: #fff; top: 74px; right: 14px; }
+  .badge.weight     { background: rgba(0,0,0,0.65); color: #fff; bottom: 14px; left: 14px; font-size: 14px; }
+
+  /* 슬라이드 1: 타이틀 슬라이드 */
+  .title-slide {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    padding: 50px 30px;
+    text-align: center;
+    color: #fff;
+    min-height: 260px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+  .title-slide .brand { font-size: 13px; letter-spacing: 4px; color: #aaa; text-transform: uppercase; }
+  .title-slide .name  { font-size: 22px; font-weight: 800; line-height: 1.4; }
+  .title-slide .tags  { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .title-slide .tag   { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; padding: 4px 14px; font-size: 12px; }
+
+  /* 슬라이드: 배송 안내 */
+  .shipping-slide {
+    background: #fff;
+    border: 2px solid #e8e8e8;
+    padding: 30px 24px;
+    margin-bottom: 8px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .ship-item {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 18px 14px;
+    text-align: center;
+  }
+  .ship-item .icon { font-size: 28px; margin-bottom: 8px; }
+  .ship-item .label { font-size: 11px; color: #888; margin-bottom: 4px; }
+  .ship-item .value { font-size: 15px; font-weight: 700; color: #1a1a2e; }
+
+  /* 플레이스홀더 이미지 (실제론 원본 이미지) */
+  .img-placeholder {
+    width: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.6);
+    font-size: 13px;
+    min-height: 200px;
+  }
+
+  .note { text-align: center; font-size: 12px; color: #888; margin-top: 6px; }
+  .slide-label {
+    background: #333;
+    color: #fff;
+    font-size: 10px;
+    padding: 2px 6px;
+    position: absolute;
+    top: 0; left: 0;
+    opacity: 0.7;
+  }
+</style>
+</head>
+<body>
+
+<div style="text-align:center;padding:20px 0 10px;font-size:22px;font-weight:800;color:#333;">
+  상세페이지 슬라이드 비교
+</div>
+<div style="text-align:center;font-size:13px;color:#888;margin-bottom:10px;">
+  셀러픽 번역 결과 vs 원본이미지 + 한국어 슬라이드 방식
+</div>
+
+<div class="compare-wrap">
+
+  <!-- BAD: 셀러픽 번역 -->
+  <div class="col bad">
+    <h2>❌ 셀러픽 번역 결과 (현재)</h2>
+    <div class="slides">
+
+      <!-- 번역된 이미지 시뮬레이션 -->
+      <div class="bad-slide" style="height:260px;">
+        <div class="img-placeholder" style="height:260px;background:linear-gradient(135deg,#fdf3e7,#fce4b3);">
+          원본 제품 사진
+        </div>
+        <!-- 셀러픽이 붙인 번역 텍스트들 (위치 엉망) -->
+        <div class="bad-text-float" style="top:18px;left:8px;font-size:26px;color:#222;">대만 봉황 배</div>
+        <div class="bad-text-float" style="top:18px;right:8px;font-size:22px;color:#444;">슈퍼 브랜드</div>
+        <div class="bad-text-float" style="top:90px;right:20px;font-size:32px;color:#333;">크림</div>
+        <div class="bad-text-float" style="top:140px;left:10px;font-size:11px;color:#555;white-space:normal;line-height:1.5;max-width:280px;">
+          금상 봉배 케이크 선물 상자 향기로운 봉배 케이크 선물 상자 봉황 케이크 선물 상자<br>
+          (10개 포장, 16개 포장) &nbsp;&nbsp; (10개 포장) &nbsp;&nbsp; (10개 포장)
+        </div>
+        <div class="bad-text-float" style="bottom:30px;left:30px;font-size:12px;color:#777;">
+          종합 크림 입력, 종합 크림 및 입력<br>(총 3종류의 케이크) (총 4종류의 케이크)
+        </div>
+      </div>
+      <div class="note">텍스트 위치 엉망, 폰트 깨짐, 겹침</div>
+
+      <div class="bad-slide" style="height:180px;margin-top:8px;">
+        <div class="img-placeholder" style="height:180px;background:linear-gradient(135deg,#e8f5e9,#c8e6c9);">
+          제품 상세 사진
+        </div>
+        <div class="bad-text-float" style="top:20px;left:15px;font-size:18px;">10년 A/S 보증</div>
+        <div class="bad-text-float" style="bottom:20px;right:10px;font-size:16px;color:#e74c3c;">국내 직접배송</div>
+        <div class="bad-text-float" style="bottom:50px;left:10px;font-size:14px;">¥68.00 → ¥45.00</div>
+      </div>
+      <div class="note">지워야 할 문구들 그대로 남아있음</div>
+
+    </div>
+  </div>
+
+  <!-- GOOD: 우리 방식 -->
+  <div class="col good">
+    <h2>✅ 원본이미지 + 한국어 슬라이드 (제안)</h2>
+    <div class="slides">
+
+      <!-- 슬라이드 1: 타이틀 -->
+      <div class="title-slide">
+        <div class="brand">Liverry 해외직구</div>
+        <div class="name">대만 정품 펑리수<br>파인애플 케이크 420g</div>
+        <div class="tags">
+          <span class="tag">해외직배송</span>
+          <span class="tag">정품보장</span>
+          <span class="tag">당일출고</span>
+        </div>
+      </div>
+
+      <!-- 슬라이드 2: 원본 이미지 + 배지 -->
+      <div class="good-slide" style="position:relative;">
+        <div class="img-placeholder" style="height:260px;background:linear-gradient(135deg,#fdf3e7,#fce4b3);">
+          원본 제품 사진 (중국어 없음)
+        </div>
+        <div class="badge-wrap">
+          <div class="badge free-ship">무료배송</div>
+          <div class="badge direct">해외직배송</div>
+          <div class="badge as">AS 가능</div>
+          <div class="badge weight">실무게 1.2kg</div>
+        </div>
+      </div>
+
+      <!-- 슬라이드 3: 배송 안내 -->
+      <div class="shipping-slide">
+        <div style="grid-column:1/-1;text-align:center;font-weight:800;font-size:16px;color:#1a1a2e;margin-bottom:4px;">
+          배송 안내
+        </div>
+        <div class="ship-item">
+          <div class="icon">✈️</div>
+          <div class="label">배송 방법</div>
+          <div class="value">해외 직배송</div>
+        </div>
+        <div class="ship-item">
+          <div class="icon">📦</div>
+          <div class="label">배송비</div>
+          <div class="value">무료배송</div>
+        </div>
+        <div class="ship-item">
+          <div class="icon">📅</div>
+          <div class="label">배송 기간</div>
+          <div class="value">7~14일</div>
+        </div>
+        <div class="ship-item">
+          <div class="icon">🏷️</div>
+          <div class="label">통관/세금</div>
+          <div class="value">포함</div>
+        </div>
+      </div>
+
+      <!-- 슬라이드 4: 원본 이미지 (깨끗) -->
+      <div class="good-slide">
+        <div class="img-placeholder" style="height:200px;background:linear-gradient(135deg,#e8f5e9,#c8e6c9);">
+          원본 제품 상세사진 (중국어 없음)
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<div style="text-align:center;padding:20px;font-size:13px;color:#555;">
+  실제 구현 시 → 플레이스홀더 자리에 alicdn 원본 이미지 자동 삽입<br>
+  배지(무료배송/실무게/배송기간)는 상품별 데이터 자동 반영
+</div>
+
+</body>
+</html>

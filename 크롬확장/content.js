@@ -374,6 +374,180 @@
       sendResponse({text:getFirstItemText(msg.containerSel)});
       return true;
     }
+
+    // ── SELLERPICK 전용 ──────────────────────────────────────────
+    // 원본 소싱 URL 추출 (셀러픽 편집 페이지)
+    if(msg.type==='SP_GET_SOURCE_URL'){
+      try{
+        // 상품 URL만 매칭 (홈페이지/로고 링크 제외)
+        const isProductUrl = href =>
+          (href.includes('taobao.com')&&(href.includes('id=')||href.includes('/item'))) ||
+          (href.includes('tmall.com')&&href.includes('id=')) ||
+          href.includes('1688.com/offer/');
+        // 1순위: 셀러픽 편집 패널의 targetUrl 필드 (가장 정확)
+        const targetInp = document.querySelector('input[name="targetUrl"]');
+        if(targetInp?.value && isProductUrl(targetInp.value))
+          { sendResponse({ok:true,url:targetInp.value}); return true; }
+        // 2순위: <a> 태그에서 상품 URL 찾기
+        const a=[...document.querySelectorAll('a')].find(el=>el.href&&isProductUrl(el.href));
+        if(a) { sendResponse({ok:true,url:a.href}); return true; }
+        // 버튼/링크 텍스트로 찾기 (onclick, data-url, data-href 등 포함)
+        const btn=[...document.querySelectorAll('a,button,span,div')].find(el=>
+          (el.innerText||el.textContent||'').trim().includes('원본')
+        );
+        if(btn){
+          // <a> href
+          if(btn.tagName==='A'&&btn.href) { sendResponse({ok:true,url:btn.href}); return true; }
+          // data-url / data-href / data-link
+          const du=btn.dataset.url||btn.dataset.href||btn.dataset.link||btn.dataset.src;
+          if(du&&(du.includes('taobao')||du.includes('tmall')||du.includes('1688')))
+            { sendResponse({ok:true,url:du}); return true; }
+          // onclick="...url..." 에서 URL 추출
+          const oc=btn.getAttribute('onclick')||'';
+          const om=oc.match(/https?:\/\/[^\s'"]+(?:taobao|tmall|1688)[^\s'"]+/);
+          if(om) { sendResponse({ok:true,url:om[0]}); return true; }
+          // 부모/자식 중 <a> 태그 확인
+          const nearby=btn.closest('a')||btn.querySelector('a');
+          if(nearby?.href) { sendResponse({ok:true,url:nearby.href}); return true; }
+        }
+        // input/textarea/div 등 모든 요소에서 타오바오 URL 탐색
+        const inp=[...document.querySelectorAll('input,textarea')].find(el=>
+          el.value&&isProductUrl(el.value)
+        );
+        if(inp) { sendResponse({ok:true,url:inp.value}); return true; }
+        // 텍스트 노드나 data 속성에 URL이 있는 경우
+        const anyEl=[...document.querySelectorAll('[data-url],[data-src-url],[data-origin-url],[data-prod-url]')].find(el=>{
+          const v=el.dataset.url||el.dataset.srcUrl||el.dataset.originUrl||el.dataset.prodUrl||'';
+          return isProductUrl(v);
+        });
+        if(anyEl){
+          const v=anyEl.dataset.url||anyEl.dataset.srcUrl||anyEl.dataset.originUrl||anyEl.dataset.prodUrl;
+          sendResponse({ok:true,url:v}); return true;
+        }
+        sendResponse({ok:false,error:'원본 링크 없음'});
+      }catch(e){sendResponse({ok:false,error:e.message});}
+      return true;
+    }
+    // 셀러픽 편집 패널 마켓속성 탭에서 무게/치수 파싱
+    if(msg.type==='SP_FETCH_SPECS'){
+      (async()=>{
+        try{
+          // 1단계: 마켓속성 탭 클릭 후 현재 DOM에서 직접 읽기
+          const marketTab=[...document.querySelectorAll('a,button,li,span,div')].find(el=>{
+            const t=(el.textContent||'').trim();
+            return t==='마켓속성'||t.includes('마켓속성');
+          });
+          if(marketTab){ marketTab.click(); await new Promise(r=>setTimeout(r,1000)); }
+
+          // DOM에서 파싱 후 결과 없으면 sharedProdNewView fallback
+          const domEl = document; // 현재 페이지 DOM 전체
+          const doc = { querySelectorAll: s => domEl.querySelectorAll(s) };
+
+          // 파싱 함수
+          const wKeys=['净重毛重','商品重量','重量','克重','净重','毛重','产品重量','包装重量','무게','중량','무게(g)','무게(kg)'];
+          const dKeys=['商品尺寸','尺寸','规格','包装尺寸','产品尺寸','长宽高','외관','가로','세로','높이','크기','사이즈','길이','치수'];
+          const parseWeight=t=>{const m=t.match(/([\d.]+)\s*(kg|g|克|千克|그램|킬로)/i);if(!m)return null;let v=parseFloat(m[1]);if(/^(g|克|그램)$/i.test(m[2]))v/=1000;return v;};
+          const parseDims=t=>{const m=t.match(/([\d.]+)\s*[×xX*]\s*([\d.]+)\s*[×xX*]\s*([\d.]+)/);return m?{l:+m[1],w:+m[2],h:+m[3]}:null;};
+
+          let weight=null, dims=null, optWeights=[];
+
+          // 1차: DOM 요소 순회 (한/중 키워드 모두)
+          doc.querySelectorAll('td,th,li,dd,div,span,tr,p').forEach(el=>{
+            const txt=(el.textContent||'').trim();
+            if(!txt||txt.length>500) return;
+            if(!weight){for(const k of wKeys){if(txt.includes(k)){const v=parseWeight(txt);if(v){weight=v;break;}}}}
+            if(!dims){for(const k of dKeys){if(txt.includes(k)){const d=parseDims(txt);if(d){dims=d;break;}}}}
+          });
+
+          // 옵션별 무게 수집 (tr/li 단위로 고유 무게값 추출, 2개 이상일 때만)
+          {
+            const seenW=new Set();
+            doc.querySelectorAll('tr,li').forEach(el=>{
+              if(el.children.length>8) return; // 컨테이너 행 제외
+              const txt=(el.textContent||'').trim();
+              if(!txt||txt.length>200) return;
+              const w=parseWeight(txt); if(!w) return;
+              const wKey=w.toFixed(2); if(seenW.has(wKey)) return;
+              seenW.add(wKey);
+              const label=txt.replace(/([\d.]+)\s*(kg|g|克|千克|그램|킬로)/gi,'').replace(/[:\s,;\-|]+/g,' ').trim().slice(0,35)||'옵션';
+              optWeights.push({label,weight:w});
+            });
+            if(optWeights.length<2) optWeights=[]; // 1개면 옵션별 의미 없음
+          }
+
+          // 2차: sharedProdNewView fetch fallback (DOM에서 못 찾은 경우)
+          if(!weight||!dims){
+            try{
+              const viewUrl=`/shopAdmin/?menuType=prodStock&mode=sharedProdNewView&nat=${msg.nat}&prodNo=${msg.prodNo}`;
+              const pageRes=await fetch(viewUrl,{credentials:'include'});
+              const html=await pageRes.text();
+              if(html&&html.length>=200){
+                const fdoc=new DOMParser().parseFromString(html,'text/html');
+                fdoc.querySelectorAll('td,th,li,dd,div,span,tr,p').forEach(el=>{
+                  const txt=(el.textContent||'').trim();
+                  if(!txt||txt.length>500) return;
+                  if(!weight){for(const k of wKeys){if(txt.includes(k)){const v=parseWeight(txt);if(v){weight=v;break;}}}}
+                  if(!dims){for(const k of dKeys){if(txt.includes(k)){const d=parseDims(txt);if(d){dims=d;break;}}}}
+                });
+                // 3차: L×W×H 패턴
+                if(!dims){const m=html.match(/([\d.]+)\s*[×xX*]\s*([\d.]+)\s*[×xX*]\s*([\d.]+)\s*(?:cm|CM|mm|MM)/);if(m){let d={l:+m[1],w:+m[2],h:+m[3]};if(/mm/i.test(m[0])){d.l/=10;d.w/=10;d.h/=10;}dims=d;}}
+                // 4차: 외관길이/가로/세로 따로 나오는 경우
+                if(!dims){const nums=[];for(const m of html.matchAll(/(?:외관|길이|가로|세로|높이|폭|너비|长|宽|高)[^\d]{0,6}([\d.]+)\s*(?:cm|CM|mm|MM)/g)){nums.push(/mm/i.test(m[0])?+m[1]/10:+m[1]);if(nums.length===3)break;}if(nums.length===3)dims={l:nums[0],w:nums[1],h:nums[2]};}
+              }
+            }catch{}
+          }
+
+          sendResponse({ok:true,weight,dims,optWeights:optWeights.length?optWeights:null});
+        }catch(e){sendResponse({ok:false,error:e.message});}
+      })();
+      return true;
+    }
+    // 타오바오/티몰 스펙 파싱 (직접 탭에서 호출 - 폴백용)
+    if(msg.type==='SP_SCRAPE_WEIGHT'){
+      try{
+        let weight=null, dims=null;
+        const weightKeys=['商品重量','重量','克重','净重','毛重','产品重量'];
+        const dimKeys=['商品尺寸','尺寸','规格','包装尺寸','产品尺寸'];
+        document.querySelectorAll('li,tr,dd,div,span,td').forEach(el=>{
+          if(weight&&dims) return;
+          const txt=(el.innerText||'').trim();
+          if(!txt||txt.length>200) return;
+          if(!weight) {
+            for(const k of weightKeys){
+              if(txt.includes(k)){
+                const m=txt.match(/([\d.]+)\s*(kg|g|克|千克)/i);
+                if(m){let v=parseFloat(m[1]);if(m[2]==='g'||m[2]==='克')v/=1000;weight=v;break;}
+              }
+            }
+          }
+          if(!dims){
+            for(const k of dimKeys){
+              if(txt.includes(k)){
+                const m=txt.match(/([\d.]+)\s*[×xX*]\s*([\d.]+)\s*[×xX*]\s*([\d.]+)/);
+                if(m){dims={l:+m[1],w:+m[2],h:+m[3]};break;}
+              }
+            }
+          }
+        });
+        sendResponse({ok:true,weight,dims});
+      }catch(e){sendResponse({ok:false,error:e.message});}
+      return true;
+    }
+    // 셀러픽 무게 필드 입력
+    if(msg.type==='SP_SET_WEIGHT_FIELD'){
+      try{
+        const inp=document.querySelector('input[name="r_mpsmWeight"]')
+                ||document.querySelector('input[id*="weight" i]')
+                ||document.querySelector('input[placeholder*="무게"]')
+                ||document.querySelector('input[placeholder*="weight" i]');
+        if(!inp){sendResponse({ok:false,error:'무게 필드 없음'});return true;}
+        inp.value=msg.weight;
+        ['input','change'].forEach(ev=>inp.dispatchEvent(new Event(ev,{bubbles:true})));
+        sendResponse({ok:true});
+      }catch(e){sendResponse({ok:false,error:e.message});}
+      return true;
+    }
+
     return true;
   });
 
