@@ -126,7 +126,7 @@ function removeField(name){
 
 async function runPreview(){
   if(!detectedConfig)return;
-  const r=await sendBg({type:'CMD_SCRAPE',config:detectedConfig});
+  const r=await sendBg({type:'CMD_SCRAPE',config:detectedConfig,preview:true});
   if(r?.data){ previewData=r.data; recCnt.textContent=r.data.length; renderTable(r.data); }
 }
 

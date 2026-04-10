@@ -211,10 +211,10 @@
       // class/aria 기반
       ...document.querySelectorAll('[class*="next"],[aria-label*="다음"],[aria-label*="next"],[class*="pg_next"],[class*="btn_next"],[rel="next"]'),
     ];
-    // 화면에 보이는 것만
+    // 화면에 있거나 스크롤 3화면 이내 버튼 허용 (bottom-of-page 버튼 대응)
     const visible=patterns.filter(el=>{
       const r=el.getBoundingClientRect();
-      return r.width>0&&r.height>0&&r.top<window.innerHeight;
+      return r.width>0&&r.height>0&&r.top<window.innerHeight*3;
     });
     if(!visible.length)return null;
     const el=visible[0];

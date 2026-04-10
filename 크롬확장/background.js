@@ -63,6 +63,7 @@ function handleBotDetected(tabId) {
   if (G.isWaiting) return;
   G.isWaiting = true; G.waitStart = Date.now();
   broadcastPanel({ type: 'BOT_START', sec: G.waitSec });
+  chrome.tabs.sendMessage(tabId, { type: 'SHOW_BOT', sec: G.waitSec }).catch(() => {});
   if (waitTimer) clearTimeout(waitTimer);
   waitTimer = setTimeout(async () => {
     G.isWaiting = false; G.waitStart = null;
@@ -85,7 +86,18 @@ async function clickAndWaitForChange(tabId, selector, containerSel) {
     type: 'CLICK_NEXT', selector
   }).catch(() => ({ clicked: false }));
 
-  if (!clicked?.clicked) return false;
+  if (!clicked?.clicked) {
+    // 앵커 클릭 시 content script 언로드로 sendResponse가 유실될 수 있음
+    // 잠시 대기 후 URL 변경 여부를 확인
+    await new Promise(r => setTimeout(r, 800));
+    const tabCheck = await chrome.tabs.get(tabId).catch(() => null);
+    if (tabCheck?.url && tabCheck.url !== urlBefore) {
+      await new Promise(r => setTimeout(r, 1500));
+      await injectIfNeeded(tabId).catch(() => {});
+      return true;
+    }
+    return false;
+  }
 
   // 최대 15초 대기 (500ms × 30)
   let failStreak = 0;
@@ -256,7 +268,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       }
       try {
         const r = await chrome.tabs.sendMessage(tab.id, { type: 'DO_SCRAPE', config: msg.config });
-        if (r?.data) G.results = G.results.concat(r.data);
+        if (r?.data && !msg.preview) G.results = G.results.concat(r.data);
         sendResponse(r);
       } catch(e) { sendResponse({ error: e.message }); }
     })();
