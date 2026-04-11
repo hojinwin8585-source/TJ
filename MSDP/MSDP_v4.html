@@ -193,6 +193,17 @@ header{background:var(--s1);border-bottom:1px solid var(--border);padding:0 20px
 .slot-add-btn{font-size:9px;color:var(--purple);background:none;border:1px solid var(--border2);border-radius:4px;padding:2px 8px;cursor:pointer;transition:border-color .15s;}
 .slot-add-btn:hover{border-color:var(--purple);}
 .slot-count{font-size:10px;color:var(--green);font-family:'JetBrains Mono',monospace;margin-top:3px;}
+/* 수동 키워드 입력 */
+.manual-kw-area{display:flex;gap:6px;align-items:center;margin:4px 0 6px;padding:6px 8px;background:rgba(155,109,255,.06);border:1px solid rgba(155,109,255,.18);border-radius:6px;}
+.manual-kw-label{font-size:9px;color:var(--purple);font-weight:600;flex-shrink:0;min-width:28px;text-align:center;}
+.manual-kw-input{flex:1;background:var(--s3);border:1px solid var(--border2);border-radius:4px;padding:4px 8px;color:var(--text);font-size:11px;outline:none;min-width:0;}
+.manual-kw-input:focus{border-color:var(--purple);}
+.manual-kw-input::placeholder{color:var(--muted);font-size:10px;}
+.manual-kw-apply{font-size:9px;color:#fff;background:var(--purple);border:none;border-radius:4px;padding:4px 10px;cursor:pointer;flex-shrink:0;font-weight:600;transition:opacity .15s;}
+.manual-kw-apply:hover{opacity:.85;}
+.manual-kw-clear{font-size:9px;color:var(--muted);background:none;border:1px solid var(--border2);border-radius:4px;padding:4px 8px;cursor:pointer;flex-shrink:0;transition:border-color .15s;}
+.manual-kw-clear:hover{border-color:var(--red);color:var(--red);}
+.manual-kw-status{font-size:9px;color:var(--green);flex-shrink:0;}
 /* 축소 완료 행 */
 .collapsed-row{align-items:center;padding:8px 10px;background:rgba(0,229,160,.04);}
 .collapsed-row .mrow-img,.collapsed-row .mrow-img-ph{width:34px;height:34px;border-radius:5px;font-size:14px;flex-shrink:0;}
@@ -398,6 +409,7 @@ let filtered     = [];
 let checkedIds   = new Set();
 let matchData    = {};   // 하위호환용 (→ shuffleData로 마이그레이션됨)
 let shuffleData  = {};   // id → [{ url, cleanUrl, provider, itemId, keyword }, ...]
+let manualKwData = {};   // id → { main, sub } — 수동 키워드 입력
 let collapsedIds = new Set();
 let sentIds      = new Set();
 let cookieMode   = 'local';
@@ -411,6 +423,8 @@ let currentSort     = 'deliv';
   try { loadBanned(); } catch {}
   // shuffleData 로드
   try { shuffleData = JSON.parse(localStorage.getItem('msdp_shuffles') || '{}'); } catch {}
+  // 수동 키워드 로드
+  try { manualKwData = JSON.parse(localStorage.getItem('msdp_manual_kw') || '{}'); } catch {}
   // 구버전 matchData 마이그레이션
   try {
     const old = JSON.parse(localStorage.getItem('msdp_matches') || '{}');
@@ -935,6 +949,21 @@ function renderWorkspace() {
           <button class="btn btn-out btn-xs" onclick="openAlibaba('${p.id}')">🌐 알리바바</button>
           ${p.url?`<a href="${p.url.replace(/'/g,'%27')}" target="_blank" class="btn btn-out btn-xs">🔗원본</a>`:''}
         </div>
+        <div class="manual-kw-area" id="mkw_${p.id}">
+          <span class="manual-kw-label">✏️ 메인</span>
+          <input type="text" class="manual-kw-input" id="mkw_main_${p.id}"
+            value="${escHtml(manualKwData[p.id]?.main || '')}"
+            placeholder="메인 키워드 직접 입력 (예: 여성 원피스)"
+            oninput="setManualKw('${p.id}')">
+          <span class="manual-kw-label">서브</span>
+          <input type="text" class="manual-kw-input" id="mkw_sub_${p.id}"
+            value="${escHtml(manualKwData[p.id]?.sub || '')}"
+            placeholder="서브 키워드 (예: 캐주얼 린넨)"
+            oninput="setManualKw('${p.id}')">
+          <button class="manual-kw-apply" onclick="applyManualKwToSlots('${p.id}')">적용</button>
+          <button class="manual-kw-clear" onclick="clearManualKw('${p.id}')">초기화</button>
+          ${manualKwData[p.id]?.main ? '<span class="manual-kw-status">✓ 수동</span>' : ''}
+        </div>
         <div class="shuffle-slots" id="slots_${p.id}">${slotsHtml}</div>
         <div class="slot-add-group">
           <span style="font-size:9px;color:var(--muted);align-self:center">슬롯</span>
@@ -1052,6 +1081,71 @@ function addSlots(id, targetCount) {
   collapsedIds.delete(id);
   saveShuffles();
   renderWorkspace();
+}
+
+// ── 수동 키워드 입력 ──────────────────────────────────────
+function saveManualKw() { localStorage.setItem('msdp_manual_kw', JSON.stringify(manualKwData)); }
+
+function setManualKw(id) {
+  const mainEl = document.getElementById(`mkw_main_${id}`);
+  const subEl  = document.getElementById(`mkw_sub_${id}`);
+  if (!mainEl || !subEl) return;
+  const main = mainEl.value.trim();
+  const sub  = subEl.value.trim();
+  if (main || sub) {
+    manualKwData[id] = { main, sub };
+  } else {
+    delete manualKwData[id];
+  }
+  saveManualKw();
+  // 상태 표시 업데이트
+  const area = document.getElementById(`mkw_${id}`);
+  const existing = area?.querySelector('.manual-kw-status');
+  if (main && !existing) {
+    const span = document.createElement('span');
+    span.className = 'manual-kw-status';
+    span.textContent = '✓ 수동';
+    area.appendChild(span);
+  } else if (!main && existing) {
+    existing.remove();
+  }
+}
+
+function getEffectiveName(id) {
+  const mkw = manualKwData[id];
+  if (mkw && mkw.main) {
+    return mkw.sub ? (mkw.main + ' ' + mkw.sub) : mkw.main;
+  }
+  const p = allProducts.find(x => x.id === id);
+  return p ? p.name : '';
+}
+
+function applyManualKwToSlots(id) {
+  const mkw = manualKwData[id];
+  if (!mkw || !mkw.main) { toast('⚠️ 메인 키워드를 입력하세요'); return; }
+  const slots = shuffleData[id] || [{}];
+  if (!shuffleData[id]) shuffleData[id] = [{}];
+  const combined = mkw.sub ? (mkw.main + ' ' + mkw.sub) : mkw.main;
+  const prefix = 'Liverry ';
+  const kw = combined.startsWith(prefix) ? combined : (prefix + combined);
+  const finalKw = kw.length > 100 ? kw.slice(0, 100) : kw;
+  shuffleData[id].forEach((s, i) => {
+    shuffleData[id][i] = { ...(s || {}), keyword: finalKw };
+  });
+  saveShuffles();
+  renderWorkspace();
+  toast(`✅ "${finalKw}" → ${shuffleData[id].length}개 슬롯 적용`);
+}
+
+function clearManualKw(id) {
+  delete manualKwData[id];
+  saveManualKw();
+  const mainEl = document.getElementById(`mkw_main_${id}`);
+  const subEl  = document.getElementById(`mkw_sub_${id}`);
+  if (mainEl) mainEl.value = '';
+  if (subEl) subEl.value = '';
+  renderWorkspace();
+  toast('🗑 수동 키워드 초기화');
 }
 
 function expandRow(id) {
@@ -1195,14 +1289,15 @@ async function toggleKwPopup(id, btn) {
   const slotCount = Math.max(1, (shuffleData[id] || [{}]).length);
 
   try {
-    const keywords = await fetchClaudeKeywords(p.name, p.platform, slotCount);
+    const effectiveName = getEffectiveName(id);
+    const keywords = await fetchClaudeKeywords(effectiveName, p.platform, slotCount);
     const cls = p.platform === 'coupang' ? 'coupang' : 'naver';
     // 금지어 포함 키워드 필터링
     const safeKws = keywords.filter(kw => !isKeywordBanned(kw));
     const bannedKws = keywords.filter(kw => isKeywordBanned(kw));
     const kwJson = JSON.stringify(safeKws).replace(/"/g,'&quot;');
     pop.innerHTML = `
-      <div class="kw-popup-title">${p.platform === 'coupang' ? '🔴 쿠팡' : '🟢 네이버'} 키워드 (${keywords.length}개${bannedKws.length?` · <span style="color:#ff6b6b">🚫 ${bannedKws.length}개 제외</span>`:''})</div>
+      <div class="kw-popup-title">${p.platform === 'coupang' ? '🔴 쿠팡' : '🟢 네이버'} 키워드 (${keywords.length}개${bannedKws.length?` · <span style="color:#ff6b6b">🚫 ${bannedKws.length}개 제외</span>`:''}${manualKwData[id]?.main ? ' · <span style="color:var(--purple)">✏️ 수동키워드</span>' : ''})</div>
       <div style="margin-bottom:6px">
         <button class="btn btn-sm" style="width:100%;background:var(--purple);color:#fff;border:none;padding:5px 8px;border-radius:4px;cursor:pointer;font-size:11px"
           onclick="applyAllKw('${id}',${kwJson})">⚡ 전체 적용 (안전 ${safeKws.length}개)</button>
@@ -1393,23 +1488,26 @@ function open1688(id) {
 function openTaobao(id) {
   const p = getProduct(id);
   if (!p) return;
-  if (p.imageUrl) {
+  const searchName = getEffectiveName(id);
+  if (p.imageUrl && !manualKwData[id]?.main) {
     window.open(`https://s.taobao.com/search?search_type=img&img=${encodeURIComponent(p.imageUrl)}`, '_blank');
   } else {
-    window.open(`https://s.taobao.com/search?q=${encodeURIComponent(p.name.slice(0,50))}`, '_blank');
+    window.open(`https://s.taobao.com/search?q=${encodeURIComponent(searchName.slice(0,50))}`, '_blank');
   }
 }
 
 function openText(id) {
   const p = getProduct(id);
   if (!p) return;
-  window.open(`https://s.1688.com/selloffer/offer_search.htm?keywords=${encodeURIComponent(p.name.slice(0,50))}`, '_blank');
+  const searchName = getEffectiveName(id);
+  window.open(`https://s.1688.com/selloffer/offer_search.htm?keywords=${encodeURIComponent(searchName.slice(0,50))}`, '_blank');
 }
 
 function openAlibaba(id) {
   const p = getProduct(id);
   if (!p) return;
-  window.open(`https://www.alibaba.com/trade/search?SearchText=${encodeURIComponent(p.name.slice(0,50))}`, '_blank');
+  const searchName = getEffectiveName(id);
+  window.open(`https://www.alibaba.com/trade/search?SearchText=${encodeURIComponent(searchName.slice(0,50))}`, '_blank');
 }
 
 // ── 셀러픽 전송 ──────────────────────────────────────────
@@ -1626,7 +1724,8 @@ function exportToSellerpickXlsx() {
     const airEl    = document.getElementById(`air_${p.id}`);
     const weight   = weightEl ? weightEl.value : '1';
     const airShip  = airEl    ? airEl.value    : '1';
-    const keywords = extractKeywords(p.name);
+    const effectiveName = getEffectiveName(p.id);
+    const keywords = extractKeywords(effectiveName);
     const slots    = (shuffleData[p.id] || []).filter(s => s?.url);
 
     slots.forEach(s => {
@@ -1673,10 +1772,11 @@ function exportToSellerpickXlsx() {
 
 function clearAll() {
   if (!confirm('초기화하면 불러온 상품이 모두 삭제됩니다. 계속할까요?')) return;
-  allProducts = []; checkedIds.clear(); matchData = {}; shuffleData = {}; sentIds.clear();
+  allProducts = []; checkedIds.clear(); matchData = {}; shuffleData = {}; manualKwData = {}; sentIds.clear();
   localStorage.removeItem('msdp_products');
   localStorage.removeItem('msdp_matches');
   localStorage.removeItem('msdp_shuffles');
+  localStorage.removeItem('msdp_manual_kw');
   applyFilter(); renderWorkspace(); updateStats();
   toast('🗑 초기화 완료');
 }
