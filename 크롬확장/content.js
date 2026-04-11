@@ -1,10 +1,20 @@
-// content.js v7 — 이미지 수집 + 페이지네이션 fix
+// content.js v8 — 쿠팡/네이버 사이트별 분기 + lazy-load 스크롤 대응
 (function(){
   if(window.__NWS7__)return; window.__NWS7__=true;
 
+  // ── 사이트 감지 ───────────────────────────────────────
+  function detectSite(){
+    const url=location.hostname;
+    if(url.includes('coupang'))return 'coupang';
+    if(url.includes('naver')||url.includes('smartstore'))return 'naver';
+    return 'other';
+  }
+  const SITE=detectSite();
+
   function isBot(){
     const t=(document.title+(document.body?.innerText||'')+location.href).toLowerCase();
-    return ['자동입력 방지','보안문자','captcha','비정상적인 접근','접근이 제한','robot check'].some(k=>t.includes(k));
+    return ['자동입력 방지','보안문자','captcha','비정상적인 접근','접근이 제한','robot check',
+            '자동화된 요청','unusual traffic','are you human','인증이 필요','보안 인증'].some(k=>t.includes(k));
   }
   if(isBot()) chrome.runtime.sendMessage({type:'BOT_DETECTED'}).catch(()=>{});
 
@@ -251,6 +261,106 @@
     document.addEventListener('click',onClickNext,true);
   }
 
+  // ── Scroll to load lazy content ─────────────────────────
+  async function scrollToLoadAll(){
+    const totalH=document.body.scrollHeight;
+    const step=window.innerHeight*0.7;
+    let pos=0;
+    while(pos<totalH){
+      pos+=step;
+      window.scrollTo({top:pos,behavior:'smooth'});
+      await new Promise(r=>setTimeout(r,300));
+    }
+    // 최하단 도달 후 추가 대기 (lazy-load 완료)
+    window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
+    await new Promise(r=>setTimeout(r,800));
+    // 최상단 복귀
+    window.scrollTo({top:0,behavior:'smooth'});
+    await new Promise(r=>setTimeout(r,300));
+  }
+
+  // ── 쿠팡 전용 셀렉터 ──────────────────────────────────
+  const COUPANG_SELECTORS={
+    container:[
+      'ul.search-product-list > li',
+      '#productList > li',
+      '.search-product-list__item',
+      '[class*="search-product"] li',
+      'ul[class*="product"] > li',
+    ],
+    name:['a.baby-product-link .name','a .name','.descriptions .name','.name','.product-name','a[class*="product"]'],
+    price:['.price-value','em.sale','.base-price .value','.price .value','strong.price-value'],
+    image:['img.search-product-wrap-img','dt.image img','img[class*="product"]','img[src*="thumbnail"]'],
+    review:['.rating-total-count','.count','[class*="review-count"]','[class*="rating"] .count'],
+    delivery:['.arrival-info','.shipping-fee-txt','.badge.rocket','[class*="arrival"]','[class*="delivery"]'],
+  };
+
+  // ── 네이버 전용 셀렉터 ─────────────────────────────────
+  const NAVER_SELECTORS={
+    container:[
+      '.product_item',
+      '.basicList_item__0T9JD',
+      '[class*="product_item"]',
+      '[class*="basicList_item"]',
+      'li[class*="product"]',
+      '.list_item',
+    ],
+    name:['.product_title','.basicList_title','.product_info_tit a','[class*="product_title"]','[class*="basicList_title"]','a[class*="title"]'],
+    price:['.product_num .num','.price_area .price','[class*="product_num"]','[class*="price"] strong','em.num'],
+    image:['img.product_img','.product_img img','img[class*="product_img"]','img[class*="thumb"]'],
+    review:['.product_etc_count','.etc_count','[class*="etc_count"]'],
+    delivery:['.product_delivery','.delivery','[class*="delivery"]'],
+  };
+
+  // ── 사이트별 auto-detect 보강 ─────────────────────────
+  function siteSpecificDetect(){
+    const sels=SITE==='coupang'?COUPANG_SELECTORS:SITE==='naver'?NAVER_SELECTORS:null;
+    if(!sels)return null;
+
+    // 컨테이너 찾기
+    let containerSel=null, count=0;
+    for(const sel of sels.container){
+      try{
+        const els=document.querySelectorAll(sel);
+        if(els.length>=2){containerSel=sel;count=els.length;break;}
+      }catch{}
+    }
+    if(!containerSel)return null;
+
+    // 필드 매핑
+    const sample=document.querySelector(containerSel);
+    if(!sample)return null;
+
+    const fields=[];
+    function findField(name,selList,isImg){
+      for(const s of selList){
+        try{
+          const el=sample.querySelector(s);
+          if(el){
+            const txt=isImg?(el.getAttribute('data-src')||el.getAttribute('src')||''):(el.innerText||'').trim();
+            if(txt||isImg){
+              fields.push({name,sel:s,sample:txt.slice(0,60),isImage:!!isImg});
+              return;
+            }
+          }
+        }catch{}
+      }
+    }
+    findField('상품명',sels.name);
+    findField('가격',sels.price);
+    findField('이미지URL',sels.image,true);
+    findField('리뷰수',sels.review);
+    findField('배송',sels.delivery);
+
+    if(fields.length<2)return null;
+
+    // 하이라이트
+    document.querySelectorAll('.nws-container-hl').forEach(e=>e.classList.remove('nws-container-hl'));
+    try{document.querySelectorAll(containerSel).forEach(e=>e.classList.add('nws-container-hl'));}catch{}
+
+    return {containerSel,count,fields};
+  }
+
   // ── Scrape ─────────────────────────────────────────────
   function doScrape(config){
     const {containerSel,fields}=config;
@@ -263,8 +373,12 @@
           const el=f.sel?item.querySelector(f.sel):item;
           if(el){
             if(f.isImage||el.tagName==='IMG'){
-              // lazy-load 대응: data-src 우선
-              row[f.name]=el.getAttribute('data-src')||el.getAttribute('data-img-src')||el.getAttribute('data-lazy')||el.getAttribute('data-original')||el.src||'';
+              // lazy-load 대응: 다양한 속성 순서대로 확인
+              row[f.name]=el.getAttribute('data-src')||el.getAttribute('data-img-src')
+                ||el.getAttribute('data-lazy')||el.getAttribute('data-lazy-src')
+                ||el.getAttribute('data-original')||el.getAttribute('data-image')
+                ||el.getAttribute('srcset')?.split(',')[0]?.trim()?.split(' ')[0]
+                ||el.src||'';
             } else {
               row[f.name]=(el.innerText||'').trim().replace(/\n+/g,' ');
               const a=el.tagName==='A'?el:(el.closest('a')||el.querySelector('a'));
@@ -272,8 +386,10 @@
             }
           } else {
             if(f.name==='이미지URL'){
-              const img=item.querySelector('img[data-src],img[data-img-src],img[src]:not([src^="data:"])');
-              row[f.name]=img?(img.getAttribute('data-src')||img.getAttribute('data-img-src')||img.src||''):'';
+              const img=item.querySelector('img[data-src],img[data-img-src],img[data-lazy-src],img[data-original],img[src]:not([src^="data:"])');
+              row[f.name]=img?(img.getAttribute('data-src')||img.getAttribute('data-img-src')
+                ||img.getAttribute('data-lazy-src')||img.getAttribute('data-original')
+                ||img.src||''):'';
             } else row[f.name]='';
           }
         }catch{row[f.name]='';}
@@ -346,7 +462,11 @@
     if(msg.type==='CHECK_BOT'){sendResponse({isBot:isBot()});return;}
     if(msg.type==='SHOW_BOT'){showBotOverlay(msg.sec||60);sendResponse({ok:true});return;}
     if(msg.type==='AUTO_DETECT'){
-      try{const r=autoDetect();sendResponse(r?{ok:true,...r}:{ok:false,error:'감지 실패'});}
+      try{
+        // 사이트 전용 셀렉터 우선 시도, 실패 시 범용 auto-detect
+        const r=siteSpecificDetect()||autoDetect();
+        sendResponse(r?{ok:true,...r,site:SITE}:{ok:false,error:'감지 실패'});
+      }
       catch(e){sendResponse({ok:false,error:e.message});}
       return true;
     }
@@ -361,8 +481,11 @@
       return true;
     }
     if(msg.type==='DO_SCRAPE'){
-      try{const data=doScrape(msg.config);sendResponse({data,count:data.length});}
-      catch(e){sendResponse({error:e.message});}
+      // lazy-load 대응: 스크래핑 전 페이지 전체 스크롤
+      scrollToLoadAll().then(()=>{
+        try{const data=doScrape(msg.config);sendResponse({data,count:data.length,site:SITE});}
+        catch(e){sendResponse({error:e.message});}
+      }).catch(e=>sendResponse({error:e.message}));
       return true;
     }
     if(msg.type==='CLICK_NEXT'){
@@ -377,5 +500,5 @@
     return true;
   });
 
-  chrome.runtime.sendMessage({type:'PAGE_READY',url:location.href,isBot:isBot()}).catch(()=>{});
+  chrome.runtime.sendMessage({type:'PAGE_READY',url:location.href,isBot:isBot(),site:SITE}).catch(()=>{});
 })();
