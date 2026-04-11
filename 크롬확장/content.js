@@ -263,17 +263,23 @@
 
   // ── Scroll to load lazy content ─────────────────────────
   async function scrollToLoadAll(){
-    const totalH=document.body.scrollHeight;
     const step=window.innerHeight*0.7;
-    let pos=0;
-    while(pos<totalH){
+    const maxScrolls=30; // 안전장치: 최대 30회 스크롤
+    let pos=0, scrollCount=0, prevH=0;
+    while(scrollCount<maxScrolls){
+      const totalH=document.body.scrollHeight; // 매번 재측정 (동적 로딩 대응)
+      if(pos>=totalH)break;
       pos+=step;
       window.scrollTo({top:pos,behavior:'smooth'});
-      await new Promise(r=>setTimeout(r,300));
+      await new Promise(r=>setTimeout(r,350));
+      scrollCount++;
+      // 높이가 더 이상 안 늘어나고 끝에 도달하면 종료
+      if(totalH===prevH&&pos>=totalH)break;
+      prevH=totalH;
     }
     // 최하단 도달 후 추가 대기 (lazy-load 완료)
     window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
-    await new Promise(r=>setTimeout(r,800));
+    await new Promise(r=>setTimeout(r,1000));
     // 최상단 복귀
     window.scrollTo({top:0,behavior:'smooth'});
     await new Promise(r=>setTimeout(r,300));
@@ -298,18 +304,18 @@
   // ── 네이버 전용 셀렉터 ─────────────────────────────────
   const NAVER_SELECTORS={
     container:[
-      '.product_item',
-      '.basicList_item__0T9JD',
       '[class*="product_item"]',
       '[class*="basicList_item"]',
+      '.product_item',
       'li[class*="product"]',
       '.list_item',
+      '[class*="product_info_area"]',
     ],
-    name:['.product_title','.basicList_title','.product_info_tit a','[class*="product_title"]','[class*="basicList_title"]','a[class*="title"]'],
-    price:['.product_num .num','.price_area .price','[class*="product_num"]','[class*="price"] strong','em.num'],
-    image:['img.product_img','.product_img img','img[class*="product_img"]','img[class*="thumb"]'],
-    review:['.product_etc_count','.etc_count','[class*="etc_count"]'],
-    delivery:['.product_delivery','.delivery','[class*="delivery"]'],
+    name:['[class*="product_title"]','[class*="basicList_title"]','.product_info_tit a','a[class*="title"]','.product_title'],
+    price:['[class*="product_num"] .num','[class*="price_area"] [class*="price"]','[class*="price"] strong','em.num','[class*="product_num"]'],
+    image:['img[class*="product_img"]','img[class*="thumb"]','.product_img img','img[class*="image"]'],
+    review:['[class*="etc_count"]','[class*="product_etc"]'],
+    delivery:['[class*="delivery"]','[class*="product_delivery"]'],
   };
 
   // ── 사이트별 auto-detect 보강 ─────────────────────────
@@ -337,8 +343,10 @@
         try{
           const el=sample.querySelector(s);
           if(el){
-            const txt=isImg?(el.getAttribute('data-src')||el.getAttribute('src')||''):(el.innerText||'').trim();
-            if(txt||isImg){
+            const txt=isImg
+              ?(el.getAttribute('data-src')||el.getAttribute('data-img-src')||el.getAttribute('data-lazy-src')||el.getAttribute('data-original')||el.getAttribute('src')||'')
+              :(el.innerText||'').trim();
+            if(txt){
               fields.push({name,sel:s,sample:txt.slice(0,60),isImage:!!isImg});
               return;
             }
