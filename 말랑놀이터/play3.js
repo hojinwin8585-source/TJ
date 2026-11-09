@@ -342,21 +342,7 @@ function makeBakery(id,title,steps,o){
 }
 
 const TOPS=[['🍄','버섯','mushroom'],['🫑','피망','pepper'],['🍅','토마토','tomato'],['🫒','올리브','olive'],['🌽','옥수수','corn'],['🍍','파인애플','pineapple'],['🥓','베이컨','bacon']];
-makeBakery('pizza','피자 만들기',[
-  {type:'pour',icon:'🌾',ko:'밀가루',ing:'flour',n:3,amt:.5,unit:'컵',unitEn:'cup',hint:'밀가루 봉지를 눌러서 그릇에 부어요 (3컵)',say:['먼저 밀가루를 세 컵 부어요!','First, pour three cups of flour!']},
-  {type:'pour',icon:'💧',ko:'물',ing:'water',n:2,amt:.25,unit:'컵',unitEn:'cup',c:'#F6EEDD',hint:'물을 두 컵 부어요',say:['물을 두 컵 부어요!','Now two cups of water!']},
-  {type:'add',icon:'🧂',ko:'이스트·소금',items:['yeast','salt','oil'],hint:'이스트, 소금, 올리브유를 하나씩 넣어요',say:['빵이 부풀게 해 주는 이스트, 그리고 소금이랑 올리브유를 넣어요.','Add yeast, salt and olive oil.']},
-  {type:'stir',icon:'🥄',ko:'섞기',rot:3,c:'#F1DDB5',tool:'🥄',hint:'숟가락으로 빙글빙글 세 바퀴 섞어요',say:['숟가락으로 빙글빙글 섞어요!','Stir round and round!'],dk:'다 섞였어요!',de:'All mixed!'},
-  {type:'knead',icon:'👐',ko:'반죽하기',n:8,hint:'반죽을 꾹꾹 눌러서 치대요 (8번)',say:['이제 손으로 꾹꾹 반죽해요!','Now knead the dough with your hands!']},
-  {type:'rise',icon:'⏳',ko:'부풀리기',hint:'천을 덮고 기다려요',say:['반죽이 쉬어야 해요. 천을 덮어 줄까?','The dough needs a rest. Cover it!']},
-  {type:'roll',icon:'🪵',ko:'밀대로 밀기',n:6,hint:'밀대를 왔다 갔다 밀어요',say:['밀대로 쭉쭉 밀어서 동그랗게 펴요!','Roll it flat with the rolling pin!']},
-  {type:'spread',icon:'🥫',ko:'소스 바르기',color:'#D9412B',tool:'🥄',hint:'숟가락으로 토마토소스를 펴 발라요',say:['토마토소스를 쓱쓱 발라요!','Spread the tomato sauce!'],dk:'소스 완성!',de:'Sauce done!'},
-  {type:'sprinkle',icon:'🧀',ko:'치즈',n:8,hint:'콕콕 눌러서 치즈를 뿌려요',say:['치즈를 솔솔 뿌려요!','Sprinkle the cheese!'],dk:'치즈 듬뿍!',de:'Lots of cheese!'},
-  {type:'top',icon:'🍄',ko:'토핑',items:TOPS,hint:'좋아하는 토핑을 3개 이상 올려요',say:['좋아하는 토핑을 올려요!','Add your favorite toppings!']},
-  {type:'oven',icon:'🔥',ko:'굽기',hint:'장갑 끼고 오븐에 넣어요'},
-  {type:'cut',icon:'🍕',ko:'자르기',tool:'🍕',hint:'피자 칼로 잘라요'}
-],{emoji:'🍕',temp:'220도',tempEn:'220 degrees',introKo:'피자 가게에 온 걸 환영해요! 진짜 피자처럼 처음부터 만들어 볼까?',introEn:'Welcome! Let\'s make a real pizza from scratch!',endKo:'맛있는 피자 완성! 다 같이 나눠 먹어요!',endEn:'Pizza is ready! Let\'s share!'});
-
+/* 피자는 pizzashop.js (말랑 피자가게)로 옮겼어요 */
 makeBakery('bread','빵 굽기',[
   {type:'pour',icon:'🌾',ko:'밀가루',ing:'flour',n:3,amt:.5,unit:'컵',unitEn:'cup',hint:'밀가루를 세 컵 부어요',say:['밀가루를 세 컵 부어요!','Pour three cups of flour!']},
   {type:'pour',icon:'🥛',ko:'우유',ing:'milk',n:2,amt:.25,unit:'컵',unitEn:'cup',c:'#FBF4E6',hint:'우유를 두 컵 부어요',say:['우유를 두 컵 부어요!','Pour two cups of milk!']},
