@@ -316,6 +316,33 @@ input{font-family:inherit}
 #cropCanvas{width:100%;height:100%;border-radius:20px;display:block;cursor:grab}
 #cropZoom{width:min(280px,100%);accent-color:var(--berry)}
 
+/* ---------- candy 3D layer ---------- */
+html,body{overscroll-behavior:none}
+body{background:radial-gradient(circle at 12% 8%,rgba(255,255,255,.75) 0 3px,transparent 4px) 0 0/46px 46px,radial-gradient(circle at 70% 60%,rgba(255,201,60,.16) 0 4px,transparent 5px) 0 0/62px 62px,linear-gradient(180deg,#E6F7F1,#DDEEFF),var(--bg)}
+.tile{background:radial-gradient(120% 80% at 30% 0%,rgba(255,255,255,.55),transparent 55%),linear-gradient(180deg,color-mix(in srgb,var(--c) 78%,#fff),var(--c) 55%,color-mix(in srgb,var(--c) 88%,var(--ink)));
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.6),inset 0 -7px 0 rgba(46,42,79,.14),0 7px 0 color-mix(in srgb,var(--c) 62%,var(--ink)),0 14px 18px rgba(46,42,79,.18)}
+.tile:active{transform:translateY(6px) scale(.97);box-shadow:inset 0 3px 0 rgba(255,255,255,.6),inset 0 -4px 0 rgba(46,42,79,.14),0 1px 0 color-mix(in srgb,var(--c) 62%,var(--ink)),0 4px 8px rgba(46,42,79,.18)}
+.tile .ic,.critter .emo,.cust-emo,.wemo,.facebtn{filter:drop-shadow(0 4px 0 rgba(46,42,79,.16))}
+.tile b{color:var(--paper);text-shadow:0 2px 0 color-mix(in srgb,var(--c) 45%,var(--ink)),0 0 5px color-mix(in srgb,var(--c) 40%,var(--ink))}
+.round:not(.holdbtn):not(.gear){background:radial-gradient(circle at 35% 25%,#FFFFFF,#F1F4FA 60%,#E2E7F1)}
+.round{box-shadow:inset 0 -4px 0 rgba(46,42,79,.1),0 5px 0 rgba(46,42,79,.16),0 9px 12px rgba(46,42,79,.12)}
+.round.on{box-shadow:0 0 0 4px var(--ink),0 5px 0 rgba(46,42,79,.16)}
+.btn{background:linear-gradient(180deg,color-mix(in srgb,var(--berry) 72%,#fff),var(--berry));box-shadow:inset 0 3px 0 rgba(255,255,255,.45),0 6px 0 color-mix(in srgb,var(--berry) 62%,var(--ink)),0 10px 14px rgba(46,42,79,.18)}
+.btn.alt{background:linear-gradient(180deg,color-mix(in srgb,var(--soda) 70%,#fff),var(--soda));box-shadow:inset 0 3px 0 rgba(255,255,255,.45),0 6px 0 color-mix(in srgb,var(--soda) 62%,var(--ink)),0 10px 14px rgba(46,42,79,.18)}
+.btn.ghost{background:linear-gradient(180deg,#fff,var(--bg));color:var(--ink);box-shadow:inset 0 3px 0 #fff,0 5px 0 rgba(46,42,79,.14)}
+.chip .dot{background:radial-gradient(circle at 35% 28%,rgba(255,255,255,.75),transparent 45%),var(--c);box-shadow:inset 0 -5px 0 rgba(46,42,79,.14),0 5px 0 rgba(46,42,79,.16),0 8px 10px rgba(46,42,79,.1)}
+.critter,.ccard,.wcard,.friends-tile{box-shadow:inset 0 4px 0 rgba(255,255,255,.9),inset 0 -6px 0 rgba(46,42,79,.06),0 7px 0 rgba(46,42,79,.1),0 12px 16px rgba(46,42,79,.1)}
+.critter:active,.ccard:active,.friends-tile:active{transform:translateY(4px)}
+.key{background:radial-gradient(120% 45% at 50% 0%,rgba(255,255,255,.55),transparent 60%),var(--c)}
+.node{background:radial-gradient(circle at 35% 25%,#fff,#EEF2F8)}
+.quest-banner{box-shadow:inset 0 4px 0 rgba(255,255,255,.4),inset 0 -9px 0 rgba(46,42,79,.12),0 7px 0 #6E55B3,0 16px 22px rgba(110,85,179,.3)}
+.seg{box-shadow:inset 0 2px 0 rgba(255,255,255,.9),0 4px 0 rgba(46,42,79,.12)}
+.seg button.on{background:linear-gradient(180deg,#5A5590,var(--ink));box-shadow:0 3px 0 rgba(0,0,0,.25)}
+.bar h2{text-shadow:0 2px 0 rgba(255,255,255,.9)}
+.section-label{font-size:19px;color:var(--ink);display:flex;align-items:center;gap:6px}
+.tapfx{position:fixed;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;border:3px solid var(--banana);pointer-events:none;z-index:90;animation:tapfx .45s ease-out forwards}
+@keyframes tapfx{to{transform:scale(4);opacity:0}}
+
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
@@ -331,17 +358,34 @@ input{font-family:inherit}
       <div class="gear-wrap"><button class="round gear" id="gear" aria-label="부모 설정, 2초 길게 누르기">⚙️</button>어른: 꾹 2초</div>
     </div>
     <div class="home-scroll">
-      <button class="quest-banner" data-go="map" id="questBanner"></button>
-      <button class="friends-tile" data-go="friends" id="friendsTile"></button>
-      <p class="section-label">자유 놀이</p>
-      <button class="tile" data-go="animals" style="--c:var(--lime)"><span class="ic">🐶</span><b>동물 친구</b></button>
-      <button class="tile" data-go="ice" style="--c:var(--berry)"><span class="ic">🍦</span><b>아이스크림</b></button>
-      <button class="tile" data-go="trace" style="--c:var(--banana)"><span class="ic">✏️</span><b>선 긋기</b></button>
-      <button class="tile" data-go="shapes" style="--c:var(--soda)"><span class="ic">🔺</span><b>모양</b></button>
-      <button class="tile" data-go="jelly" style="--c:var(--grape)"><span class="ic">🍬</span><b>젤리 세기</b></button>
-      <button class="tile" data-go="music" style="--c:var(--peach)"><span class="ic">🎹</span><b>음악회</b></button>
-      <button class="tile" data-go="draw" style="--c:var(--banana)"><span class="ic">🎨</span><b>그림</b></button>
-      <button class="tile" data-go="words" style="--c:var(--lime)"><span class="ic">🍎</span><b>낱말 카드</b></button>
+      <button class="quest-banner" data-go="map" data-en="Adventure" id="questBanner"></button>
+      <button class="friends-tile" data-go="friends" data-en="Our friends" id="friendsTile"></button>
+      <p class="section-label">🏡 엄마 아빠 따라하기</p>
+      <button class="tile" data-go="cake" data-en="Cake shop" style="--c:var(--berry)"><span class="ic">🎂</span><b>케이크</b></button>
+      <button class="tile" data-go="pizza" data-en="Pizza" style="--c:var(--peach)"><span class="ic">🍕</span><b>피자</b></button>
+      <button class="tile" data-go="dishes" data-en="Dishes" style="--c:var(--soda)"><span class="ic">🍽️</span><b>설거지</b></button>
+      <button class="tile" data-go="chores" data-en="Chores" style="--c:var(--lime)"><span class="ic">🧹</span><b>집안일</b></button>
+      <button class="tile" data-go="routine" data-en="My day" style="--c:var(--grape)"><span class="ic">⏰</span><b>하루 일과</b></button>
+      <p class="section-label">👑 꾸미기</p>
+      <button class="tile" data-go="dressup" data-en="Dress up" style="--c:var(--berry)"><span class="ic">👗</span><b>옷 입히기</b></button>
+      <button class="tile" data-go="makeup" data-en="Makeup" style="--c:var(--grape)"><span class="ic">💄</span><b>화장 놀이</b></button>
+      <button class="tile" data-go="nails" data-en="Nails" style="--c:var(--peach)"><span class="ic">💅</span><b>손톱</b></button>
+      <p class="section-label">🚒 직업 놀이</p>
+      <button class="tile" data-go="jobdress" data-en="Job outfits" style="--c:var(--soda)"><span class="ic">🧑‍🚒</span><b>직업 옷</b></button>
+      <button class="tile" data-go="jobmatch" data-en="Match" style="--c:var(--banana)"><span class="ic">🧩</span><b>짝 맞추기</b></button>
+      <button class="tile" data-go="dispatch" data-en="Rescue" style="--c:var(--berry)"><span class="ic">🚨</span><b>출동!</b></button>
+      <p class="section-label">📚 배움 놀이</p>
+      <button class="tile" data-go="animals" data-en="Animals" style="--c:var(--lime)"><span class="ic">🐶</span><b>동물 친구</b></button>
+      <button class="tile" data-go="ice" data-en="Ice cream" style="--c:var(--berry)"><span class="ic">🍦</span><b>아이스크림</b></button>
+      <button class="tile" data-go="trace" data-en="Lines" style="--c:var(--banana)"><span class="ic">✏️</span><b>선 긋기</b></button>
+      <button class="tile" data-go="shapes" data-en="Shapes" style="--c:var(--soda)"><span class="ic">🔺</span><b>모양</b></button>
+      <button class="tile" data-go="jelly" data-en="Counting" style="--c:var(--grape)"><span class="ic">🍬</span><b>젤리 세기</b></button>
+      <button class="tile" data-go="music" data-en="Music" style="--c:var(--peach)"><span class="ic">🎹</span><b>음악회</b></button>
+      <button class="tile" data-go="draw" data-en="Drawing" style="--c:var(--banana)"><span class="ic">🎨</span><b>그림</b></button>
+      <button class="tile" data-go="words" data-en="Words" style="--c:var(--lime)"><span class="ic">🍎</span><b>낱말 카드</b></button>
+      <p class="section-label">🎵 소리·노래</p>
+      <button class="tile" data-go="sounds" data-en="Sounds" style="--c:var(--lime)"><span class="ic">🔊</span><b>소리 놀이</b></button>
+      <button class="tile" data-go="videos" data-en="Songs" style="--c:var(--berry)"><span class="ic">📺</span><b>노래 영상</b></button>
     </div>
   </section>
 
@@ -365,7 +409,7 @@ input{font-family:inherit}
   <section id="friends" class="screen" hidden>
     <div class="bar"><button class="round" data-go="home" aria-label="처음으로">🏠</button><h2>우리 친구들</h2>
       <button class="round holdbtn" id="editHold" aria-label="어른 편집, 2초 길게 누르기">✏️</button></div>
-    <p class="hint" id="editHint">모험을 하나 깰 때마다 새 친구가 생겨요. 어른: ✏️를 2초 꾹 누르면 사진과 이름을 바꿀 수 있어요.</p>
+    <p class="hint" id="editHint">모험을 하나 깰 때마다 새 친구가 생겨요. 어른: ✏️를 2초 꾹 누르면 아기·엄마·아빠·친구 사진과 이름을 바꿀 수 있어요.</p>
     <div class="cast" id="cast"></div>
   </section>
 
@@ -525,10 +569,11 @@ function speak(text,lang){
   if(v)u.voice=v;
   speechSynthesis.speak(u);
 }
+let quietUntil=0;
 function say(ko,en,queue){
   if(!S.sound||!hasTTS)return;
   try{
-    if(!queue)speechSynthesis.cancel();
+    if(!queue&&Date.now()>quietUntil)speechSynthesis.cancel();
     if(S.lang!=='en'&&ko)speak(ko,'ko-KR');
     if(S.lang!=='ko'&&en)speak(en,'en-US');
   }catch(e){}
@@ -599,6 +644,7 @@ const FRIEND_DEF=[['🐰','토끼','bunny'],['🐶','강아지','puppy'],['🐱'
 const FRIEND_COL=['var(--soda)','var(--banana)','var(--lime)','var(--peach)','#5B8DEF','var(--grape)','var(--berry)'];
 const CAST=Object.assign({hero:{name:'',photo:null,setup:false},friends:{}},store.get('mallang_cast',{}));
 CAST.hero=Object.assign({name:'',photo:null,setup:false},CAST.hero);CAST.friends=CAST.friends||{};
+CAST.family=Object.assign({mom:{},dad:{}},CAST.family||{});
 const PROG=Object.assign({cleared:0,pos:0},store.get('mallang_quest',{}));
 const saveProg=()=>store.set('mallang_quest',PROG);
 function saveCast(){
@@ -648,9 +694,8 @@ $('#cropSave').onclick=()=>{
   const out=document.createElement('canvas');out.width=out.height=256;const o=out.getContext('2d'),r=cropRect(256);
   o.fillStyle='#FFFFFF';o.fillRect(0,0,256,256);o.drawImage(crop.img,r.x,r.y,r.w,r.h);
   const data=out.toDataURL('image/jpeg',.85);
-  const prev=photoTarget==='hero'?CAST.hero.photo:(CAST.friends[photoTarget]||{}).photo;
-  if(photoTarget==='hero')CAST.hero.photo=data;else CAST.friends[photoTarget]=Object.assign({},CAST.friends[photoTarget],{photo:data});
-  if(!saveCast()){if(photoTarget==='hero')CAST.hero.photo=prev;else CAST.friends[photoTarget].photo=prev}
+  const slot=photoTarget==='hero'?CAST.hero:(photoTarget==='mom'||photoTarget==='dad')?CAST.family[photoTarget]:(CAST.friends[photoTarget]=CAST.friends[photoTarget]||{});
+  const prev=slot.photo;slot.photo=data;if(!saveCast())slot.photo=prev;
   syncHeroImg();$('#cropper').hidden=true;
   if(afterPhoto)afterPhoto();
 };
@@ -670,17 +715,44 @@ function bump(id){
   store.set('mallang_stats',st);
 }
 function go(id,noEnter){
-  if(games[current]&&games[current].exit)games[current].exit();
+  if(!document.getElementById(id))id='home';
+  try{if(games[current]&&games[current].exit)games[current].exit()}catch(err){console.error(err)}
   document.querySelectorAll('.screen').forEach(s=>{s.hidden=s.id!==id});
   current=id;
   if(id!=='home'){if(!sessionStart)sessionStart=Date.now();bump(id)}
   else if(hasTTS){try{speechSynthesis.cancel()}catch(e){}}
-  if(!noEnter&&games[id]&&games[id].enter)games[id].enter();
+  if(!noEnter&&games[id]&&games[id].enter){
+    try{games[id].enter()}catch(err){console.error(err);if(id!=='home'){toast('앗, 잠깐 문제가 생겨서 처음 화면으로 왔어요.');go('home')}}
+  }
 }
+let lastGo=0,lastGoId='';
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-go]');if(!b)return;
-  actx();sfx.pop();go(b.dataset.go);
+  const now=Date.now();if(now-lastGo<150||(b.dataset.go===lastGoId&&now-lastGo<600))return;lastGo=now;lastGoId=b.dataset.go;
+  actx();sfx.pop();
+  const lb=b.querySelector('b');
+  if(lb&&b.dataset.go!=='home'){say(lb.textContent,b.dataset.en||'');quietUntil=now+1400}
+  go(b.dataset.go);
 });
+/* say the label of segment buttons, then let the game's own speech queue after it */
+document.addEventListener('click',e=>{
+  const b=e.target.closest('.seg button');if(!b)return;
+  const t=(b.dataset.say||b.textContent||'').trim();
+  if(/[가-힣A-Za-z0-9]/.test(t)){say(t,'');quietUntil=Date.now()+700}
+},true);
+/* touch safety: no pinch/double-tap zoom, no long-press menu, quiet when hidden */
+['gesturestart','gesturechange'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
+document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});
+document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault()},{passive:false});
+document.addEventListener('contextmenu',e=>{if(!e.target.closest('input'))e.preventDefault()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&hasTTS){try{speechSynthesis.cancel()}catch(_){}}});
+window.addEventListener('error',e=>console.error('mallang:',e.message));
+window.addEventListener('unhandledrejection',e=>e.preventDefault());
+let lastFx=0;
+document.addEventListener('pointerdown',e=>{
+  const now=performance.now();if(now-lastFx<70||e.target.closest('canvas,.cutsvg,.mkface,.keys,.bkeys'))return;lastFx=now;
+  const f=document.createElement('span');f.className='tapfx';f.style.left=e.clientX+'px';f.style.top=e.clientY+'px';document.body.appendChild(f);setTimeout(()=>f.remove(),480);
+},true);
 setInterval(()=>{
   if(S.timer>0&&sessionStart&&$('#rest').hidden&&Date.now()-sessionStart>S.timer*60000){
     $('#rest').hidden=false;
@@ -1237,6 +1309,12 @@ games.friends=(()=>{
   }
   function render(){
     box.innerHTML='';box.appendChild(card(heroData(),'hero',false));
+    [['mom','👩','엄마','Mommy'],['dad','👨','아빠','Daddy']].forEach(([k,e,ko,en])=>{
+      const ph=CAST.family[k].photo,d=document.createElement(edit?'div':'button');d.className='ccard';
+      d.innerHTML=charaHTML({photo:ph,emoji:e,color:k==='mom'?'var(--grape)':'var(--soda)'})+`<span class="cn">${ko}</span>`+
+        (edit?`<span class="ce"><button class="btn small alt" data-ph="${k}">📷 사진</button>${ph?`<button class="btn small ghost" data-rm="${k}">지우기</button>`:''}</span>`:'');
+      if(!edit)d.onclick=()=>{bounce(d.querySelector('.chara'));sfx.pop();say(ko+'!',en+'!')};
+      box.appendChild(d)});
     FRIEND_DEF.forEach((_,i)=>box.appendChild(card(friendData(i),i,i>=PROG.cleared)));
     $('#editHint').textContent=edit?'사진은 이 기기 안에만 저장돼요. 이름은 칸을 벗어나면 저장돼요. 다 하면 ✏️를 한 번 누르세요.'
       :'모험을 하나 깰 때마다 새 친구가 생겨요. 어른: ✏️를 2초 꾹 누르면 사진과 이름을 바꿀 수 있어요.';
@@ -1244,8 +1322,8 @@ games.friends=(()=>{
   }
   box.addEventListener('click',e=>{
     const ph=e.target.closest('[data-ph]'),rm=e.target.closest('[data-rm]');
-    if(ph){const s=ph.dataset.ph;pickPhoto(s==='hero'?'hero':+s,render)}
-    if(rm){const s=rm.dataset.rm;if(s==='hero')CAST.hero.photo=null;else if(CAST.friends[s])CAST.friends[s].photo=null;saveCast();syncHeroImg();render()}
+    if(ph){const s=ph.dataset.ph;pickPhoto(/^(hero|mom|dad)$/.test(s)?s:+s,render)}
+    if(rm){const s=rm.dataset.rm;if(s==='hero')CAST.hero.photo=null;else if(s==='mom'||s==='dad')CAST.family[s].photo=null;else if(CAST.friends[s])CAST.friends[s].photo=null;saveCast();syncHeroImg();render()}
   });
   box.addEventListener('change',e=>{
     const inp=e.target.closest('input[id^="nm-"]');if(!inp)return;const s=inp.id.slice(3),v=inp.value.trim().slice(0,8);
@@ -1527,6 +1605,8 @@ games.words=(()=>{
   return{enter:()=>show(true)};
 })();
 
+window.ML={$,say,sfx,tone,cheer,confetti,bounce,pick,rand,shuffle,cap,batchim,go,games,charaHTML,heroData,friendData,CAST,saveCast,pickPhoto,hold,store,S,
+  CNT_KO,CNT_EN,EMOJI_FONT,actx,marimba,toothSVG,germSVG,toast,NAMES,current:()=>current,prog:()=>PROG};
 games.home.enter();
 
 /* offline install (works when hosted on https, e.g. GitHub Pages) */
@@ -1535,5 +1615,6 @@ if('serviceWorker' in navigator&&location.protocol==='https:'){
 }
 })();
 </script>
+<script src="play2.js"></script>
 </body>
 </html>
