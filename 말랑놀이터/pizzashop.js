@@ -98,7 +98,7 @@ $('#pzSteps').innerHTML=STEPS.map(([t])=>`<span>${t==='top'?A.pieceSVG('tomato',
 
 /* ---------- small helpers ---------- */
 function hint(t){let h=table.querySelector('.pzhint');if(!h){h=document.createElement('div');h.className='pzhint';table.appendChild(h)}h.textContent=t;h.hidden=!t}
-function size(){const r=table.getBoundingClientRect(),z=Math.round(Math.max(150,Math.min(r.width*.86,r.height*.84)));work.style.width=work.style.height=z+'px'}
+function size(){const r=table.getBoundingClientRect(),low=S&&S.mode==='bowl',z=Math.round(Math.max(150,Math.min(r.width*.86,r.height*.84)*(low?.7:1)));work.style.width=work.style.height=z+'px';work.style.top=low?'64%':''}
 function face(mood,extra){if(!cust)return;custEl.innerHTML=A.animal(cust[0],mood,Object.assign({},cust[2],extra||{}))}
 function hop(){custEl.classList.remove('hop','enter');void custEl.offsetWidth;custEl.classList.add('hop')}
 function stars(){$('#pzStars').innerHTML=Array.from({length:Math.min(10,DATA.served)},()=>'<svg viewBox="0 0 20 20"><path d="M10 1l2.6 5.6 6 .7-4.5 4.1 1.2 6L10 14.5 4.7 17.4l1.2-6L1.4 7.3l6-.7z" fill="#FFC93C" stroke="#5B3A29" stroke-width="1.2"/></svg>').join('')}
@@ -150,12 +150,14 @@ function pour(color){let p=table.querySelector('.pour');if(!p){p=document.create
 
 /* ---------- steps ---------- */
 const STEP={
-  flour(){S.mode='bowl';draw();hint('밀가루 봉지를 눌러서 그릇에 부어요');say(`${cust[1]}가 주문했어요! 먼저 밀가루를 두 컵 부어요.`,'First, pour two cups of flour!');let k=0;
-    toolBtn('flour','밀가루',b=>{b.classList.add('tilt');setTimeout(()=>b.classList.remove('tilt'),500);pour('#FFFDF6');noise(.45,{freq:900,vol:.15});k++;S.level=Math.min(1,S.level+.35);S.color='#FFF8EA';S.mound=k*.5;draw();
-      say(`${CNT_KO_UNIT(k)} 컵!`,`${cap(CNT_EN[k-1])} cup!`);if(k>=2)done()})},
-  water(){S.mode='bowl';draw();hint('물을 부어요');say('물을 부어요. 졸졸졸!','Pour in the water!');let k=0;
-    toolBtn('water','물',b=>{b.classList.add('tilt');setTimeout(()=>b.classList.remove('tilt'),500);pour('#9FD6FF');noise(.6,{type:'lowpass',freq:1300,vol:.2});k++;S.level=Math.min(1,S.level+.2);S.puddle=true;draw();
-      say(`${CNT_KO_UNIT(k)} 컵!`,`${cap(CNT_EN[k-1])} cup!`);if(k>=2)done()})},
+  flour(){S.mode='bowl';draw();hint('');say(`${cust[1]}가 주문했어요! 밀가루 봉지를 꾹 누르고, 위에서 솔솔 부어요!`,'Press and hold to pour the flour from above!');
+    eng=M.P3.makePour(table,work,{kind:'flour',ms:15000,surface:.36,noise,tone,say,
+      onProgress:p=>{S.level=Math.min(.75,.05+.7*p);S.color='#FFF8EA';S.mound=Math.min(1.3,p*1.4);if(!raf)raf=requestAnimationFrame(()=>{raf=0;draw()})},
+      onCup:k=>say(`${CNT_KO_UNIT(k)} 컵!`,`${cap(CNT_EN[k-1])} cup!`,true),onDone:()=>done('밀가루 세 컵, 충분해요!','Three cups of flour. Enough!')})},
+  water(){S.mode='bowl';draw();hint('');say('이번엔 큰 물병! 꾹 누르고 빙글빙글 돌리면서 부어요.','Now the big water bottle! Press, hold and swirl!');const l0=S.level,m0=S.mound;
+    eng=M.P3.makePour(table,work,{kind:'water',ms:15000,surface:.36,noise,tone,say,
+      onProgress:(p,dx)=>{S.level=Math.min(1,l0+(1-l0)*p);S.puddle=true;S.mound=Math.max(.3,m0*(1-p*.6));S.swirl=(S.swirl||0)+dx*.08;if(!raf)raf=requestAnimationFrame(()=>{raf=0;draw()})},
+      onCup:k=>say(`${CNT_KO_UNIT(k)} 컵!`,`${cap(CNT_EN[k-1])} cup!`,true),onDone:()=>{S.swirl=0;done('물도 충분해요! 이제 섞어요.','Enough water! Now let us mix.')}})},
   spoon(){S.mode='bowl';draw();hint('숟가락으로 빙글빙글 섞어요');say('나무 숟가락으로 빙글빙글 섞어요!','Stir round and round!');const c=cursor('spoon');let last=null,acc=0,turns=0;
     H={down:q=>{last=Math.atan2(q[1]+24,q[0]);moveCursor(c,q)},
       move:q=>{moveCursor(c,q);const a=Math.atan2(q[1]+24,q[0]);if(last===null){last=a;return}let d=a-last;if(d>Math.PI)d-=6.283;if(d<-Math.PI)d+=6.283;last=a;if(Math.hypot(q[0],q[1]+24)<12)return;
@@ -163,7 +165,7 @@ const STEP={
         if(!raf)raf=requestAnimationFrame(()=>{raf=0;draw()});if(Math.random()<.12)noise(.12,{type:'lowpass',freq:500,vol:.12});
         const t=Math.floor(acc/6.283);if(t>turns){turns=t;say(`${CNT_KO_UNIT(turns)} 바퀴!`,`${cap(CNT_EN[turns-1])}!`)}
         if(p>=1){S.swirl=0;S.ball=1;draw();done('반죽 덩어리가 됐어요!','It became dough!')}},up:()=>{last=null;hideCursor()}}},
-  hands(){S.mode='board';S.bumps=9;draw();hint('반죽을 꾹꾹 눌러서 치대요');say('도마에 밀가루를 뿌리고, 손으로 꾹꾹 반죽해요!','Knead the dough on the floured board!');const c=cursor('hands');let k=0;
+  hands(){S.mode='board';size();S.bumps=9;draw();hint('반죽을 꾹꾹 눌러서 치대요');say('도마에 밀가루를 뿌리고, 손으로 꾹꾹 반죽해요!','Knead the dough on the floured board!');const c=cursor('hands');let k=0;
     H={down:q=>{moveCursor(c,q);S.squish=true;k++;S.bumps=Math.max(0,9-Math.round(k*9/6));draw();sweepTone(220,150,.12,'sine',.25);say(`꾹! ${CNT_KO[k-1]}`,`Press! ${cap(CNT_EN[k-1])}`);
       setTimeout(()=>{S.squish=false;draw()},160);if(k>=6){H={};setTimeout(()=>done('매끈매끈 반죽 완성!','Smooth dough!'),300)}},up:hideCursor}},
   pin(){S.mode='pizza';S.pz.r=56;S.pz.flour=true;draw();hint('밀대를 왔다 갔다 밀어요');say('밀대로 쭉쭉 밀어서 동그랗게 펴요!','Roll it out with the rolling pin!');const c=cursor('pin');let sx=null,dir=0,tr=0,pass=0;
@@ -239,7 +241,7 @@ function run(){
   H={};tools.innerHTML='';if(eng&&eng.stop)eng.stop();eng=null;hideCursor();
   sec.querySelectorAll('#pzSteps span').forEach((s,k)=>{s.className=k<i?'done':k===i?'on':''});
   const on=sec.querySelector('#pzSteps span.on');if(on)$('#pzSteps').scrollLeft=Math.max(0,on.offsetLeft-$('#pzSteps').clientWidth/2+20);
-  STEP[STEPS[i][0]]();
+  STEP[STEPS[i][0]]();size();
 }
 function showOrder(){
   top.querySelector('.order')?.remove();const o=document.createElement('div');o.className='order';

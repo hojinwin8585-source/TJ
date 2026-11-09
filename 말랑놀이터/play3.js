@@ -84,6 +84,81 @@ const css=`
 const st=document.createElement('style');st.textContent=css;document.head.appendChild(st);
 
 /* =================================================================
+   POUR (hold the finger down: the bag or bottle follows it and pours from above)
+   ================================================================= */
+const OL='#5B3A29',PS=`stroke="${OL}" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"`;
+/* containers are drawn tipped over (opening down-left); POUR_MOUTH gives where the opening sits in the box */
+const POUR_MOUTH={flour:[.24,.72],water:[.16,.78],milk:[.17,.78]};
+const POUR_ART={
+  flour:`<svg viewBox="0 0 140 140"><g transform="rotate(-130 70 70)"><path d="M34 24Q30 12 44 12H96Q110 12 106 24L116 118Q116 130 104 130H36Q24 130 24 118Z" fill="#FFF6E2" ${PS}/>
+    <path d="M30 26L40 40L52 26L64 40L76 26L88 40L100 26L110 40" fill="none" ${PS}/><ellipse cx="70" cy="22" rx="34" ry="8" fill="#FFFFFF" ${PS}/>
+    <rect x="40" y="62" width="60" height="38" rx="10" fill="#F7C548" ${PS}/><path d="M56 92V70M56 74l-6-5M56 80l-6-5M56 86l-6-5M56 74l6-5M56 80l6-5M56 86l6-5" stroke="${OL}" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <text x="80" y="88" font-size="13" text-anchor="middle" fill="${OL}" font-family="Jua,sans-serif">밀가루</text></g></svg>`,
+  water:`<svg viewBox="0 0 140 140"><g transform="rotate(-130 70 70)"><rect x="58" y="4" width="24" height="16" rx="5" fill="#BFE3FF" ${PS}/><path d="M52 22Q52 18 58 18H82Q88 18 88 22V30Q108 40 108 62V122Q108 132 98 132H42Q32 132 32 122V62Q32 40 52 30Z" fill="#E7F5FF" fill-opacity=".9" ${PS}/>
+    <path d="M35 74H105V122Q105 129 98 129H42Q35 129 35 122Z" fill="#6EC1F5"/><path d="M35 74Q52 68 70 74T105 74" fill="#9AD5FA"/><rect x="34" y="92" width="72" height="18" fill="#FF8FB1" opacity=".9"/><text x="70" y="106" font-size="12" text-anchor="middle" fill="#fff" font-family="Jua,sans-serif">물</text>
+    <path d="M44 44V118" stroke="#fff" stroke-width="6" opacity=".7" stroke-linecap="round"/></g></svg>`,
+  milk:`<svg viewBox="0 0 140 140"><g transform="rotate(-130 70 70)"><path d="M40 40L56 14H84L100 40V128H40Z" fill="#FFFFFF" ${PS}/><path d="M56 14L70 4L84 14" fill="#E9F2FB" ${PS}/><path d="M40 40H100" ${PS}/>
+    <rect x="40" y="64" width="60" height="40" fill="#5EA8F2"/><text x="70" y="90" font-size="15" text-anchor="middle" fill="#fff" font-family="Jua,sans-serif">우유</text><circle cx="56" cy="114" r="5" fill="#5EA8F2"/></g></svg>`
+};
+const pcss=`.pourer{position:absolute;width:140px;height:140px;z-index:7;pointer-events:none;transition:left .06s linear,top .06s linear;filter:drop-shadow(0 6px 4px rgba(46,42,79,.25))}
+.pourer svg{width:100%;height:100%;overflow:visible}
+.pourer.idle{animation:floaty 1.4s ease-in-out infinite}
+.pourer.go svg{animation:pshake .14s infinite alternate}
+@keyframes pshake{to{transform:rotate(-4deg) translateY(2px)}}
+.pstream{position:absolute;width:20px;margin-left:-10px;height:0;z-index:6;pointer-events:none;border-radius:10px;opacity:0;transition:opacity .15s}
+.pstream.on{opacity:1}
+.pstream.flour{width:26px;margin-left:-13px;background:repeating-linear-gradient(180deg,rgba(255,255,255,.95) 0 6px,rgba(255,250,236,.7) 6px 12px);background-size:100% 24px;animation:pflow .25s linear infinite}
+.pstream.water,.pstream.milk{background:linear-gradient(90deg,rgba(110,193,245,.75),rgba(200,235,255,.95) 45%,rgba(110,193,245,.8));background-size:100% 30px;animation:pflow .2s linear infinite}
+.pstream.milk{background:linear-gradient(90deg,#EEF4FA,#FFFFFF 45%,#E6EEF6)}
+@keyframes pflow{to{background-position:0 24px}}
+.ppuff{position:absolute;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;pointer-events:none;z-index:6;animation:ppuff .7s ease-out forwards}
+.ppuff.flour{background:radial-gradient(circle,#fff 30%,rgba(255,255,255,0) 70%)}
+.ppuff.water,.ppuff.milk{background:none;border:3px solid rgba(255,255,255,.9);border-radius:50%;animation:pring .6s ease-out forwards}
+@keyframes ppuff{to{transform:translate(var(--dx),-26px) scale(2.6);opacity:0}}
+@keyframes pring{from{transform:scale(.4) scaleY(.4)}to{transform:scale(3) scaleY(.9);opacity:0}}
+.pgauge{position:absolute;right:10px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column-reverse;gap:6px;z-index:6;pointer-events:none}
+.pgauge i{display:block;width:34px;height:34px;border-radius:8px 8px 12px 12px;border:3px solid ${OL};background:linear-gradient(0deg,var(--fc) var(--f,0%),#fff var(--f,0%));transition:background .1s}
+.phold{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);background:#fff;border-radius:999px;padding:6px 14px;font-size:16px;z-index:6;box-shadow:0 3px 0 rgba(46,42,79,.12);pointer-events:none;white-space:nowrap}`;
+{const e=document.createElement('style');e.textContent=pcss;document.head.appendChild(e)}
+function makePour(host,work,o){
+  const ms=o.ms||15000,ab=new AbortController(),opt={signal:ab.signal},kind=o.kind;
+  const box=document.createElement('div');box.className='pourer idle';box.innerHTML=POUR_ART[kind];host.appendChild(box);
+  const stream=document.createElement('div');stream.className='pstream '+kind;host.appendChild(stream);
+  const gauge=document.createElement('div');gauge.className='pgauge';gauge.innerHTML='<i></i><i></i><i></i>';gauge.style.setProperty('--fc',kind==='flour'?'#FFF3D6':kind==='milk'?'#F2F7FF':'#7CC8F7');host.appendChild(gauge);
+  const tip=document.createElement('div');tip.className='phold';tip.textContent='👆 꾹 누르고 있으면 쏟아져요';host.appendChild(tip);
+  let down=null,acc=0,last=0,raf=0,cups=0,fin=false,lastSnd=0,lastFx=0,mx=0,my=0,idleT=0,nags=0,pa=null;
+  const surf=()=>{const hr=host.getBoundingClientRect(),wr=work.getBoundingClientRect();return{y:wr.top-hr.top+wr.height*(o.surface||.36),x0:wr.left-hr.left+wr.width*.14,x1:wr.left-hr.left+wr.width*.86,top:wr.top-hr.top+wr.height*.2,cx:wr.left-hr.left+wr.width/2,hw:host.clientWidth}};
+  const MF=POUR_MOUTH[kind]||[.2,.75];
+  function place(){const sf=surf();box.style.left=(mx-140*MF[0])+'px';box.style.top=(my-140*MF[1])+'px';stream.style.left=mx+'px';stream.style.top=my+'px';stream.style.height=Math.max(8,sf.y-my)+'px';
+    stream.classList.toggle('on',!!down&&!fin&&mx>sf.x0&&mx<sf.x1)}
+  function home(){const sf=surf();mx=sf.cx+30;my=Math.max(110,sf.top-70);place()}
+  function aim(e){const hr=host.getBoundingClientRect(),sf=surf();mx=Math.max(30,Math.min(sf.hw-40,e.clientX-hr.left));my=Math.max(110,Math.min(sf.top-55,e.clientY-hr.top-60));place()}
+  function frame(t){
+    if(fin)return;const dt=last?Math.min(80,t-last):0;last=t;const sf=surf(),inBowl=mx>sf.x0&&mx<sf.x1;
+    if(down&&inBowl){
+      acc+=dt;const p=Math.min(1,acc/ms);o.onProgress&&o.onProgress(p,mx-sf.cx);
+      gauge.querySelectorAll('i').forEach((c,k)=>c.style.setProperty('--f',Math.max(0,Math.min(100,(p*3-k)*100))+'%'));
+      const c=Math.floor(p*3+1e-6);if(c>cups){cups=c;o.onCup&&o.onCup(cups)}
+      if(t-lastSnd>150){lastSnd=t;kind==='flour'?o.noise(.22,{freq:1100,q:.6,vol:.1}):(o.noise(.2,{type:'lowpass',freq:900,vol:.14}),o.tone(500+Math.random()*500,.05,'sine',.05))}
+      if(t-lastFx>90){lastFx=t;const f=document.createElement('span');f.className='ppuff '+kind;f.style.left=(mx+(Math.random()-.5)*20)+'px';f.style.top=sf.y+'px';f.style.setProperty('--dx',((Math.random()-.5)*50)+'px');host.appendChild(f);setTimeout(()=>f.remove(),700)}
+      if(p>=1){finish();return}
+    }
+    if(!down&&!fin){idleT+=dt;if(idleT>5000&&nags<2){idleT=0;nags++;o.say('꾹 누르고 있어 봐! 손가락을 빙글빙글 움직여도 돼요.','Press and hold to pour!')}}else idleT=0;
+    raf=requestAnimationFrame(frame);
+  }
+  function finish(){fin=true;down=null;place();box.classList.remove('go');tip.remove();stream.classList.remove('on');
+    setTimeout(()=>{box.style.transition='transform .4s,opacity .4s';box.style.opacity='0';setTimeout(cleanup,450)},300);o.onDone&&o.onDone()}
+  function cleanup(){ab.abort();cancelAnimationFrame(raf);[box,stream,gauge,tip].forEach(n=>n.remove());host.querySelectorAll('.ppuff').forEach(n=>n.remove())}
+  host.addEventListener('pointerdown',e=>{if(fin||down!==null)return;if(e.target.closest('button'))return;e.preventDefault();try{host.setPointerCapture(e.pointerId)}catch(_){}down=e.pointerId;box.classList.remove('idle');box.classList.add('go');aim(e);tip.style.opacity='.0'},opt);
+  host.addEventListener('pointermove',e=>{if(down!==e.pointerId)return;aim(e)},opt);
+  const up=e=>{if(down!==e.pointerId)return;down=null;box.classList.remove('go');box.classList.add('idle');place();tip.style.opacity='1';tip.textContent='👆 다시 꾹! 더 부어요'};
+  host.addEventListener('pointerup',up,opt);host.addEventListener('pointercancel',up,opt);host.addEventListener('lostpointercapture',up,opt);
+  requestAnimationFrame(()=>{home();raf=requestAnimationFrame(frame)});
+  return{stop:cleanup,progress:()=>acc/ms};
+}
+M.P3={makePour,POUR_ART};
+
+/* =================================================================
    REAL BAKING (pizza · bread · cake)
    ================================================================= */
 const SACK=(label,color)=>`<svg class="sack" viewBox="0 0 54 58"><path d="M8 14Q6 4 14 4H40Q48 4 46 14L50 50Q50 56 44 56H10Q4 56 4 50Z" fill="${color}" stroke="rgba(46,42,79,.25)" stroke-width="2"/><path d="M12 12H42" stroke="rgba(46,42,79,.25)" stroke-width="2"/><text x="27" y="38" font-size="11" text-anchor="middle" fill="#6B4A2A" font-family="Jua,sans-serif">${label}</text></svg>`;
@@ -107,7 +182,7 @@ function makeBakery(id,title,steps,o){
   let svg=work.querySelector('svg'),V,i=0,H={},act=null,eng=null,raf=0;
   const p='bk'+(++uid);
   bar.innerHTML=steps.map((s,k)=>`<span class="rs" data-k="${k}">${s.icon}<i>${s.ko}</i></span>`).join('');
-  function size(){const z=Math.round(Math.max(170,Math.min(stage.clientWidth*.86,stage.clientHeight*.7)));work.style.width=work.style.height=z+'px'}
+  function size(){const low=V&&V.mode==='bowl',z=Math.round(Math.max(170,Math.min(stage.clientWidth*.86,stage.clientHeight*.7)*(low?.78:1)));work.style.width=work.style.height=z+'px';work.style.top=low?'64%':''}
   /* ---------- drawing ---------- */
   function bowlSVG(){
     const lv=V.level,k=.5+.5*lv,ry=25*k,rx=94*k,cy=-30+(1-lv)*14;
@@ -192,13 +267,11 @@ function makeBakery(id,title,steps,o){
   /* ---------- step types ---------- */
   const T={
     pour(s){
-      V.mode='bowl';draw();const ig=ING[s.ing];let k=0;
-      prop(ig.p,ig.ko,b=>{b.classList.add('tilt');setTimeout(()=>b.classList.remove('tilt'),520);stream(ig.color==='#FFFFFF'?'#F4F7FB':ig.color);
-        s.ing==='water'||s.ing==='milk'?noise(.5,{type:'lowpass',freq:1400,vol:.2}):noise(.4,{freq:900,vol:.15});
-        k++;V.level=Math.min(1,V.level+s.amt/s.n);if(V.color==='#FFFFFF'||k===1&&V.level<=s.amt/s.n+.01)V.color=s.c||ig.color;else V.color=lerpC(V.color,s.c||ig.color,.5);
-        if(s.ing==='flour')V.lumps=Math.min(9,V.lumps+3);draw();
-        say(`${CNT_KO_UNIT(k)} ${s.unit}!`,`${cap(CNT_EN[k-1])} ${s.unitEn}!`);
-        if(k>=s.n)done()});
+      V.mode='bowl';draw();const ig=ING[s.ing],l0=V.level,c0=V.color==='#FFFFFF'?(s.c||ig.color):V.color,amt=s.amt,L0=V.lumps;
+      eng=makePour(stage,work,{kind:s.ing==='flour'?'flour':s.ing==='milk'?'milk':'water',ms:15000,surface:.38,noise,tone,say,
+        onProgress:p=>{V.level=Math.min(1,l0+amt*p);V.color=lerpC(c0,s.c||ig.color,p);if(s.ing==='flour')V.lumps=Math.round(L0+6*p);if(!raf)raf=requestAnimationFrame(()=>{raf=0;draw()})},
+        onCup:k=>say(`${CNT_KO_UNIT(k)} ${s.unit}!`,`${cap(CNT_EN[k-1])} ${s.unitEn}!`,true),
+        onDone:()=>done('충분해요! 잘 부었어요!','That is enough! Great pouring!')});
     },
     crack(s){
       V.mode='bowl';draw();let k=0;
@@ -330,7 +403,7 @@ function makeBakery(id,title,steps,o){
     const on=bar.querySelector('.rs.on');if(on)bar.scrollLeft=Math.max(0,on.offsetLeft-bar.clientWidth/2+30);
     if(s.type!=='top'&&s.type!=='decorate')tray.innerHTML=`<span class="hint" style="font-size:16px">${i+1}단계 · ${s.icon} ${s.ko}</span>`;
     hint(stage,s.hint||s.ko);if(s.say)say(s.say[0],s.say[1]);
-    T[s.type](s);
+    T[s.type](s);size();
   }
   function start(){
     L.begin();H={};act=null;if(eng&&eng.stop)eng.stop();eng=null;
@@ -344,8 +417,8 @@ function makeBakery(id,title,steps,o){
 const TOPS=[['🍄','버섯','mushroom'],['🫑','피망','pepper'],['🍅','토마토','tomato'],['🫒','올리브','olive'],['🌽','옥수수','corn'],['🍍','파인애플','pineapple'],['🥓','베이컨','bacon']];
 /* 피자는 pizzashop.js (말랑 피자가게)로 옮겼어요 */
 makeBakery('bread','빵 굽기',[
-  {type:'pour',icon:'🌾',ko:'밀가루',ing:'flour',n:3,amt:.5,unit:'컵',unitEn:'cup',hint:'밀가루를 세 컵 부어요',say:['밀가루를 세 컵 부어요!','Pour three cups of flour!']},
-  {type:'pour',icon:'🥛',ko:'우유',ing:'milk',n:2,amt:.25,unit:'컵',unitEn:'cup',c:'#FBF4E6',hint:'우유를 두 컵 부어요',say:['우유를 두 컵 부어요!','Pour two cups of milk!']},
+  {type:'pour',icon:'🌾',ko:'밀가루',ing:'flour',n:3,amt:.5,unit:'컵',unitEn:'cup',hint:'꾹 누르고 있으면 밀가루가 쏟아져요',say:['밀가루 봉지를 꾹 누르고 위에서 부어요! 세 컵!','Press and hold to pour three cups of flour!']},
+  {type:'pour',icon:'🥛',ko:'우유',ing:'milk',n:3,amt:.3,unit:'컵',unitEn:'cup',c:'#FBF4E6',hint:'꾹 누르고 빙글빙글, 우유를 부어요',say:['우유를 꾹 누르고 부어요. 빙글빙글 돌려도 돼요!','Press and hold to pour the milk!']},
   {type:'crack',icon:'🥚',ko:'달걀',n:1,hint:'달걀을 톡 깨서 넣어요',say:['달걀을 톡 깨서 넣어요!','Crack an egg!']},
   {type:'add',icon:'🧈',ko:'버터·설탕',items:['butter','sugar','yeast'],hint:'버터, 설탕, 이스트를 넣어요',say:['버터랑 설탕, 이스트를 넣어요.','Add butter, sugar and yeast.']},
   {type:'stir',icon:'🥄',ko:'섞기',rot:3,c:'#F4DFB6',tool:'🥄',hint:'빙글빙글 세 바퀴 섞어요',say:['빙글빙글 섞어요!','Stir it up!'],dk:'잘 섞였어요!',de:'Well mixed!'},
