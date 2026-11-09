@@ -335,7 +335,8 @@ function makeSweep(area,{tool,radius=60,onHit,onDone,onMove}){
 }
 
 /* cutter: swipe across a top-view circle (cake / pizza) */
-function makeCutter(box,{top,target=2,onCut,onSeparated,onServe}){
+function makeCutter(box,{top,target=2,onCut,onSeparated,onServe,easy}){
+  const EASY=[0,Math.PI/3,2*Math.PI/3];
   const p='c'+(++uid);let cuts=[],start=null,active=true,served=0,n=0;
   box.innerHTML=`<svg class="cutsvg" viewBox="-120 -120 240 240"><defs></defs><g class="whole"><g id="${p}top">${top}</g></g><g class="cuts"></g><line class="slash" x1="0" y1="0" x2="0" y2="0"/></svg><span class="knife">🔪</span>`;
   const svg=box.querySelector('svg'),defs=svg.querySelector('defs'),cg=svg.querySelector('.cuts'),sl=svg.querySelector('.slash'),whole=svg.querySelector('.whole');
@@ -347,12 +348,15 @@ function makeCutter(box,{top,target=2,onCut,onSeparated,onServe}){
   svg.addEventListener('pointermove',e=>{if(!start||start.id!==e.pointerId)return;const q=pt(e);sl.setAttribute('x2',q[0]);sl.setAttribute('y2',q[1])});
   const up=e=>{
     if(!start||start.id!==e.pointerId)return;const [x1,y1]=start.p,[x2,y2]=pt(e);start=null;sl.classList.remove('on');if(!active)return;
-    const L=Math.hypot(x2-x1,y2-y1);if(L<70)return;
+    const L=Math.hypot(x2-x1,y2-y1);if(easy){doCut(EASY[cuts.length%3]);return}if(L<70)return;
     const t=Math.max(0,Math.min(1,-(x1*(x2-x1)+y1*(y2-y1))/(L*L))),px=x1+t*(x2-x1),py=y1+t*(y2-y1);
     if(Math.hypot(px,py)>60){sfx.soft();return}
     let a=Math.atan2(y2-y1,x2-x1);a=((a%Math.PI)+Math.PI)%Math.PI;a=(Math.round(a/(Math.PI/12))*(Math.PI/12))%Math.PI;
     if(cuts.some(c=>{const d=Math.abs(c-a);return Math.min(d,Math.PI-d)<Math.PI/7})){sfx.soft();return}
-    cuts.push(a);SFX.swish();
+    doCut(a);
+  };
+  function doCut(a){
+    if(!active)return;cuts.push(a);SFX.swish();
     const l=document.createElementNS('http://www.w3.org/2000/svg','line');l.setAttribute('class','cutl');
     l.setAttribute('x1',-108*Math.cos(a));l.setAttribute('y1',-108*Math.sin(a));l.setAttribute('x2',108*Math.cos(a));l.setAttribute('y2',108*Math.sin(a));cg.appendChild(l);
     onCut&&onCut(cuts.length*2);
@@ -374,7 +378,7 @@ function makeCutter(box,{top,target=2,onCut,onSeparated,onServe}){
     svg.querySelectorAll('.pc').forEach(pc=>pc.addEventListener('pointerdown',e=>{e.preventDefault();if(pc.classList.contains('gone'))return;pc.classList.add('gone');served++;onServe&&onServe(served,n)}));
     onSeparated&&onSeparated(n);
   }
-  return{stop(){active=false}};
+  return{stop(){active=false},cut(){if(active)doCut(EASY[cuts.length%3])}};
 }
 
 /* tap-to-pop targets */

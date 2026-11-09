@@ -121,32 +121,36 @@ const pcss=`.pourer{position:absolute;width:140px;height:140px;z-index:7;pointer
 .phold{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);background:#fff;border-radius:999px;padding:6px 14px;font-size:16px;z-index:6;box-shadow:0 3px 0 rgba(46,42,79,.12);pointer-events:none;white-space:nowrap}`;
 {const e=document.createElement('style');e.textContent=pcss;document.head.appendChild(e)}
 function makePour(host,work,o){
-  const ms=o.ms||15000,ab=new AbortController(),opt={signal:ab.signal},kind=o.kind;
+  const ms=o.ms||7000,ab=new AbortController(),opt={signal:ab.signal},kind=o.kind,quiet=!!o.quiet;
   const box=document.createElement('div');box.className='pourer idle';box.innerHTML=POUR_ART[kind];host.appendChild(box);
   const stream=document.createElement('div');stream.className='pstream '+kind;host.appendChild(stream);
-  const gauge=document.createElement('div');gauge.className='pgauge';gauge.innerHTML='<i></i><i></i><i></i>';gauge.style.setProperty('--fc',kind==='flour'?'#FFF3D6':kind==='milk'?'#F2F7FF':'#7CC8F7');host.appendChild(gauge);
-  const tip=document.createElement('div');tip.className='phold';tip.textContent='👆 꾹 누르고 있으면 쏟아져요';host.appendChild(tip);
-  let down=null,acc=0,last=0,raf=0,cups=0,fin=false,lastSnd=0,lastFx=0,mx=0,my=0,idleT=0,nags=0,pa=null;
+  const gauge=document.createElement('div');gauge.className='pgauge';gauge.innerHTML='<i></i><i></i><i></i>';gauge.style.setProperty('--fc',kind==='flour'?'#FFF3D6':kind==='milk'?'#F2F7FF':'#7CC8F7');if(!quiet)host.appendChild(gauge);
+  const tip=document.createElement('div');tip.className='phold';tip.textContent='👆 꾹 누르고 있으면 쏟아져요';if(!quiet)host.appendChild(tip);
+  let down=null,acc=0,last=0,raf=0,cups=0,fin=false,lastSnd=0,lastFx=0,mx=0,my=0,idleT=0,nags=0;
   const surf=()=>{const hr=host.getBoundingClientRect(),wr=work.getBoundingClientRect();return{y:wr.top-hr.top+wr.height*(o.surface||.36),x0:wr.left-hr.left+wr.width*.14,x1:wr.left-hr.left+wr.width*.86,top:wr.top-hr.top+wr.height*.2,cx:wr.left-hr.left+wr.width/2,hw:host.clientWidth}};
   const MF=POUR_MOUTH[kind]||[.2,.75];
   function place(){const sf=surf();box.style.left=(mx-140*MF[0])+'px';box.style.top=(my-140*MF[1])+'px';stream.style.left=mx+'px';stream.style.top=my+'px';stream.style.height=Math.max(8,sf.y-my)+'px';
-    stream.classList.toggle('on',!!down&&!fin&&mx>sf.x0&&mx<sf.x1)}
+    stream.classList.toggle('on',down!==null&&!fin&&mx>sf.x0&&mx<sf.x1)}
   function home(){const sf=surf();mx=sf.cx+30;my=Math.max(110,sf.top-70);place()}
-  function aim(e){const hr=host.getBoundingClientRect(),sf=surf();mx=Math.max(30,Math.min(sf.hw-40,e.clientX-hr.left));my=Math.max(110,Math.min(sf.top-55,e.clientY-hr.top-60));place()}
+  function aim(e){const hr=host.getBoundingClientRect(),sf=surf();mx=e.clientX-hr.left;mx=o.anywhere?Math.max(sf.x0+16,Math.min(sf.x1-16,mx)):Math.max(30,Math.min(sf.hw-40,mx));my=Math.max(110,Math.min(sf.top-55,e.clientY-hr.top-60));place()}
+  function apply(dx){
+    const p=Math.min(1,acc/ms);o.onProgress&&o.onProgress(p,dx||0);
+    gauge.querySelectorAll('i').forEach((c,k)=>c.style.setProperty('--f',Math.max(0,Math.min(100,(p*3-k)*100))+'%'));
+    const c=Math.floor(p*3+1e-6);if(c>cups){cups=c;o.onCup&&o.onCup(cups)}
+    if(p>=1)finish();
+  }
   function frame(t){
     if(fin)return;const dt=last?Math.min(80,t-last):0;last=t;const sf=surf(),inBowl=mx>sf.x0&&mx<sf.x1;
-    if(down&&inBowl){
-      acc+=dt;const p=Math.min(1,acc/ms);o.onProgress&&o.onProgress(p,mx-sf.cx);
-      gauge.querySelectorAll('i').forEach((c,k)=>c.style.setProperty('--f',Math.max(0,Math.min(100,(p*3-k)*100))+'%'));
-      const c=Math.floor(p*3+1e-6);if(c>cups){cups=c;o.onCup&&o.onCup(cups)}
+    if(down!==null&&inBowl){
+      acc+=dt;
       if(t-lastSnd>150){lastSnd=t;kind==='flour'?o.noise(.22,{freq:1100,q:.6,vol:.1}):(o.noise(.2,{type:'lowpass',freq:900,vol:.14}),o.tone(500+Math.random()*500,.05,'sine',.05))}
       if(t-lastFx>90){lastFx=t;const f=document.createElement('span');f.className='ppuff '+kind;f.style.left=(mx+(Math.random()-.5)*20)+'px';f.style.top=sf.y+'px';f.style.setProperty('--dx',((Math.random()-.5)*50)+'px');host.appendChild(f);setTimeout(()=>f.remove(),700)}
-      if(p>=1){finish();return}
+      apply(mx-sf.cx);if(fin)return;
     }
-    if(!down&&!fin){idleT+=dt;if(idleT>5000&&nags<2){idleT=0;nags++;o.say('꾹 누르고 있어 봐! 손가락을 빙글빙글 움직여도 돼요.','Press and hold to pour!')}}else idleT=0;
+    if(!quiet){if(down===null){idleT+=dt;if(idleT>5000&&nags<2){idleT=0;nags++;o.say('꾹 누르고 있어 봐!','Press and hold to pour!')}}else idleT=0}
     raf=requestAnimationFrame(frame);
   }
-  function finish(){fin=true;down=null;place();box.classList.remove('go');tip.remove();stream.classList.remove('on');
+  function finish(){if(fin)return;fin=true;down=null;place();box.classList.remove('go');tip.remove();stream.classList.remove('on');
     setTimeout(()=>{box.style.transition='transform .4s,opacity .4s';box.style.opacity='0';setTimeout(cleanup,450)},300);o.onDone&&o.onDone()}
   function cleanup(){ab.abort();cancelAnimationFrame(raf);[box,stream,gauge,tip].forEach(n=>n.remove());host.querySelectorAll('.ppuff').forEach(n=>n.remove())}
   host.addEventListener('pointerdown',e=>{if(fin||down!==null)return;if(e.target.closest('button'))return;e.preventDefault();try{host.setPointerCapture(e.pointerId)}catch(_){}down=e.pointerId;box.classList.remove('idle');box.classList.add('go');aim(e);tip.style.opacity='.0'},opt);
@@ -154,7 +158,9 @@ function makePour(host,work,o){
   const up=e=>{if(down!==e.pointerId)return;down=null;box.classList.remove('go');box.classList.add('idle');place();tip.style.opacity='1';tip.textContent='👆 다시 꾹! 더 부어요'};
   host.addEventListener('pointerup',up,opt);host.addEventListener('pointercancel',up,opt);host.addEventListener('lostpointercapture',up,opt);
   requestAnimationFrame(()=>{home();raf=requestAnimationFrame(frame)});
-  return{stop:cleanup,progress:()=>acc/ms};
+  return{stop:cleanup,progress:()=>acc/ms,add(d){if(fin)return;acc+=d;
+    /* show a short pour so the child sees what "helping" looks like */
+    box.classList.add('go');stream.classList.add('on');setTimeout(()=>{if(down===null){box.classList.remove('go');stream.classList.remove('on')}},700);apply(0)}};
 }
 M.P3={makePour,POUR_ART};
 
@@ -268,7 +274,7 @@ function makeBakery(id,title,steps,o){
   const T={
     pour(s){
       V.mode='bowl';draw();const ig=ING[s.ing],l0=V.level,c0=V.color==='#FFFFFF'?(s.c||ig.color):V.color,amt=s.amt,L0=V.lumps;
-      eng=makePour(stage,work,{kind:s.ing==='flour'?'flour':s.ing==='milk'?'milk':'water',ms:15000,surface:.38,noise,tone,say,
+      eng=makePour(stage,work,{kind:s.ing==='flour'?'flour':s.ing==='milk'?'milk':'water',ms:7000,anywhere:true,surface:.38,noise,tone,say,
         onProgress:p=>{V.level=Math.min(1,l0+amt*p);V.color=lerpC(c0,s.c||ig.color,p);if(s.ing==='flour')V.lumps=Math.round(L0+6*p);if(!raf)raf=requestAnimationFrame(()=>{raf=0;draw()})},
         onCup:k=>say(`${CNT_KO_UNIT(k)} ${s.unit}!`,`${cap(CNT_EN[k-1])} ${s.unitEn}!`,true),
         onDone:()=>done('충분해요! 잘 부었어요!','That is enough! Great pouring!')});
