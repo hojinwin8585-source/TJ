@@ -360,7 +360,9 @@ body{background:radial-gradient(circle at 12% 8%,rgba(255,255,255,.75) 0 3px,tra
     <div class="home-scroll">
       <button class="quest-banner" data-go="map" data-en="Adventure" id="questBanner"></button>
       <button class="friends-tile" data-go="friends" data-en="Our friends" id="friendsTile"></button>
+      <button class="friends-tile stamp-tile" data-go="stamps" data-en="Praise stamps" id="stampTile"><b>⭐ 칭찬 도장판</b></button>
       <p class="section-label">🏡 엄마 아빠 따라하기</p>
+      <button class="tile" data-go="bread" data-en="Bread" style="--c:var(--banana)"><span class="ic">🥐</span><b>빵 굽기</b></button>
       <button class="tile" data-go="cake" data-en="Cake shop" style="--c:var(--berry)"><span class="ic">🎂</span><b>케이크</b></button>
       <button class="tile" data-go="pizza" data-en="Pizza" style="--c:var(--peach)"><span class="ic">🍕</span><b>피자</b></button>
       <button class="tile" data-go="dishes" data-en="Dishes" style="--c:var(--soda)"><span class="ic">🍽️</span><b>설거지</b></button>
@@ -381,6 +383,7 @@ body{background:radial-gradient(circle at 12% 8%,rgba(255,255,255,.75) 0 3px,tra
       <button class="tile" data-go="shapes" data-en="Shapes" style="--c:var(--soda)"><span class="ic">🔺</span><b>모양</b></button>
       <button class="tile" data-go="jelly" data-en="Counting" style="--c:var(--grape)"><span class="ic">🍬</span><b>젤리 세기</b></button>
       <button class="tile" data-go="music" data-en="Music" style="--c:var(--peach)"><span class="ic">🎹</span><b>음악회</b></button>
+      <button class="tile" data-go="rhythm" data-en="Rhythm" style="--c:var(--soda)"><span class="ic">🥁</span><b>리듬 박수</b></button>
       <button class="tile" data-go="draw" data-en="Drawing" style="--c:var(--banana)"><span class="ic">🎨</span><b>그림</b></button>
       <button class="tile" data-go="words" data-en="Words" style="--c:var(--lime)"><span class="ic">🍎</span><b>낱말 카드</b></button>
       <p class="section-label">🎵 소리·노래</p>
@@ -511,6 +514,7 @@ body{background:radial-gradient(circle at 12% 8%,rgba(255,255,255,.75) 0 3px,tra
     <div class="row"><span>하루 놀이 시간</span><div class="seg" id="setTimer"><button data-v="10">10분</button><button data-v="15">15분</button><button data-v="20">20분</button><button data-v="0">끄기</button></div></div>
     <div class="row"><span>소리</span><div class="seg" id="setSound"><button data-v="1">켜기</button><button data-v="0">끄기</button></div></div>
     <div class="row"><span>주인공·친구 사진</span><button class="btn small alt" id="openFriendsEdit">사진 바꾸기</button></div>
+    <div class="row"><span>칭찬 도장·진짜 드레스</span><button class="btn small alt" id="openStamps">도장판 열기</button></div>
     <div class="row"><span>모험 진행</span><button class="pillhold holdbtn" id="resetQuest">처음부터 다시 (꾹 2초)</button></div>
     <h4>오늘 논 놀이</h4>
     <ul id="todayList"></ul>
@@ -619,6 +623,7 @@ function confetti(n=18){
   }
 }
 function cheer(ko,en){
+  try{document.dispatchEvent(new CustomEvent('ml-cheer',{detail:current}))}catch(e){}
   sfx.ding();confetti();const p=pick(PRAISE);
   say(ko?ko+' '+p[0]:p[0],en?en+' '+p[1]:p[1]);
 }
@@ -785,6 +790,7 @@ hold($('#gear'),2000,()=>{
   $('#settings').hidden=false;
 });
 $('#closeSettings').onclick=()=>{$('#settings').hidden=true};
+$('#openStamps').onclick=()=>{$('#settings').hidden=true;go('stamps')};
 $('#openFriendsEdit').onclick=()=>{$('#settings').hidden=true;go('friends');games.friends.setEdit(true)};
 hold($('#resetQuest'),2000,()=>{PROG.cleared=0;PROG.pos=0;saveProg();toast('모험을 처음부터 다시 시작해요. 친구 사진은 그대로 남아 있어요.');games.home.enter()});
 
@@ -1269,6 +1275,7 @@ games.stage=(()=>{
     clear();dots(3);
     const first=si===PROG.cleared,last=si===STAGES.length-1;
     if(first)PROG.cleared++;PROG.pos=si;saveProg();
+    try{document.dispatchEvent(new CustomEvent('ml-stageclear',{detail:si}))}catch(e){}
     let html='<div class="reward"><div class="rstar">⭐</div>';
     if(first&&si<FRIEND_DEF.length){
       const f=friendData(si);html+=charaHTML(f)+`<h3>새 친구 ${esc(f.name)}!</h3>`;
@@ -1616,5 +1623,6 @@ if('serviceWorker' in navigator&&location.protocol==='https:'){
 })();
 </script>
 <script src="play2.js"></script>
+<script src="play3.js"></script>
 </body>
 </html>
