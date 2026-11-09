@@ -118,8 +118,19 @@ input{font-family:inherit}
   background:linear-gradient(180deg,#6E55B3 0%,#A98BEA 13%,#BDE8FF 24%,#DDF4FF 33%,#7FD3F7 37%,#4FB6EA 45%,#A8E08A 49%,#8FD47A 70%,#7CC96B 100%)}
 .map svg{position:absolute;inset:0;width:100%;height:100%}
 .map .deco{position:absolute;transform:translate(-50%,-50%);line-height:1;pointer-events:none}
-.node{position:absolute;transform:translate(-50%,-50%);width:64px;height:64px;border-radius:50%;background:var(--paper);font-size:32px;border:4px solid var(--paper);
+.node{position:absolute;transform:translate(-50%,-50%);width:84px;height:84px;border-radius:50%;background:var(--paper);font-size:42px;border:4px solid var(--paper);
   box-shadow:0 5px 0 rgba(46,42,79,.18);display:grid;place-items:center;padding:0;z-index:2}
+.node::after{content:"";position:absolute;inset:-18px;border-radius:50%}
+.gocard{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:7;border:0;border-radius:28px;padding:12px 26px 12px 16px;display:flex;align-items:center;gap:12px;
+  background:linear-gradient(180deg,#FFF6C9,#FFD95A);box-shadow:inset 0 3px 0 #fff,0 7px 0 #D9A21F,0 14px 20px rgba(46,42,79,.25);animation:gopulse 1.2s ease-in-out infinite;white-space:nowrap}
+.gocard .gi{font-size:56px;line-height:1}
+.gocard .gt{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left}
+.gocard .gt b{font-weight:400;font-size:26px;color:var(--ink)}
+.gocard .gt small{font-size:17px;color:#9A5B00}
+.gocard::after{content:"";position:absolute;inset:-14px}
+@keyframes gopulse{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.06)}}
+.tapme{position:absolute;font-size:46px;z-index:6;pointer-events:none;transform:translate(-10%,10%);animation:tapme .9s ease-in-out infinite}
+@keyframes tapme{0%,100%{margin-top:0}50%{margin-top:14px}}
 .node .nl{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:6px;background:rgba(255,255,255,.92);border-radius:999px;padding:2px 10px;font-size:15px;white-space:nowrap}
 .node .st{position:absolute;right:-8px;top:-10px;font-size:22px}
 .node.locked{filter:grayscale(1);opacity:.7}
@@ -164,6 +175,8 @@ input{font-family:inherit}
   animation:germwob 1.5s ease-in-out infinite;animation-delay:var(--d);z-index:2;touch-action:none}
 .germ svg{width:100%;height:100%;display:block;pointer-events:none}
 @keyframes germwob{0%,100%{transform:translate(-50%,-50%) rotate(-7deg)}50%{transform:translate(-50%,-56%) rotate(7deg)}}
+.germ::after{content:"";position:absolute;inset:-22%;border-radius:50%}
+.hole.hint{animation:pulse 1s ease-in-out infinite;border-radius:16px}
 .germ.zapped{animation:zap .45s ease-in forwards;pointer-events:none}
 @keyframes zap{to{transform:translate(-50%,-50%) scale(0) rotate(200deg);opacity:0}}
 .germ.inbub::before{content:"";position:absolute;inset:-10%;border-radius:50%;border:3px solid rgba(255,255,255,.95);
@@ -513,6 +526,7 @@ body{background:radial-gradient(circle at 12% 8%,rgba(255,255,255,.75) 0 3px,tra
     <div class="row"><span>말하는 언어</span><div class="seg" id="setLang"><button data-v="both">한국어+영어</button><button data-v="ko">한국어</button><button data-v="en">English</button></div></div>
     <div class="row"><span>하루 놀이 시간</span><div class="seg" id="setTimer"><button data-v="10">10분</button><button data-v="15">15분</button><button data-v="20">20분</button><button data-v="0">끄기</button></div></div>
     <div class="row"><span>소리</span><div class="seg" id="setSound"><button data-v="1">켜기</button><button data-v="0">끄기</button></div></div>
+    <div class="row"><span>배경음악</span><div class="seg" id="setBgm"><button data-v="1">켜기</button><button data-v="0">끄기</button></div></div>
     <div class="row"><span>주인공·친구 사진</span><button class="btn small alt" id="openFriendsEdit">사진 바꾸기</button></div>
     <div class="row"><span>칭찬 도장·진짜 드레스</span><button class="btn small alt" id="openStamps">도장판 열기</button></div>
     <div class="row"><span>모험 진행</span><button class="pillhold holdbtn" id="resetQuest">처음부터 다시 (꾹 2초)</button></div>
@@ -544,7 +558,7 @@ const store={
   get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},
   set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}
 };
-const S=Object.assign({lang:'both',timer:15,sound:true},store.get('mallang_settings',{}));
+const S=Object.assign({lang:'both',timer:15,sound:true,bgm:true},store.get('mallang_settings',{}));
 const rand=n=>Math.random()*n|0;
 const pick=a=>a[rand(a.length)];
 const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rand(i+1);[a[i],a[j]]=[a[j],a[i]]}return a};
@@ -584,7 +598,7 @@ function say(ko,en,queue){
 }
 
 /* ---------- sound ---------- */
-let ac=null;
+let ac=null,stepI=-1;
 function actx(){
   if(!ac){try{ac=new(window.AudioContext||window.webkitAudioContext)()}catch(e){ac=null}}
   if(ac&&ac.state==='suspended')ac.resume();
@@ -601,12 +615,44 @@ const sfx={
   pop(){tone(660,.12,'triangle',.28);tone(990,.1,'sine',.14,.05)},
   ding(){[523,659,784,1047].forEach((f,i)=>tone(f,.32,'triangle',.2,i*.09))},
   soft(){tone(330,.16,'sine',.14);tone(294,.2,'sine',.12,.1)},
-  step(){tone(180,.06,'sine',.08)},
+  step(){const n=[523.25,587.33,659.25,783.99,880,783.99,659.25,587.33];stepI=(stepI+1)%n.length;tone(n[stepI],.14,'triangle',.13);tone(n[stepI]*2,.06,'sine',.04)},
   zap(){tone(880,.08,'square',.06);tone(1320,.12,'triangle',.12,.05)},
   boing(){const a=actx();if(!a||!S.sound)return;const o=a.createOscillator(),g=a.createGain(),t=a.currentTime;
     o.type='sine';o.frequency.setValueAtTime(220,t);o.frequency.exponentialRampToValueAtTime(520,t+.18);
     g.gain.setValueAtTime(.2,t);g.gain.exponentialRampToValueAtTime(.0001,t+.3);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+.32)}
 };
+/* ---------- background music (original tune, made with WebAudio) ---------- */
+const BGM=(()=>{
+  let on=false,timer=0,next=0,stepN=0,gain=null,level=.2,duckT=0;
+  const spb=60/104/2,mf=m=>440*Math.pow(2,(m-69)/12);
+  const CH=[[48,52,55],[45,48,52],[41,45,48],[43,47,50]];
+  const MEL=[72,-1,76,79,76,-1,74,72, 69,-1,72,76,74,-1,72,-1, 65,69,72,-1,74,72,69,-1, 67,71,74,77,76,-1,74,-1];
+  function note(f,t,d,type,v){const o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.value=f;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.015);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(gain);o.start(t);o.stop(t+d+.05)}
+  function tick(){
+    if(!on||!ac)return;
+    while(next<ac.currentTime+.35){
+      const bar=Math.floor(stepN/8)%4,e=stepN%8,ch=CH[bar];
+      if(e===0||e===4)note(mf(ch[0]-12),next,spb*3.4,'sine',.5);
+      note(mf(ch[[0,1,2,1][e%4]]+12),next,spb*.9,'triangle',.1);
+      const m=MEL[stepN%32];if(m>0){note(mf(m),next,spb*1.7,'sine',.22);note(mf(m)*2,next,spb*.7,'sine',.04)}
+      next+=spb;stepN++;
+    }
+    const target=(hasTTS&&speechSynthesis.speaking?.35:1)*level;
+    gain.gain.setTargetAtTime(target,ac.currentTime,.15);
+  }
+  return{
+    start(){if(on)return;const a=actx();if(!a||a.state!=='running')return;gain=a.createGain();gain.gain.value=.0001;gain.connect(a.destination);gain.gain.setTargetAtTime(level,a.currentTime,.6);next=a.currentTime+.15;on=true;timer=setInterval(tick,90)},
+    stop(){if(!on)return;on=false;clearInterval(timer);const g=gain;if(g&&ac){g.gain.setTargetAtTime(.0001,ac.currentTime,.25);setTimeout(()=>{try{g.disconnect()}catch(e){}},1500)}},
+    get on(){return on}
+  };
+})();
+const BGM_OFF=['music','rhythm','sounds','videos','cake'];
+function bgmSync(){
+  const want=S.bgm&&S.sound&&!document.hidden&&!BGM_OFF.includes(current)&&(!document.getElementById('rest')||document.getElementById('rest').hidden);
+  if(want)BGM.start();else BGM.stop();
+}
+document.addEventListener('pointerdown',()=>{actx();setTimeout(bgmSync,50)},{capture:true});
+document.addEventListener('visibilitychange',()=>bgmSync());
 function marimba(f){tone(f,.7,'sine',.34);tone(f*2,.28,'triangle',.07);tone(f*4,.1,'sine',.05)}
 
 /* ---------- praise ---------- */
@@ -726,6 +772,7 @@ function go(id,noEnter){
   current=id;
   if(id!=='home'){if(!sessionStart)sessionStart=Date.now();bump(id)}
   else if(hasTTS){try{speechSynthesis.cancel()}catch(e){}}
+  try{bgmSync()}catch(e){}
   if(!noEnter&&games[id]&&games[id].enter){
     try{games[id].enter()}catch(err){console.error(err);if(id!=='home'){toast('앗, 잠깐 문제가 생겨서 처음 화면으로 왔어요.');go('home')}}
   }
@@ -760,7 +807,7 @@ document.addEventListener('pointerdown',e=>{
 },true);
 setInterval(()=>{
   if(S.timer>0&&sessionStart&&$('#rest').hidden&&Date.now()-sessionStart>S.timer*60000){
-    $('#rest').hidden=false;
+    $('#rest').hidden=false;bgmSync();
     say('오늘 놀이는 여기까지! 눈도 쉬어요. 안녕!','Time to rest your eyes. Bye bye!');
   }
 },5000);
@@ -773,15 +820,16 @@ hold($('#restHold'),3000,()=>{$('#rest').hidden=true;sessionStart=Date.now();go(
 function bindSeg(sel,key,parse){
   const el=$(sel);
   const sync=()=>el.querySelectorAll('button').forEach(b=>{
-    const cur=key==='sound'?(S.sound?'1':'0'):String(S[key]);b.classList.toggle('on',cur===b.dataset.v)});
+    const cur=typeof S[key]==='boolean'?(S[key]?'1':'0'):String(S[key]);b.classList.toggle('on',cur===b.dataset.v)});
   el.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
-    S[key]=parse(b.dataset.v);store.set('mallang_settings',S);sync();
+    S[key]=parse(b.dataset.v);store.set('mallang_settings',S);sync();bgmSync();
     if(key==='timer'&&sessionStart)sessionStart=Date.now();});
   sync();
 }
 bindSeg('#setLang','lang',v=>v);
 bindSeg('#setTimer','timer',Number);
 bindSeg('#setSound','sound',v=>v==='1');
+bindSeg('#setBgm','bgm',v=>v==='1');
 hold($('#gear'),2000,()=>{
   const st=store.get('mallang_stats',{})[today()]||{};
   const items=Object.keys(st).map(k=>`<li>${NAMES[k]||k}: ${st[k]}번</li>`);
@@ -858,13 +906,21 @@ function makeTracer(cv,onDone){
       face(cur[0]-lw*.05,cur[1]-lw*(cfg.rider==='🚗'?.95:.8),lw*.42);
     }else emoji(cfg.a,cur[0],cur[1],lw*1.45);
   }
-  function loop(t){if(!active)return;draw(t);raf=requestAnimationFrame(loop)}
+  let aim=0;
+  function finish(){prog=pts.length-1;done=true;tracing=false;cheer(cfg.dk,cfg.de);onDone()}
+  function advanceTo(j){if(done)return;prog=j;const pct=prog/(pts.length-1);if(pct-lastBeep>=.1){lastBeep=pct;tone(392+pct*520,.12,'triangle',.18)}if(prog>=pts.length-2)finish()}
+  function loop(t){if(!active)return;if(aim>prog&&!done)advanceTo(Math.min(aim,prog+3));draw(t);raf=requestAnimationFrame(loop)}
+  function assist(e){
+    const r=cv.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,tol=Math.max(70,lw*1.8);let best=-1,bd=1e9;
+    for(let i=prog+1;i<pts.length;i++){const d=Math.hypot(pts[i][0]-x,pts[i][1]-y);if(d<bd){bd=d;best=i}}
+    const stepN=Math.round(pts.length*.1);aim=Math.max(aim,bd<tol?Math.min(best,prog+stepN*3):prog+stepN);
+  }
   function build(){
     const r=cv.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
     W=r.width;H=r.height;if(!W||!H)return;
     cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);g.setTransform(dpr,0,0,dpr,0,0);
     lw=Math.max(38,Math.min(64,Math.min(W,H)*.1));
-    pts=resample(rawPath(cfg.shape),6);prog=0;done=false;lastBeep=0;
+    pts=resample(rawPath(cfg.shape),6);prog=0;done=false;lastBeep=0;aim=0;
   }
   function move(e){
     if(done||!active)return;const r=cv.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,tol=Math.max(48,lw*1.25);
@@ -873,10 +929,10 @@ function makeTracer(cv,onDone){
     if(best>prog&&bd<tol){
       prog=best;const pct=prog/(pts.length-1);
       if(pct-lastBeep>=.1){lastBeep=pct;tone(392+pct*520,.12,'triangle',.18)}
-      if(prog>=pts.length-2){prog=pts.length-1;done=true;tracing=false;cheer(cfg.dk,cfg.de);onDone()}
+      if(prog>=pts.length-2)finish();
     }
   }
-  cv.addEventListener('pointerdown',e=>{if(done)return;try{cv.setPointerCapture(e.pointerId)}catch(_){}tracing=true;move(e)});
+  cv.addEventListener('pointerdown',e=>{if(done)return;try{cv.setPointerCapture(e.pointerId)}catch(_){}tracing=true;const p0=prog;move(e);if(cfg.assist&&prog===p0)assist(e)});
   cv.addEventListener('pointermove',e=>{if(tracing)move(e)});
   ['pointerup','pointercancel'].forEach(ev=>cv.addEventListener(ev,()=>{tracing=false}));
   return{
@@ -932,13 +988,14 @@ function makeSorter(board,onDone){
     const up=()=>{
       if(!drag||drag.it!==it)return;const moved=drag.moved;drag=null;p.classList.remove('lift');
       const px=parseFloat(p.style.left),py=parseFloat(p.style.top),name=SHP[it.t];
-      if(Math.hypot(px-it.tx,py-it.ty)<size*.6){
+      const auto=!moved&&it.hinted;
+      if(auto||Math.hypot(px-it.tx,py-it.ty)<size*.6){it.h.classList.remove('hint');
         it.done=true;place(it,it.tx,it.ty);p.classList.add('placed');sfx.pop();
         say(`${name[0]}!`,`${cap(name[1])}!`);left--;
         if(!left)setTimeout(()=>{if(!active)return;cheer('모양을 다 맞췄어!','All the shapes are home!');onDone()},500);
       }else{
         place(it,it.hx,it.hy);
-        if(!moved){bounce(p);say(`${name[0]}야.`,`It's ${an(name[1])} ${name[1]}.`)}else sfx.boing();
+        if(!moved){bounce(p);it.hinted=true;it.h.classList.add('hint');say(`${name[0]}야. 반짝이는 자리로 쏙! 한 번 더 누르면 들어가요.`,`It's ${an(name[1])} ${name[1]}. Tap again!`)}else sfx.boing();
       }
     };
     p.addEventListener('pointerup',up);p.addEventListener('pointercancel',up);
@@ -1133,7 +1190,7 @@ games.map=(()=>{
       b.style.left=NODES[i][0]+'%';b.style.top=pctY(NODES[i][1])+'%';
       b.innerHTML=`${st.icon}<span class="nl">${st.name}</span>${state==='done'?'<span class="st">⭐</span>':''}`;
       b.setAttribute('aria-label',st.name);
-      b.onclick=()=>tapNode(i,b);area.appendChild(b);
+      b.addEventListener('pointerdown',e=>{e.preventDefault();tapNode(i,b)});area.appendChild(b);
     });
     heroEl=document.createElement('div');heroEl.className='map-hero';heroEl.innerHTML=`<div class="flipper">${charaHTML(heroData())}</div>`;area.appendChild(heroEl);
     setHero(NODES[Math.min(PROG.pos,NODES.length-1)]);
@@ -1157,8 +1214,23 @@ games.map=(()=>{
     walking=true;const fwd=target>PROG.pos,seg=fwd?PROG.pos:PROG.pos-1;
     walkSeg(seg,fwd,()=>{PROG.pos+=fwd?1:-1;saveProg();if(PROG.pos===target){walking=false;heroEl.firstElementChild.classList.remove('flip');cb()}else walkTo(target,cb)});
   }
+  function clearGo(){area.querySelectorAll('.gocard,.tapme').forEach(n=>n.remove())}
+  function showGo(t){
+    clearGo();if(current!=='map')return;const st=STAGES[t];
+    const c=document.createElement('button');c.className='gocard';c.innerHTML=`<span class="gi">${st.icon}</span><span class="gt"><b>${st.name}</b><small>여기를 눌러서 출발! 👆</small></span>`;
+    if(pctY(NODES[t][1])>62){c.style.bottom='auto';c.style.top='14px'}
+    c.addEventListener('pointerdown',e=>{e.preventDefault();tapNode(t)});area.appendChild(c);
+    const h=document.createElement('span');h.className='tapme';h.textContent='👆';h.style.left=NODES[t][0]+'%';h.style.top=pctY(NODES[t][1])+'%';area.appendChild(h);
+    say(`${H()}! ${st.name}에 왔어요! 노란 버튼을 눌러 봐!`.replace('에 왔어요','에 도착했어요'),`We're here! Tap the yellow button, ${HE()}!`);
+  }
+  function autoGo(){
+    if(PROG.cleared>=STAGES.length){greet();return}
+    const t=PROG.cleared;if(PROG.pos===t){showGo(t);return}
+    say(`${ro(STAGES[t].name)} 가 볼까? 출발!`,"Let's go!");
+    setTimeout(()=>{if(current!=='map'||walking)return;walkTo(t,()=>showGo(t))},900);
+  }
   function tapNode(i,b){
-    if(walking)return;actx();
+    if(walking)return;actx();clearGo();
     if(i>PROG.cleared){sfx.soft();
       say(`아직 잠겨 있어요. 먼저 ${STAGES[PROG.cleared].name}에 가요!`,'Not yet! Go to the glowing place first.');return}
     sfx.pop();say(`${ro(STAGES[i].name)} 가자!`,"Let's go!");
@@ -1167,13 +1239,13 @@ games.map=(()=>{
   function enter(){
     walking=false;build();
     if(!CAST.hero.photo&&!CAST.hero.setup){games.setup.open();return}
-    greet();
+    autoGo();
   }
   function greet(){
     if(PROG.cleared>=STAGES.length)say(`${H()}, 대작전 성공! 가고 싶은 곳을 눌러 봐!`,`You did it, ${HE()}! Tap anywhere you want to go!`);
     else say(`${H()}! 반짝이는 ${eul(STAGES[PROG.cleared].name)} 눌러 봐!`,`Tap the glowing place, ${HE()}!`);
   }
-  return{enter,greet,refresh:build};
+  return{enter,greet:autoGo,refresh:build};
 })();
 
 /* ---------- hero setup modal ---------- */
@@ -1249,13 +1321,15 @@ games.stage=(()=>{
     requestAnimationFrame(()=>renderParty(true));
     const ko=fill(st.ko),en=fill(st.en);bubble(ko);say(ko,en);
     const gob=document.createElement('button');gob.className='btn go-btn';gob.textContent='출발! ▶';
-    gob.onclick=()=>{actx();sfx.pop();mission()};play.appendChild(gob);
+    let went=false;const goNow=()=>{if(went)return;went=true;actx();sfx.pop();mission()};
+    gob.addEventListener('pointerdown',e=>{e.preventDefault();goNow()});play.appendChild(gob);
+    later(goNow,7000);
   }
   function mission(){
     clear();dots(0);play.innerHTML='';const m=st.mission,next=ms=>()=>later(germs,ms);
     if(m.type==='germ'){eng=makeGerms(play,()=>later(reward,2300));requestAnimationFrame(()=>eng.start(m));later(()=>bubble(''),3000)}
-    else if(m.type==='tracer'){const cv=document.createElement('canvas');cv.className='qcanvas';play.appendChild(cv);eng=makeTracer(cv,next(2700));eng.start(Object.assign({},m));
-      bubble(m.rider==='🚗'?'손가락으로 자동차를 길 따라 끌어 봐!':'손가락으로 비행기를 구름길 따라 끌어 봐!',5000)}
+    else if(m.type==='tracer'){const cv=document.createElement('canvas');cv.className='qcanvas';play.appendChild(cv);eng=makeTracer(cv,next(2700));eng.start(Object.assign({assist:true},m));
+      bubble(m.rider==='🚗'?'길을 따라 쓱~ 끌거나 콕콕 눌러 봐!':'구름길을 따라 쓱~ 끌거나 콕콕 눌러 봐!',5000)}
     else if(m.type==='sorter'){const b=document.createElement('div');b.className='board qboard';play.appendChild(b);eng=makeSorter(b,next(2600));eng.start(m);
       say('모양을 같은 자리에 쏙 넣어 봐!','Put each shape in its home!')}
     else if(m.type==='counter'){play.innerHTML='<div class="qcol"><div class="jelly-num"></div><div class="plate"></div></div>';
@@ -1613,7 +1687,7 @@ games.words=(()=>{
 })();
 
 window.ML={$,say,sfx,tone,cheer,confetti,bounce,pick,rand,shuffle,cap,batchim,go,games,charaHTML,heroData,friendData,CAST,saveCast,pickPhoto,hold,store,S,
-  CNT_KO,CNT_EN,EMOJI_FONT,actx,marimba,toothSVG,germSVG,toast,NAMES,current:()=>current,prog:()=>PROG};
+  CNT_KO,CNT_EN,EMOJI_FONT,actx,marimba,toothSVG,germSVG,toast,NAMES,current:()=>current,prog:()=>PROG,bgmOn:()=>BGM.on};
 games.home.enter();
 
 /* offline install (works when hosted on https, e.g. GitHub Pages) */
