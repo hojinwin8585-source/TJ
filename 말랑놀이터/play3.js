@@ -503,6 +503,7 @@ const saveSTP=()=>store.set('mallang_stamps',STP);
 const CLOSET=store.get('mallang_closet',[]);
 function saveCloset(){if(!store.set('mallang_closet',CLOSET)){toast('저장 공간이 부족해요. 사진 드레스를 하나 지우고 다시 해 주세요.');return false}return true}
 M.stamps=()=>STP.total;M.closet=()=>CLOSET;
+M.missions=()=>{ensureMissions();return STP.missions.map(id=>{const m=POOL.find(x=>x[0]===id);return m?{id,icon:m[1],name:m[2],done:STP.done.includes(id)}:null}).filter(Boolean)};
 const POOL=[['jelly','🍬','젤리 세기'],['trace','✏️','선 긋기'],['shapes','🔺','모양 맞추기'],['animals','🐶','동물 찾기 (찾기 모드)'],['rhythm','🥁','리듬 박수'],['music','🎹','작은 별 연주'],
   ['jobmatch','🧩','직업 짝 맞추기'],['chores','🧹','집안일'],['dishes','🍽️','설거지'],['pizza','🍕','피자 만들기'],['bread','🥐','빵 굽기'],['routine','⏰','하루 일과']];
 function ensureMissions(){

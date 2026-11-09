@@ -101,7 +101,7 @@ const WHOLE={
   pineapple:`<path d="M-30 -4Q-34 44 0 48Q34 44 30 -4Q24 -26 0 -26Q-24 -26 -30 -4Z" fill="#F7C548" ${S}/><path d="M-26 0L26 30M-26 20L14 42M-20 -16L28 10M26 0L-26 30M26 20L-14 42M20 -16L-28 10" stroke="#D99A26" stroke-width="2.5"/><path d="M0 -26L-14 -52M0 -26L0 -56M0 -26L14 -52M0 -26L-24 -40M0 -26L24 -40" stroke="#3E9E3A" stroke-width="6" stroke-linecap="round"/>`
 };
 function wholeSVG(name,cuts=0){
-  const cutLines=cuts?Array.from({length:cuts},(_,i)=>`<path d="M${-26+i*18} -46V48" stroke="#FFF7EE" stroke-width="4" opacity=".9"/>`).join(''):'';
+  const cutLines=cuts?Array.from({length:cuts},(_,i)=>`<path d="M${-28+i*14} -46V48" stroke="#FFF7EE" stroke-width="4" opacity=".9"/>`).join(''):'';
   return `<svg viewBox="-60 -60 120 120">${WHOLE[name]||''}${cutLines}</svg>`;
 }
 function pieceSVG(t,size=40){return `<svg viewBox="-20 -20 40 40" width="${size}" height="${size}">${F[t](0,0,14,10,false)}</svg>`}

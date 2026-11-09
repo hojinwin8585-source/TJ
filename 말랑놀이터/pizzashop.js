@@ -61,7 +61,7 @@ const css=`
 .ptool.bowl{background:radial-gradient(circle at 50% 60%,#FFFFFF 0 46%,#DCE8F5 47% 60%,#fff 61%)}
 .pour{position:absolute;left:50%;top:0;width:16px;margin-left:-8px;height:0;border-radius:8px;z-index:5;transition:height .25s;pointer-events:none}
 .pour.on{height:38%}
-.knife2{position:absolute;right:16%;top:12%;width:90px;height:90px;z-index:6;pointer-events:none;transition:transform .12s}
+.knife2{position:absolute;right:16%;top:12%;width:90px;height:90px;z-index:6;pointer-events:none;transition:transform .22s ease-in}
 .knife2.chop{transform:translateY(46px) rotate(-12deg)}
 .ovenbox{position:absolute;inset:0;display:grid;place-items:center}
 .ovenbox .ov{width:min(96%,330px)}
@@ -71,6 +71,8 @@ const css=`
 @keyframes flick2{to{transform:scaleY(1.08) scaleX(.96)}}
 .steam{position:absolute;font-size:30px;color:#fff;opacity:.85;pointer-events:none;animation:foamup 1.4s ease-out forwards;z-index:7}
 .servepz{position:absolute;z-index:9;transition:transform 1s cubic-bezier(.4,.1,.3,1),opacity .4s;pointer-events:none}
+.pzwork.callme{animation:callme .7s ease-in-out}
+@keyframes callme{0%,100%{transform:translate(-50%,-50%) scale(1);filter:none}50%{transform:translate(-50%,-50%) scale(1.07);filter:drop-shadow(0 0 14px #FFC93C)}}
 .pzmeter{display:flex;align-items:center;gap:12px;width:100%;padding:0 4px}
 .pzmeter .mi{flex:none;width:72px;height:72px;border-radius:22px;background:radial-gradient(circle at 35% 25%,#fff,#F3F0FA);padding:7px;box-shadow:inset 0 -5px 0 rgba(46,42,79,.1),0 5px 0 rgba(46,42,79,.14)}
 .pzmeter .mi svg{width:100%;height:100%;display:block}
@@ -141,7 +143,7 @@ function draw(){
   }else if(m==='cut'){
     let s=`<rect x="-114" y="-84" width="228" height="186" rx="28" fill="#F3F6FA" stroke="${A.OL}" stroke-width="3.5"/><rect x="-100" y="-70" width="200" height="158" rx="20" fill="#E9B67A" stroke="${A.OL}" stroke-width="3"/>`;
     const it=S.cutItem;
-    if(it){if(S.cuts<4)s+=`<g transform="translate(-20 6) scale(1.25)">${A.wholeSVG(A.TOPPING[it].whole,S.cuts).replace(/<\/?svg[^>]*>/g,'')}</g>`;
+    if(it){if(S.cuts<5)s+=`<g transform="translate(-20 6) scale(1.25)">${A.wholeSVG(A.TOPPING[it].whole,S.cuts).replace(/<\/?svg[^>]*>/g,'')}</g>`;
       for(let k=0;k<S.cuts*2;k++)s+=A.F[it](40+(k%3)*22,-36+Math.floor(k/3)*30,15,k*25,false);}
     svg.innerHTML=s;
   }
@@ -149,7 +151,14 @@ function draw(){
 /* pointer routing: the whole table is ONE touch zone */
 const G=M.Guide.make(table,{say});
 const pt=e=>{const r=work.getBoundingClientRect(),tr=table.getBoundingClientRect();return[(e.clientX-(r.left+r.width/2))*240/r.width,(e.clientY-(r.top+r.height/2))*240/r.height,e.clientX-tr.left,e.clientY-tr.top]};
-table.addEventListener('pointerdown',()=>G.touch(),true);
+/* only the real target counts; a touch anywhere else gets a cheer and the hand points to the right place */
+let HIT=null,lastMiss=0,misses=0;
+const inBowl=q=>Math.abs(q[0])<128&&q[1]<118,onBoard=q=>Math.abs(q[0])<122&&q[1]>-96&&q[1]<110,onPizza=q=>Math.hypot(q[0],q[1])<Math.max(78,S.pz.r+16),onWork=q=>Math.abs(q[0])<125&&Math.abs(q[1])<125;
+const HITS={flour:inBowl,water:inBowl,spoon:q=>inBowl(q)&&q[1]>-90,hands:onBoard,pin:onPizza,ladle:onPizza,cheese:onPizza,knife:onBoard,top:onPizza,peel:onWork,wheel:onPizza,plate:onPizza};
+const MISS=[['여기야, 여기! 할 수 있어!','Right here! You can do it!'],['괜찮아! 손이 가리키는 곳을 눌러 봐!','It is okay! Tap where the hand points!'],['잘하고 있어! 여기를 눌러 봐!','You are doing great! Tap here!']];
+function miss(){misses++;G.nudge();work.classList.remove('callme');void work.offsetWidth;work.classList.add('callme');
+  const n=performance.now();if(n-lastMiss<2400)return;lastMiss=n;const c=pick(MISS);say(c[0],c[1]);face('happy');hop();L.later(()=>face('idle'),1300)}
+table.addEventListener('pointerdown',e=>{if(HIT&&!HIT(pt(e))){e.stopImmediatePropagation();e.preventDefault();miss();return}G.touch()},true);
 ['pointerup','pointercancel'].forEach(t=>table.addEventListener(t,()=>G.release(),true));
 table.addEventListener('pointerdown',e=>{if(!H.down||act!==null)return;e.preventDefault();try{table.setPointerCapture(e.pointerId)}catch(_){}act=e.pointerId;H.down(pt(e))});
 table.addEventListener('pointermove',e=>{if(act!==e.pointerId||!H.move)return;H.move(pt(e))});
@@ -206,13 +215,15 @@ const STEP={
     H={down:drop,move:q=>{const t=performance.now();if(t-lastT>140){lastT=t;drop(q)}},up:hideCursor};
     guide('tap',{ko:'피자를 콕콕 눌러 봐!',en:'Tap the pizza!',assist:()=>{for(let k=0;k<4;k++)drop(null)}})},
   knife(){
-    const need=order.filter(t=>A.TOPPING[t].cut),CH=4;let qi=0,fin=false,busy=false;S.mode='cut';meter('knife');
+    const need=order.filter(t=>A.TOPPING[t].cut),CH=5;let qi=0,fin=false,busy=false;S.mode='cut';meter('knife');
     const kn=document.createElement('div');kn.className='knife2';kn.innerHTML=A.TOOL.knife;table.appendChild(kn);
-    const nextItem=()=>{S.cutItem=need[qi];S.cuts=0;draw();const t=A.TOPPING[S.cutItem];hint('콕콕 눌러요');say(`${eul(t.ko)} 썰어요! 콕콕 눌러 봐!`,`Tap to slice the ${t.en}!`)};
-    const chop=()=>{if(fin||busy||S.cuts>=CH)return;kn.classList.add('chop');setTimeout(()=>kn.classList.remove('chop'),130);noise(.07,{freq:2600,vol:.3});S.cuts++;draw();
-      prog((qi*CH+S.cuts)/(need.length*CH));say(CNT_KO[S.cuts-1]+'!',cap(CNT_EN[S.cuts-1])+'!');
-      if(S.cuts>=CH){busy=true;qi++;if(qi<need.length)L.later(()=>{busy=false;nextItem()},900);else{fin=true;L.later(()=>{kn.remove();done('다 썰었어요!','All sliced!')},500)}}};
-    nextItem();H={down:chop};guide('tap',{x:-20,ko:'콕콕 눌러서 썰어 봐!',en:'Tap to chop!',assist:chop})},
+    const nextItem=()=>{S.cutItem=need[qi];S.cuts=0;draw();const t=A.TOPPING[S.cutItem];hint('콕! 한 번씩 썰어요');say(`${eul(t.ko)} 썰어요! 콕, 콕, 천천히 눌러 봐!`,`Slice the ${t.en}! Tap, tap, nice and slow!`)};
+    /* each chop: knife goes down, a slice falls, then a short rest before the next one */
+    const chop=()=>{if(fin||busy||S.cuts>=CH)return;busy=true;kn.classList.add('chop');noise(.07,{freq:2600,vol:.3});
+      L.later(()=>{kn.classList.remove('chop');S.cuts++;draw();sfx.pop();prog((qi*CH+S.cuts)/(need.length*CH));say(CNT_KO[S.cuts-1]+'!',cap(CNT_EN[S.cuts-1])+'!');
+        if(S.cuts>=CH){qi++;if(qi<need.length)L.later(()=>{busy=false;nextItem()},1200);else{fin=true;L.later(()=>{kn.remove();done('다 썰었어요!','All sliced!')},700)}}
+        else L.later(()=>{busy=false},520)},260)};
+    nextItem();H={down:chop};guide('tap',{x:-20,ko:'콕! 한 번씩 눌러서 썰어 봐!',en:'Tap to chop, one at a time!'})},
   top(){
     S.mode='pizza';draw();const PER=4,total=order.length*PER;let cnt=0,fin=false;
     const curT=()=>order[Math.min(order.length-1,Math.floor(cnt/PER))];
@@ -237,11 +248,24 @@ const STEP={
     H={down:()=>{stg===0?putIn():takeOut()}};guide('tap',{y:40,ko:'콕 눌러서 넣어 봐!',en:'Tap to put it in!',assist:putIn})},
   wheel(){
     S.mode='pizza';svg.innerHTML='';meter('wheel');const box=document.createElement('div');box.style.cssText='position:absolute;inset:0;pointer-events:none';work.appendChild(box);
-    hint('콕콕 눌러서 잘라요');say('피자 칼로 쓱! 콕콕 눌러서 잘라요.','Tap to cut the pizza!');let lastC=0;
-    eng=makeCutter(box,{top:A.pizza(S.pz),target:3,easy:true,onCut:n=>{sweepTone(500,300,.25,'sawtooth',.06);prog(n/6);say(`${CNT_KO_UNIT(n)} 조각!`,`${cap(CNT_EN[n-1])} slices!`)},onSeparated:()=>{L.later(()=>done('여섯 조각 완성!','Six slices!'),700)},onServe:()=>{}});
-    const k=box.querySelector('.knife');if(k){k.innerHTML=A.TOOL.wheel;k.style.cssText='position:absolute;right:-6px;bottom:-6px;width:70px;height:70px;pointer-events:none;animation:floaty 1.2s infinite'}
-    const cut=()=>{const t=performance.now();if(t-lastC<450)return;lastC=t;if(eng&&eng.cut)eng.cut()};
-    H={down:cut};guide('tap',{ko:'콕콕 눌러서 잘라 봐!',en:'Tap to cut!',assist:cut})},
+    eng=makeCutter(box,{top:A.pizza(S.pz),target:3,easy:true,onCut:n=>{sweepTone(500,300,.25,'sawtooth',.06);say(`${CNT_KO_UNIT(n)} 조각!`,`${cap(CNT_EN[n-1])} slices!`)},onSeparated:()=>{L.later(()=>done('여섯 조각 완성!','Six slices!'),900)},onServe:()=>{}});
+    const k0=box.querySelector('.knife');if(k0)k0.style.display='none';
+    const ANG=[0,Math.PI/3,2*Math.PI/3],R=104;let ci=0,cp=0,dir=1,busy=false,lastS=0;
+    const ov=document.createElement('div');ov.style.cssText='position:absolute;inset:0;pointer-events:none;z-index:4';
+    ov.innerHTML=`<svg viewBox="-120 -120 240 240" style="width:100%;height:100%;overflow:visible"><line class="gl" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-dasharray="2 14"/><line class="cl" stroke="${A.OL}" stroke-width="4" stroke-linecap="round"/>
+      <g class="wh"><circle r="20" fill="#E6EAF0" stroke="${A.OL}" stroke-width="3.5"/><circle r="6" fill="#9AA2B1" stroke="${A.OL}" stroke-width="2.5"/><path d="M12 12L34 34" stroke="${A.OL}" stroke-width="13" stroke-linecap="round"/><path d="M12 12L34 34" stroke="#FF6F91" stroke-width="7" stroke-linecap="round"/></g></svg>`;work.appendChild(ov);
+    const gl=ov.querySelector('.gl'),cl=ov.querySelector('.cl'),wh=ov.querySelector('.wh');
+    const upd=()=>{const a=ANG[ci],ux=Math.cos(a),uy=Math.sin(a),sx=-dir*R*ux,sy=-dir*R*uy,cx=sx+dir*2*R*cp*ux,cy=sy+dir*2*R*cp*uy;
+      gl.setAttribute('x1',-R*ux);gl.setAttribute('y1',-R*uy);gl.setAttribute('x2',R*ux);gl.setAttribute('y2',R*uy);
+      cl.setAttribute('x1',sx);cl.setAttribute('y1',sy);cl.setAttribute('x2',cx);cl.setAttribute('y2',cy);wh.setAttribute('transform',`translate(${cx.toFixed(1)} ${cy.toFixed(1)})`)};
+    const newLine=()=>{cp=0;dir=1;busy=false;upd();hint('점선을 따라 쓱~ 그어요');say(ci===0?'피자 칼로 잘라요! 점선을 따라 쓱~ 그어 봐!':'한 번 더! 점선을 따라 쓱~','Follow the dotted line to cut!');
+      guide('swipe',{angle:ANG[ci]*180/Math.PI,span:70,ko:'점선을 따라 손가락으로 쓱~ 그어 봐!',en:'Slide your finger along the dotted line!'})};
+    const track=(q,isDown)=>{if(busy)return;const a=ANG[ci],ux=Math.cos(a),uy=Math.sin(a),t=q[0]*ux+q[1]*uy,perp=Math.abs(-q[0]*uy+q[1]*ux);if(perp>70)return;
+      if(isDown&&cp<.05)dir=t>0?-1:1;
+      const pr=(dir*t+R)/(2*R);if(pr<=cp||pr-cp>.3)return;cp=Math.min(1,pr);upd();prog((ci+cp)/3);
+      const now=performance.now();if(now-lastS>110){lastS=now;noise(.08,{freq:1800,q:.8,vol:.1})}
+      if(cp>=.93){busy=true;cp=1;upd();G.stop();if(eng&&eng.cut)eng.cut();ci++;prog(ci/3);if(ci<3)L.later(newLine,1100);else L.later(()=>ov.remove(),500)}};
+    H={down:q=>track(q,true),move:q=>track(q,false)};newLine()},
   plate(){
     meter('plate');hint('콕! 손님에게 드려요');say(`완성! 콕 눌러서 ${cust[1]}에게 드려요!`,`All done! Tap to serve ${cust[1]}!`);let sent=false;
     const serve=()=>{if(sent)return;sent=true;H={};G.stop();prog(1);
@@ -263,8 +287,11 @@ function eat(){
     const names=order.length>1?rang(A.TOPPING[order[0]].ko)+' '+A.TOPPING[order[1]].ko:A.TOPPING[order[0]].ko;
     DATA.served++;store.set('mallang_pizza',DATA);stars();
     cheer(got?`${names} 피자! 내가 주문한 거야! 최고야!`:'음~ 새로운 맛이네! 맛있어요!',got?'This is exactly what I ordered! The best!':'Mmm, a new taste! Yummy!');
-    L.later(()=>{face('happy',{wave:true});tools.innerHTML='';hint('콕! 다음 손님을 불러요');let called=false;const call=()=>{if(called)return;called=true;H={};G.stop();newCustomer()};
-      H={down:call};G.start({type:'tap',ko:'콕 눌러서 다음 손님을 불러 봐!',en:'Tap for the next customer!'})},2400)},2300);
+    L.later(()=>{face('happy',{wave:true});tools.innerHTML='';hint('딩동! 벨을 눌러요');let called=false;
+      work.style.opacity='1';work.innerHTML=`<svg viewBox="-120 -120 240 240"><ellipse cx="0" cy="62" rx="70" ry="12" fill="rgba(90,50,20,.2)"/><path d="M-62 44Q-58 -10 -40 -34Q-22 -58 0 -58Q22 -58 40 -34Q58 -10 62 44Z" fill="#FFC93C" stroke="${A.OL}" stroke-width="4" stroke-linejoin="round"/><rect x="-74" y="40" width="148" height="18" rx="9" fill="#F2A81D" stroke="${A.OL}" stroke-width="4"/><circle cx="0" cy="-64" r="10" fill="#F2A81D" stroke="${A.OL}" stroke-width="4"/><path d="M-36 20Q-34 -14 -18 -32" stroke="#fff" stroke-width="9" opacity=".6" fill="none" stroke-linecap="round"/></svg>`;
+      const call=()=>{if(called)return;called=true;H={};HIT=null;G.stop();tone(1318,.5,'sine',.22);tone(1046,.7,'sine',.22,.35);L.later(newCustomer,900)};
+      HIT=q=>Math.hypot(q[0],q[1])<92;H={down:call};say('딩동 벨을 눌러서 다음 손님을 불러요!','Ring the bell for the next customer!');
+      guide('tap',{ko:'노란 벨을 콕 눌러 봐!',en:'Tap the yellow bell!'})},2400)},2300);
   L.onEnd(()=>clearInterval(chomp));
 }
 function next(){i++;if(i>=STEPS.length)return;run()}
@@ -272,7 +299,7 @@ function run(){
   H={};if(eng&&eng.stop)eng.stop();eng=null;hideCursor();
   sec.querySelectorAll('#pzSteps span').forEach((s,k)=>{s.className=k<i?'done':k===i?'on':''});
   const on=sec.querySelector('#pzSteps span.on');if(on)$('#pzSteps').scrollLeft=Math.max(0,on.offsetLeft-$('#pzSteps').clientWidth/2+20);
-  STEP[STEPS[i][0]]();size();G.place();
+  HIT=HITS[STEPS[i][0]]||null;STEP[STEPS[i][0]]();size();G.place();
 }
 function showOrder(){
   top.querySelector('.order')?.remove();const o=document.createElement('div');o.className='order';
@@ -280,15 +307,15 @@ function showOrder(){
   top.appendChild(o);
 }
 function newCustomer(){
-  L.begin();H={};act=null;G.stop();if(eng&&eng.stop)eng.stop();eng=null;tools.innerHTML='';
+  L.begin();H={};act=null;HIT=null;G.stop();if(eng&&eng.stop)eng.stop();eng=null;tools.innerHTML='';
   work.innerHTML='<svg viewBox="-120 -120 240 240"></svg>';svg=work.querySelector('svg');work.style.opacity='1';table.querySelectorAll('.knife2,.pour,.steam').forEach(n=>n.remove());
   cust=pick(CUSTS.filter(c=>!cust||c[0]!==cust[0]));order=shuffle(TOPS.slice()).slice(0,2);
   S={mode:'bowl',level:0,color:'#FFF8EA',mound:0,puddle:false,ball:0,swirl:0,bumps:0,squish:false,cutItem:null,cuts:0,pz:{r:56,sauce:false,cheese:[],tops:[],baked:false,flour:false}};
   i=0;size();draw();face('idle',{wave:true});custEl.classList.remove('hop');void custEl.offsetWidth;custEl.classList.add('enter');stars();
-  setTimeout(()=>{if(cur()!==id)return;showOrder();const nm=rang(A.TOPPING[order[0]].ko)+' '+A.TOPPING[order[1]].ko;
+  L.later(()=>{if(!cust)return;showOrder();const nm=rang(A.TOPPING[order[0]].ko)+' '+A.TOPPING[order[1]].ko;
     say(`안녕하세요! 저는 ${cust[1]}예요. ${nm} 피자 주세요!`,`Hi! I'm ${cust[1]}. ${order.map(t=>A.TOPPING[t].en).join(' and ')} pizza, please!`);hint('');
     L.later(()=>{face('idle');run()},3200)},700);
 }
-M.__pz=()=>({i,step:STEPS[i]&&STEPS[i][0],guide:G.state(),bar:(tools.querySelector('.mbar i')||{style:{}}).style.width,tops:S&&S.pz.tops.length,act,hasDown:!!H.down});
-games[id]={enter:()=>{cust=null;requestAnimationFrame(newCustomer)},exit:()=>{L.begin();H={};G.stop();if(eng&&eng.stop)eng.stop();document.querySelectorAll('.servepz').forEach(n=>n.remove())},resize:size};
+M.__pz=()=>({misses,i,step:STEPS[i]&&STEPS[i][0],guide:G.state(),bar:(tools.querySelector('.mbar i')||{style:{}}).style.width,tops:S&&S.pz.tops.length,act,hasDown:!!H.down});
+games[id]={enter:()=>{requestAnimationFrame(()=>{if(cur()===id)newCustomer()})},exit:()=>{L.begin();H={};G.stop();if(eng&&eng.stop)eng.stop();document.querySelectorAll('.servepz').forEach(n=>n.remove())},resize:size};
 })();
