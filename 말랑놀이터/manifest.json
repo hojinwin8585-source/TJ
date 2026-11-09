@@ -1,0 +1,13 @@
+{
+  "name": "말랑 놀이터",
+  "short_name": "말랑놀이터",
+  "description": "29개월 아이를 위한 동물·요리·젤리 학습 놀이 앱",
+  "lang": "ko",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#E3F4EF",
+  "theme_color": "#FF6F91",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
