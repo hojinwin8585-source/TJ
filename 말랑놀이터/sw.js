@@ -1,5 +1,5 @@
 // 말랑 놀이터: 한 번 열면 인터넷 없이도 열리도록 파일을 저장해 둡니다.
-const CACHE = 'mallang-v1';
+const CACHE = 'mallang-v2';
 const FILES = ['./', './index.html', './manifest.json', './icon.svg'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES))));
 self.addEventListener('activate', e => e.waitUntil(
