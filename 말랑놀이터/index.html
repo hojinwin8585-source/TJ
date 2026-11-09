@@ -1327,7 +1327,7 @@ games.stage=(()=>{
   }
   function mission(){
     clear();dots(0);play.innerHTML='';const m=st.mission,next=ms=>()=>later(germs,ms);
-    if(m.type==='germ'){eng=makeGerms(play,()=>later(reward,2300));requestAnimationFrame(()=>eng.start(m));later(()=>bubble(''),3000)}
+    if(m.type==='germ'){eng=makeGerms(play,()=>later(reward,2300));{const e0=eng;requestAnimationFrame(()=>{if(e0&&eng===e0)e0.start(m)})};later(()=>bubble(''),3000)}
     else if(m.type==='tracer'){const cv=document.createElement('canvas');cv.className='qcanvas';play.appendChild(cv);eng=makeTracer(cv,next(2700));eng.start(Object.assign({assist:true},m));
       bubble(m.rider==='🚗'?'길을 따라 쓱~ 끌거나 콕콕 눌러 봐!':'구름길을 따라 쓱~ 끌거나 콕콕 눌러 봐!',5000)}
     else if(m.type==='sorter'){const b=document.createElement('div');b.className='board qboard';play.appendChild(b);eng=makeSorter(b,next(2600));eng.start(m);
@@ -1343,7 +1343,7 @@ games.stage=(()=>{
   function germs(){
     clear();dots(1);play.innerHTML='';const n=st.germs||4;
     bubble('세균이 나타났어! 콕콕 눌러서 물리치자!',4000);say('세균이 나타났어! 콕콕 눌러서 물리치자!','Germs! Tap tap to zap them!');
-    eng=makeGerms(play,()=>later(reward,2300));requestAnimationFrame(()=>eng.start({n,bubble:st.bg==='sea'}));
+    eng=makeGerms(play,()=>later(reward,2300));{const e0=eng;requestAnimationFrame(()=>{if(e0&&eng===e0)e0.start({n,bubble:st.bg==='sea'})})};
   }
   function reward(){
     clear();dots(3);

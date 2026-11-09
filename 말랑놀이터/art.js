@@ -19,54 +19,57 @@ function blob(cx,cy,r,jit,n,seed){
    kind: bunny | bear | cat | dog   mood: idle | happy | yum | wow | sleepy | think
    viewBox 0 0 200 230 */
 const KINDS={
-  bunny:{ko:'토토',body:'#FFF7EE',dark:'#F3DCC8',inner:'#FFB3C6',cheek:'#FF9CB5'},
-  bear:{ko:'보리',body:'#C98C5C',dark:'#A86E43',inner:'#F2D3B0',cheek:'#FF9C8A'},
-  cat:{ko:'모모',body:'#FFB75E',dark:'#EE8F32',inner:'#FFE6C7',cheek:'#FF8E8E'},
-  dog:{ko:'콩이',body:'#FFFFFF',dark:'#B98154',inner:'#F7E7D7',cheek:'#FFA3B4'}
+  bunny:{ko:'토토',body:'#FFF9F2',edge:'#FFDCCB',dark:'#F3DCC8',inner:'#FFB3C6',cheek:'#FF86A8'},
+  bear:{ko:'보리',body:'#DDA574',edge:'#B97C4B',dark:'#A86E43',inner:'#F9E2C6',cheek:'#FF8672'},
+  cat:{ko:'모모',body:'#FFC878',edge:'#F59A38',dark:'#EE8F32',inner:'#FFEFD8',cheek:'#FF8585'},
+  dog:{ko:'콩이',body:'#FFFFFF',edge:'#EADFD5',dark:'#B98154',inner:'#FCF1E6',cheek:'#FF94AC'}
 };
+/* big head, big sparkly eyes, rosy cheeks, soft shading. opt: chef, apron, bow, wave, lash */
 function animal(kind='bunny',mood='idle',opt={}){
-  const k=KINDS[kind]||KINDS.bunny,c=k.body;let s='';
-  /* ears behind head */
-  if(kind==='bunny')s+=`<g class="ears"><ellipse cx="76" cy="40" rx="17" ry="42" fill="${c}" ${S} transform="rotate(-10 76 40)"/><ellipse cx="76" cy="44" rx="8" ry="30" fill="${k.inner}" transform="rotate(-10 76 44)"/>
-    <ellipse cx="124" cy="40" rx="17" ry="42" fill="${c}" ${S} transform="rotate(12 124 40)"/><ellipse cx="124" cy="44" rx="8" ry="30" fill="${k.inner}" transform="rotate(12 124 44)"/></g>`;
-  if(kind==='bear')s+=`<circle cx="50" cy="56" r="22" fill="${c}" ${S}/><circle cx="50" cy="58" r="11" fill="${k.inner}"/><circle cx="150" cy="56" r="22" fill="${c}" ${S}/><circle cx="150" cy="58" r="11" fill="${k.inner}"/>`;
-  if(kind==='cat')s+=`<path d="M46 74L52 26L88 52Z" fill="${c}" ${S}/><path d="M56 62L59 40L76 53Z" fill="${k.inner}"/><path d="M154 74L148 26L112 52Z" fill="${c}" ${S}/><path d="M144 62L141 40L124 53Z" fill="${k.inner}"/>`;
-  /* body + arms */
-  const wave=opt.wave?' class="wave"':'';
-  s+=`<ellipse cx="100" cy="184" rx="52" ry="42" fill="${c}" ${S}/><ellipse cx="100" cy="192" rx="31" ry="25" fill="${k.inner}" opacity=".85"/>`;
-  if(opt.apron)s+=`<path d="M70 160H130L136 222Q100 230 64 222Z" fill="${opt.apron}" ${S}/><rect x="88" y="182" width="24" height="16" rx="5" fill="#fff" opacity=".7"/>`;
-  s+=`<ellipse cx="54" cy="178" rx="13" ry="21" fill="${c}" ${S} transform="rotate(25 54 178)"/><g${wave}><ellipse cx="146" cy="178" rx="13" ry="21" fill="${c}" ${S} transform="rotate(-25 146 178)"/></g>`;
+  const k=KINDS[kind]||KINDS.bunny,id=uid('an'),c=`url(#${id}b)`,EYE='#4A2E20';let s='';
+  s+=`<defs><radialGradient id="${id}b" cx=".36" cy=".28" r=".85"><stop offset="0" stop-color="${k.body}"/><stop offset=".62" stop-color="${k.body}"/><stop offset="1" stop-color="${k.edge}"/></radialGradient>
+    <radialGradient id="${id}c"><stop offset="0" stop-color="${k.cheek}" stop-opacity=".95"/><stop offset=".6" stop-color="${k.cheek}" stop-opacity=".55"/><stop offset="1" stop-color="${k.cheek}" stop-opacity="0"/></radialGradient></defs>`;
+  s+=`<ellipse cx="100" cy="225" rx="58" ry="6" fill="rgba(91,58,41,.16)"/>`;
+  /* ears behind the head */
+  if(kind==='bunny')s+=`<g class="ears"><ellipse cx="72" cy="36" rx="19" ry="44" fill="${c}" ${S} transform="rotate(-10 72 36)"/><ellipse cx="72" cy="40" rx="9" ry="31" fill="${k.inner}" transform="rotate(-10 72 40)"/>
+    <ellipse cx="128" cy="36" rx="19" ry="44" fill="${c}" ${S} transform="rotate(12 128 36)"/><ellipse cx="128" cy="40" rx="9" ry="31" fill="${k.inner}" transform="rotate(12 128 40)"/></g>`;
+  if(kind==='bear')s+=`<circle cx="42" cy="50" r="25" fill="${c}" ${S}/><circle cx="42" cy="52" r="13" fill="${k.inner}"/><circle cx="158" cy="50" r="25" fill="${c}" ${S}/><circle cx="158" cy="52" r="13" fill="${k.inner}"/>`;
+  if(kind==='cat')s+=`<path d="M36 74L44 12L90 44Z" fill="${c}" ${S}/><path d="M49 58L52 30L74 46Z" fill="${k.inner}"/><path d="M164 74L156 12L110 44Z" fill="${c}" ${S}/><path d="M151 58L148 30L126 46Z" fill="${k.inner}"/>`;
+  /* body, feet, arms */
+  s+=`<ellipse cx="78" cy="220" rx="17" ry="9" fill="${c}" ${S}/><ellipse cx="122" cy="220" rx="17" ry="9" fill="${c}" ${S}/>`;
+  s+=`<ellipse cx="100" cy="188" rx="48" ry="38" fill="${c}" ${S}/><ellipse cx="100" cy="196" rx="28" ry="22" fill="${k.inner}" opacity=".92"/>`;
+  if(opt.apron)s+=`<path d="M72 164H128L134 220Q100 228 66 220Z" fill="${opt.apron}" ${S}/><rect x="88" y="184" width="24" height="16" rx="5" fill="#fff" opacity=".75"/><path d="M92 172c-5-6-13 1-6 7l6 5 6-5c7-6-1-13-6-7z" fill="#fff" opacity=".9" transform="translate(8 0)"/>`;
+  s+=`<ellipse cx="52" cy="182" rx="13" ry="21" fill="${c}" ${S} transform="rotate(28 52 182)"/><g${opt.wave?' class="wave"':''}><ellipse cx="148" cy="182" rx="13" ry="21" fill="${c}" ${S} transform="rotate(-28 148 182)"/></g>`;
   /* head */
-  s+=`<circle cx="100" cy="104" r="64" fill="${c}" ${S}/>`;
-  if(kind==='cat')s+=`<path d="M100 42v14M86 44l3 12M114 44l-3 12" stroke="${k.dark}" stroke-width="5" stroke-linecap="round"/>`;
-  if(kind==='dog')s+=`<ellipse cx="128" cy="86" rx="16" ry="13" fill="${k.dark}" opacity=".75"/><path d="M44 76Q30 112 50 136Q62 120 62 84Z" fill="${k.dark}" ${S}/><path d="M156 76Q170 112 150 136Q138 120 138 84Z" fill="${k.dark}" ${S}/>`;
-  if(kind==='bunny')s+=`<path d="M92 44q8-10 16 0" stroke="${k.inner}" stroke-width="5" fill="none" stroke-linecap="round"/>`;
-  /* muzzle */
-  if(kind==='bear'||kind==='dog')s+=`<ellipse cx="100" cy="128" rx="30" ry="22" fill="${k.inner}"/>`;
-  else s+=`<ellipse cx="100" cy="128" rx="22" ry="15" fill="#FFFFFF" opacity=".55"/>`;
-  /* cheeks */
-  s+=`<ellipse cx="62" cy="124" rx="12" ry="7.5" fill="${k.cheek}" opacity=".75"/><ellipse cx="138" cy="124" rx="12" ry="7.5" fill="${k.cheek}" opacity=".75"/>`;
+  s+=`<circle cx="100" cy="100" r="70" fill="${c}" ${S}/><ellipse cx="68" cy="56" rx="25" ry="13" fill="#fff" opacity=".38" transform="rotate(-28 68 56)"/>`;
+  if(kind==='cat')s+=`<path d="M100 32v15M84 35l3 13M116 35l-3 13" stroke="${k.dark}" stroke-width="5.5" stroke-linecap="round"/>`;
+  if(kind==='dog')s+=`<ellipse cx="128" cy="92" rx="21" ry="24" fill="${k.dark}" opacity=".55"/><path d="M36 68Q16 108 40 140Q58 120 58 78Z" fill="${k.dark}" ${S}/><path d="M164 68Q184 108 160 140Q142 120 142 78Z" fill="${k.dark}" ${S}/>`;
+  if(kind==='bunny')s+=`<path d="M90 36q10-12 20 0" stroke="${k.inner}" stroke-width="5" fill="none" stroke-linecap="round"/>`;
+  if(kind==='bear'||kind==='dog')s+=`<ellipse cx="100" cy="127" rx="31" ry="23" fill="${k.inner}"/>`;else s+=`<ellipse cx="100" cy="127" rx="25" ry="17" fill="#fff" opacity=".5"/>`;
+  s+=`<circle cx="52" cy="124" r="18" fill="url(#${id}c)"/><circle cx="148" cy="124" r="18" fill="url(#${id}c)"/>`;
   /* eyes */
-  const eye=(x)=>{
-    if(mood==='happy'||mood==='yum')return `<path d="M${x-10} 104Q${x} 90 ${x+10} 104" stroke="${OL}" stroke-width="5" fill="none" stroke-linecap="round"/>`;
-    if(mood==='sleepy')return `<path d="M${x-9} 102Q${x} 108 ${x+9} 102" stroke="${OL}" stroke-width="4.5" fill="none" stroke-linecap="round"/>`;
-    const r=mood==='wow'?11:8.5,ry=mood==='wow'?12:10.5;
-    return `<g class="eye"><ellipse cx="${x}" cy="102" rx="${r}" ry="${ry}" fill="${OL}"/><circle cx="${x+3}" cy="${98}" r="${mood==='wow'?4:3.2}" fill="#fff"/><circle cx="${x-3}" cy="106" r="1.6" fill="#fff"/></g>`;
+  const eye=(x,out)=>{
+    const lash=(opt.bow||opt.lash)?`<path d="M${x+out*11} ${92}l${out*7} -5M${x+out*8} ${87}l${out*5} -7" stroke="${EYE}" stroke-width="3" stroke-linecap="round"/>`:'';
+    if(mood==='happy'||mood==='yum')return `<path d="M${x-12} 104Q${x} 86 ${x+12} 104" stroke="${EYE}" stroke-width="5.5" fill="none" stroke-linecap="round"/>${lash}`;
+    if(mood==='sleepy')return `<path d="M${x-11} 100Q${x} 108 ${x+11} 100" stroke="${EYE}" stroke-width="5" fill="none" stroke-linecap="round"/>`;
+    const w=mood==='wow',rx=w?13:11.5,ry=w?15.5:13.5;
+    return `<g class="eye"><ellipse cx="${x}" cy="100" rx="${rx}" ry="${ry}" fill="${EYE}"/><ellipse cx="${x}" cy="${105}" rx="${rx*.62}" ry="${ry*.5}" fill="#8A5638"/>
+      <circle cx="${x+4}" cy="${94}" r="${w?5.6:4.8}" fill="#fff"/><circle cx="${x-4.5}" cy="${106}" r="${w?2.8:2.3}" fill="#fff" opacity=".95"/></g>${lash}`;
   };
-  s+=`<g class="eyes">${eye(78)}${eye(122)}</g>`;
-  if(mood==='think')s+=`<path d="M66 84l18-4M134 84l-18-4" stroke="${OL}" stroke-width="4" stroke-linecap="round"/>`;
-  /* nose + mouth */
-  s+=`<ellipse cx="100" cy="117" rx="${kind==='bear'||kind==='dog'?9:6}" ry="${kind==='bear'||kind==='dog'?6.5:4.5}" fill="${kind==='bunny'?'#FF8FAB':OL}"/>`;
-  if(mood==='yum')s+=`<g class="chew"><path d="M86 128Q100 150 114 128Z" fill="#9C3D3D" ${S}/><path d="M92 136Q100 146 108 136Q100 132 92 136Z" fill="#FF8FA3"/></g>`;
-  else if(mood==='wow')s+=`<ellipse cx="100" cy="136" rx="9" ry="11" fill="#9C3D3D" ${S}/>`;
-  else if(mood==='happy')s+=`<path d="M84 128Q100 148 116 128Z" fill="#9C3D3D" ${S}/><path d="M91 136Q100 144 109 136Q100 131 91 136Z" fill="#FF8FA3"/>`;
-  else if(kind==='cat')s+=`<path d="M88 126q6 8 12 0q6 8 12 0" stroke="${OL}" stroke-width="4" fill="none" stroke-linecap="round"/>`;
-  else s+=`<path d="M100 122v6M88 128Q100 138 112 128" stroke="${OL}" stroke-width="4" fill="none" stroke-linecap="round"/>`;
-  if(kind==='cat')s+=`<path d="M60 116h-20M60 124l-18 5M140 116h20M140 124l18 5" stroke="${OL}" stroke-width="2.5" stroke-linecap="round"/>`;
+  s+=`<g class="eyes">${eye(74,-1)}${eye(126,1)}</g>`;
+  if(mood==='think')s+=`<path d="M60 80l20-5M140 80l-20-5" stroke="${EYE}" stroke-width="4" stroke-linecap="round"/>`;
+  /* nose and mouth */
+  const big=kind==='bear'||kind==='dog';
+  s+=`<ellipse cx="100" cy="116" rx="${big?9:6}" ry="${big?6.5:4.5}" fill="${big?EYE:'#FF7FA2'}"/>${big?'<ellipse cx="97" cy="114" rx="3" ry="1.6" fill="#fff" opacity=".6"/>':''}`;
+  if(mood==='yum')s+=`<g class="chew"><path d="M84 124Q100 150 116 124Z" fill="#B8474B" ${S}/><path d="M91 134Q100 146 109 134Q100 129 91 134Z" fill="#FF8FA3"/></g>`;
+  else if(mood==='wow')s+=`<ellipse cx="100" cy="135" rx="8.5" ry="10.5" fill="#B8474B" ${S}/>`;
+  else if(mood==='happy')s+=`<path d="M82 123Q100 150 118 123Z" fill="#B8474B" ${S}/><path d="M90 134Q100 146 110 134Q100 129 90 134Z" fill="#FF8FA3"/>`;
+  else s+=`<path d="M88 123q6 9 12 0q6 9 12 0" stroke="${OL}" stroke-width="3.8" fill="none" stroke-linecap="round"/>`;
+  if(kind==='cat')s+=`<path d="M46 114h-20M46 122l-18 5M154 114h20M154 122l18 5" stroke="${OL}" stroke-width="2.5" stroke-linecap="round"/>`;
   /* hats */
-  if(opt.chef)s+=`<g><rect x="70" y="40" width="60" height="22" rx="6" fill="#fff" ${S}/><path d="M66 46Q52 18 78 14Q86 -2 100 6Q114 -4 124 12Q150 16 134 46Z" fill="#fff" ${S}/></g>`;
-  if(opt.bow)s+=`<g transform="translate(128 52) rotate(18)"><path d="M0 0L-18 -12V12Z" fill="${opt.bow}" ${S}/><path d="M0 0L18 -12V12Z" fill="${opt.bow}" ${S}/><circle r="6" fill="${opt.bow}" ${S}/></g>`;
-  return `<svg class="ani ani-${mood}" viewBox="0 0 200 230" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
+  if(opt.chef)s+=`<g><path d="M64 36Q48 8 76 2Q86 -14 100 -6Q114 -16 124 0Q152 6 136 36Z" fill="#fff" ${S}/><rect x="66" y="30" width="68" height="20" rx="7" fill="#fff" ${S}/><path d="M78 40h44" stroke="#E6EAF0" stroke-width="3" stroke-linecap="round"/></g>`;
+  if(opt.bow)s+=`<g transform="translate(140 42) rotate(20)"><path d="M0 0L-22 -15Q-27 0 -22 15Z" fill="${opt.bow}" ${S}/><path d="M0 0L22 -15Q27 0 22 15Z" fill="${opt.bow}" ${S}/><circle r="7.5" fill="${opt.bow}" ${S}/><circle cx="-13" cy="-4" r="2.5" fill="#fff" opacity=".7"/></g>`;
+  return `<svg class="ani ani-${mood}" viewBox="0 0 200 230" style="overflow:visible" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
 }
 
 /* =========================== FOOD (pizza) =========================== */
@@ -179,5 +182,87 @@ const BUILD={
   stamp:`<svg viewBox="0 0 200 160"><rect x="36" y="30" width="128" height="110" rx="14" fill="#fff" ${S}/>${[0,1,2,3,4,5].map(i=>`<circle cx="${66+(i%3)*34}" cy="${66+Math.floor(i/3)*40}" r="14" fill="none" stroke="${i<4?'#E0393E':'#E4DDF2'}" stroke-width="${i<4?4:3}" ${i<4?'':'stroke-dasharray="4 4"'}/>${i<4?`<text x="${66+(i%3)*34}" y="${71+Math.floor(i/3)*40}" font-size="11" text-anchor="middle" fill="#E0393E" font-family="Jua,sans-serif">참</text>`:''}`).join('')}</svg>`
 };
 
-window.ART={OL,animal,KINDS,F,TOPPING,WHOLE,wholeSVG,pieceSVG,pizza,TOOL,oven,BUILD,blob,rng};
+/* =========================== 꾸미기 그림 (화장 얼굴, 액세서리, 드레스, 화장품) =========================== */
+function star(cx,cy,r,fill='#FFD84D',extra=''){let d='';for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rr=i%2?r*.45:r;d+=(i?'L':'M')+(cx+rr*Math.cos(a)).toFixed(1)+' '+(cy+rr*Math.sin(a)).toFixed(1)}return `<path d="${d}Z" fill="${fill}" ${extra}/>`}
+function twinkle(cx,cy,r,fill='#fff'){return `<path d="M${cx} ${cy-r}Q${cx} ${cy} ${cx+r} ${cy}Q${cx} ${cy} ${cx} ${cy+r}Q${cx} ${cy} ${cx-r} ${cy}Q${cx} ${cy} ${cx} ${cy-r}Z" fill="${fill}"/>`}
+/* accessories, drawn around (0,0), about 80 wide */
+const ACC={
+  crown:`<path d="M-36 20L-42 -18L-18 2L0 -30L18 2L42 -18L36 20Z" fill="#FFD23F" ${S}/><rect x="-37" y="14" width="74" height="13" rx="5" fill="#FFB800" ${S}/><circle cy="-30" r="6.5" fill="#FF6F91" ${S}/><circle cx="-42" cy="-18" r="5.5" fill="#5EC2FF" ${S}/><circle cx="42" cy="-18" r="5.5" fill="#5EC2FF" ${S}/><circle cy="3" r="5.5" fill="#FF6F91"/><circle cx="-20" cy="20" r="3" fill="#fff"/><circle cx="20" cy="20" r="3" fill="#fff"/><path d="M-26 -2l6 8" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".8"/>`,
+  ribbon:`<path d="M-6 6L-20 36L-2 26Z" fill="#FF8FB1" ${S}/><path d="M6 6L20 36L2 26Z" fill="#FF8FB1" ${S}/><path d="M0 0L-40 -24Q-50 0 -40 24Z" fill="#FF6F91" ${S}/><path d="M0 0L40 -24Q50 0 40 24Z" fill="#FF6F91" ${S}/><circle r="11" fill="#FF8FB1" ${S}/><path d="M-32 -12q6 -2 10 2M22 -10q6 -4 12 0" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".8" fill="none"/>`,
+  flower:`<path d="M18 22Q34 30 40 18Q28 10 18 22Z" fill="#6CCB5F" ${S}/>${[0,1,2,3,4].map(i=>{const a=-Math.PI/2+i*Math.PI*2/5;return `<circle cx="${(22*Math.cos(a)).toFixed(1)}" cy="${(22*Math.sin(a)).toFixed(1)}" r="16" fill="#FFB3D1" ${S}/>`}).join('')}<circle r="13" fill="#FFD23F" ${S}/><circle cx="-4" cy="-4" r="3.5" fill="#fff" opacity=".8"/>`,
+  wand:`<path d="M-6 6L-34 38" stroke="${OL}" stroke-width="11" stroke-linecap="round"/><path d="M-6 6L-34 38" stroke="#FF8FB1" stroke-width="5.5" stroke-linecap="round"/>${star(8,-8,26,'#FFD84D',S)}${twinkle(34,-30,8)}${twinkle(-14,-34,6)}`,
+  star:star(0,0,36,'#FFD84D',S)+`<circle cx="-10" cy="-8" r="4" fill="#fff" opacity=".8"/>`,
+  heart:`<path d="M0 30C-44 0 -38 -34 -18 -34C-8 -34 -2 -28 0 -20C2 -28 8 -34 18 -34C38 -34 44 0 0 30Z" fill="#FF6F91" ${S}/><ellipse cx="-16" cy="-18" rx="7" ry="4.5" fill="#fff" opacity=".7" transform="rotate(-30 -16 -18)"/>`
+};
+const accSVG=n=>`<svg viewBox="-55 -50 110 100" style="overflow:visible">${ACC[n]||''}</svg>`;
+
+/* a girl's face for the makeup game. viewBox 0 0 300 330.
+   st: {lip:color|null, blushL,blushR:bool, lidL,lidR:color|null, acc:'crown'|'ribbon'|'flower'|null, mood:'idle'|'happy', glow:zoneName|null} */
+const FACE_ZONES={lips:[150,250,62],cheekL:[78,226,44],cheekR:[222,226,44],lidL:[106,172,42],lidR:[194,172,42],top:[150,48,70]};
+function face(st={}){
+  const id=uid('fc'),HAIR='#7A4A2A',HAIR2='#94603A',SKIN='#FFE4D0',EYE='#4A2E20';
+  const glow=z=>st.glow===z?`<circle cx="${FACE_ZONES[z][0]}" cy="${FACE_ZONES[z][1]}" r="${FACE_ZONES[z][2]*.8}" fill="none" stroke="#FFC93C" stroke-width="6" stroke-dasharray="4 12" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" from="0 ${FACE_ZONES[z][0]} ${FACE_ZONES[z][1]}" to="360 ${FACE_ZONES[z][0]} ${FACE_ZONES[z][1]}" dur="6s" repeatCount="indefinite"/></circle>`:'';
+  let s=`<defs><radialGradient id="${id}s" cx=".4" cy=".3" r=".8"><stop offset="0" stop-color="#FFF1E6"/><stop offset=".6" stop-color="${SKIN}"/><stop offset="1" stop-color="#F9CDB3"/></radialGradient>
+    <radialGradient id="${id}c"><stop offset="0" stop-color="#FF7FA6" stop-opacity=".95"/><stop offset=".6" stop-color="#FF8FB1" stop-opacity=".6"/><stop offset="1" stop-color="#FF8FB1" stop-opacity="0"/></radialGradient></defs>`;
+  /* hair behind, buns */
+  s+=`<circle cx="56" cy="70" r="38" fill="${HAIR}" ${S}/><circle cx="244" cy="70" r="38" fill="${HAIR}" ${S}/><circle cx="46" cy="58" r="10" fill="${HAIR2}" opacity=".7"/><circle cx="234" cy="58" r="10" fill="${HAIR2}" opacity=".7"/>
+    <path d="M36 200Q18 64 150 44Q282 64 264 200Q268 268 238 300L62 300Q32 268 36 200Z" fill="${HAIR}" ${S}/>`;
+  s+=`<ellipse cx="46" cy="196" rx="15" ry="19" fill="${SKIN}" ${S}/><ellipse cx="254" cy="196" rx="15" ry="19" fill="${SKIN}" ${S}/>`;
+  s+=`<ellipse cx="150" cy="190" rx="106" ry="108" fill="url(#${id}s)" ${S}/>`;
+  /* fringe */
+  s+=`<path d="M48 168Q50 72 150 66Q250 72 252 168Q232 120 196 108Q184 136 150 108Q118 136 104 108Q68 120 48 168Z" fill="${HAIR}" ${S}/><path d="M92 92Q120 78 150 80" stroke="${HAIR2}" stroke-width="7" fill="none" stroke-linecap="round" opacity=".8"/>`;
+  /* bun ties */
+  s+=`<g transform="translate(78 96) scale(.42) rotate(-20)">${ACC.ribbon}</g><g transform="translate(222 96) scale(.42) rotate(20)">${ACC.ribbon}</g>`;
+  /* eye shadow, eyes */
+  if(st.lidL)s+=`<ellipse cx="106" cy="168" rx="30" ry="15" fill="${st.lidL}" opacity=".75"/>${twinkle(84,158,6)}`;
+  if(st.lidR)s+=`<ellipse cx="194" cy="168" rx="30" ry="15" fill="${st.lidR}" opacity=".75"/>${twinkle(216,158,6)}`;
+  const eye=(x,out)=>st.mood==='happy'
+    ?`<path d="M${x-18} 196Q${x} 170 ${x+18} 196" stroke="${EYE}" stroke-width="7" fill="none" stroke-linecap="round"/><path d="M${x+out*18} 190l${out*9} -5M${x+out*13} 182l${out*7} -8" stroke="${EYE}" stroke-width="3.5" stroke-linecap="round"/>`
+    :`<ellipse cx="${x}" cy="190" rx="17" ry="20" fill="${EYE}"/><ellipse cx="${x}" cy="197" rx="10.5" ry="10" fill="#8A5638"/><circle cx="${x+6}" cy="181" r="7" fill="#fff"/><circle cx="${x-6}" cy="199" r="3.4" fill="#fff" opacity=".95"/>
+      <path d="M${x+out*16} 178l${out*9} -6M${x+out*11} 171l${out*6} -9" stroke="${EYE}" stroke-width="3.5" stroke-linecap="round"/>`;
+  s+=`<g class="eyes">${eye(106,-1)}${eye(194,1)}</g>`;
+  s+=`<path d="M86 154q20 -11 38 0M176 154q18 -11 38 0" stroke="${HAIR}" stroke-width="5" fill="none" stroke-linecap="round"/>`;
+  s+=`<path d="M145 220q5 6 10 0" stroke="#E0A184" stroke-width="3.5" fill="none" stroke-linecap="round"/>`;
+  /* cheeks */
+  s+=`<circle cx="78" cy="226" r="${st.blushL?30:24}" fill="url(#${id}c)" opacity="${st.blushL?1:.4}"/><circle cx="222" cy="226" r="${st.blushR?30:24}" fill="url(#${id}c)" opacity="${st.blushR?1:.4}"/>`;
+  if(st.blushL)s+=twinkle(66,214,6);if(st.blushR)s+=twinkle(234,214,6);
+  /* lips */
+  const lc=st.lip||'#F2A4A2',ls=st.lip?'rgba(91,58,41,.55)':'#D98482';
+  s+=st.mood==='happy'
+    ?`<path d="M118 244Q150 286 182 244Q150 252 118 244Z" fill="#B8474B" stroke="${ls}" stroke-width="2.5" stroke-linejoin="round"/><path d="M118 244Q134 232 150 240Q166 232 182 244Q150 252 118 244Z" fill="${lc}" stroke="${ls}" stroke-width="2.5" stroke-linejoin="round"/><path d="M124 250Q150 292 176 250" fill="none" stroke="${lc}" stroke-width="9" stroke-linecap="round"/>`
+    :`<path d="M122 248Q150 280 178 248Q150 256 122 248Z" fill="${lc}" stroke="${ls}" stroke-width="2.5" stroke-linejoin="round"/><path d="M122 248Q136 234 150 243Q164 234 178 248Q150 256 122 248Z" fill="${lc}" stroke="${ls}" stroke-width="2.5" stroke-linejoin="round"/>`;
+  if(st.lip)s+=`<ellipse cx="160" cy="262" rx="8" ry="3" fill="#fff" opacity=".65"/>`;
+  if(st.acc&&ACC[st.acc])s+=`<g transform="translate(150 ${st.acc==='crown'?44:52}) scale(1.35)">${ACC[st.acc]}</g>`;
+  s+=glow('lips')+glow('cheekL')+glow('cheekR')+glow('lidL')+glow('lidR')+glow('top');
+  return `<svg class="face-art" viewBox="0 0 300 330" style="overflow:visible" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
+}
+
+/* dresses, viewBox 0 0 200 240. kind: ball | tutu | star. c1 main colour, c2 trim */
+function dress(kind='ball',c1='#FF8FB1',c2='#FFD1E0'){
+  let s='';
+  if(kind==='ball'){
+    s+=`<circle cx="58" cy="36" r="21" fill="${c2}" ${S}/><circle cx="142" cy="36" r="21" fill="${c2}" ${S}/>
+      <path d="M66 86Q12 150 8 220Q100 244 192 220Q188 150 134 86Z" fill="${c1}" ${S}/>
+      <path d="M36 158Q100 182 164 158" stroke="#fff" stroke-width="4" fill="none" opacity=".6" stroke-linecap="round"/><path d="M22 190Q100 214 178 190" stroke="#fff" stroke-width="4" fill="none" opacity=".45" stroke-linecap="round"/>
+      ${[0,1,2,3,4,5,6,7,8].map(i=>`<circle cx="${14+i*21.5}" cy="${222+Math.sin(i/8*Math.PI)*9}" r="11" fill="${c2}" ${S}/>`).join('')}
+      <path d="M72 14Q100 30 128 14L134 88H66Z" fill="${c1}" ${S}/><path d="M74 16Q100 32 126 16" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" stroke-dasharray="1 9"/>
+      <g transform="translate(100 88) scale(.5)">${ACC.ribbon.replace(/#FF6F91/g,c2).replace(/#FF8FB1/g,'#fff')}</g>
+      ${twinkle(52,130,8)}${twinkle(150,146,7)}${twinkle(96,196,6)}${twinkle(134,112,5)}`;
+  }else if(kind==='tutu'){
+    s+=`<path d="M78 8V34M122 8V34" stroke="${OL}" stroke-width="10" stroke-linecap="round"/><path d="M78 8V34M122 8V34" stroke="${c2}" stroke-width="5" stroke-linecap="round"/>
+      <ellipse cx="100" cy="150" rx="92" ry="44" fill="${c2}" ${S}/><ellipse cx="100" cy="138" rx="80" ry="36" fill="${c1}" ${S} opacity=".95"/><ellipse cx="100" cy="126" rx="64" ry="28" fill="${c2}" ${S}/>
+      ${[0,1,2,3,4,5,6].map(i=>`<path d="M${22+i*26} ${168+Math.sin(i/6*Math.PI)*18}q8 12 16 0" stroke="#fff" stroke-width="3.5" fill="none" stroke-linecap="round" opacity=".8"/>`).join('')}
+      <path d="M68 30Q100 42 132 30L128 112Q100 122 72 112Z" fill="${c1}" ${S}/>
+      <g transform="translate(100 66) scale(.42)">${ACC.heart.replace('#FF6F91','#fff')}</g>${twinkle(40,132,7)}${twinkle(160,140,6)}${twinkle(100,150,5)}`;
+  }else{
+    s+=`<path d="M70 12Q100 26 130 12L172 214Q100 234 28 214Z" fill="${c1}" ${S}/><path d="M34 190Q100 210 166 190L172 214Q100 234 28 214Z" fill="${c2}" ${S}/>
+      <path d="M70 12Q78 34 100 24Q84 14 70 12Z" fill="#fff" ${S}/><path d="M130 12Q122 34 100 24Q116 14 130 12Z" fill="#fff" ${S}/><circle cx="100" cy="30" r="6" fill="#FFD84D" ${S}/>
+      ${star(76,80,11)}${star(122,104,13)}${star(66,140,12)}${star(132,162,10)}${star(98,150,9,'#fff')}${star(104,64,7,'#fff')}${star(52,176,7,'#fff')}`;
+  }
+  return `<svg class="dress-art" viewBox="0 0 200 240" style="overflow:visible" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
+}
+function lipstick(color='#FF5A7A'){return `<svg viewBox="0 0 100 140" style="overflow:visible"><path d="M36 60V34Q36 12 64 24V60Z" fill="${color}" ${S}/><path d="M42 54V34Q42 26 50 24" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" opacity=".6"/><rect x="32" y="56" width="36" height="20" rx="4" fill="#F3F5F9" ${S}/><rect x="26" y="72" width="48" height="60" rx="9" fill="#FFD23F" ${S}/><path d="M36 82v40" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity=".6"/>${twinkle(80,30,8,'#FFD84D')}</svg>`}
+function polish(color='#FF5A7A'){return `<svg viewBox="0 0 100 140" style="overflow:visible"><rect x="38" y="6" width="24" height="56" rx="9" fill="#5B4A8A" ${S}/><path d="M44 14v40" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".45"/><rect x="40" y="58" width="20" height="12" fill="#F3F5F9" ${S}/><path d="M22 84Q22 68 38 68H62Q78 68 78 84V118Q78 134 62 134H38Q22 134 22 118Z" fill="${color}" ${S}/><path d="M32 82v36" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity=".55"/><g transform="translate(58 104) scale(.28)">${ACC.heart.replace('#FF6F91','#fff')}</g></svg>`}
+
+window.ART={OL,animal,KINDS,F,TOPPING,WHOLE,wholeSVG,pieceSVG,pizza,TOOL,oven,BUILD,blob,rng,ACC,accSVG,face,FACE_ZONES,dress,lipstick,polish,star,twinkle};
 })();

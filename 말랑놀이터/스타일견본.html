@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>말랑 그림 견본</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&display=swap">
+<style>
+body{margin:0;padding:16px;background:linear-gradient(180deg,#FFF3F8,#EAF6FF);font-family:"Jua","Apple SD Gothic Neo","Malgun Gothic",sans-serif;color:#5B3A29}
+h1{font-weight:400;font-size:26px;margin:0 0 4px}
+h2{font-weight:400;font-size:19px;margin:18px 0 8px}
+p{margin:0 0 8px;font-family:system-ui,sans-serif;font-size:13px;line-height:1.5}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+.card{background:#fff;border-radius:22px;padding:8px;box-shadow:inset 0 4px 0 #fff,0 6px 0 rgba(91,58,41,.12);display:grid;place-items:center}
+.card svg{display:block;width:100%;height:100%}
+.c1{width:104px;height:120px}.c2{width:150px;height:166px}.c3{width:118px;height:140px}.c4{width:84px;height:84px}.c5{width:70px;height:98px}
+.sw{width:64px;height:64px;border-radius:50%;border:4px solid #fff;box-shadow:0 4px 0 rgba(91,58,41,.15)}
+.scene{position:relative;width:100%;max-width:520px;aspect-ratio:16/10;border-radius:28px;overflow:hidden;background:linear-gradient(180deg,#FFE3EF 0%,#FFF1F7 62%,#F7C9DD 62%,#F2B6CF 100%);box-shadow:0 6px 0 rgba(91,58,41,.12)}
+.scene .gar{position:absolute;left:0;right:0;top:0;height:22%}
+.scene .who{position:absolute;bottom:4%;width:24%}
+.scene .mirror{position:absolute;left:50%;top:14%;width:34%;transform:translateX(-50%)}
+</style>
+</head>
+<body>
+<h1>말랑 그림 견본</h1>
+<p>새 그림은 모두 이 그림체를 따릅니다: 큰 머리, 반짝이는 큰 눈(흰 점 2개), 발그레한 볼, 부드러운 명암과 윤기, 같은 갈색 외곽선(#5B3A29), 파스텔 바탕에 분홍·노랑 포인트.</p>
+
+<h2>1. 친구들 (기본 · 웃음 · 냠냠 · 우와)</h2>
+<div class="row" id="animals"></div>
+
+<h2>2. 화장 놀이 얼굴 (전 → 립스틱 → 볼터치 → 눈 화장 → 장식)</h2>
+<div class="row" id="faces"></div>
+
+<h2>3. 드레스</h2>
+<div class="row" id="dresses"></div>
+
+<h2>4. 장식과 화장품</h2>
+<div class="row" id="accs"></div>
+
+<h2>5. 색</h2>
+<div class="row" id="colors"></div>
+
+<h2>6. 장면 꾸밈 예시 (살롱)</h2>
+<p>배경은 세 겹으로: 뒤(벽·바닥), 가운데(거울·가구), 앞(가랜드·반짝이). 장면마다 꾸밈 요소를 3개 이상 넣습니다.</p>
+<div class="scene" id="scene"></div>
+
+<script src="art.js"></script>
+<script>
+const A=window.ART,$=id=>document.getElementById(id);
+const card=(cls,html)=>`<div class="card ${cls}">${html}</div>`;
+$('animals').innerHTML=[['bunny',{bow:'#FF6F91'}],['bear',{apron:'#FF8FB1'}],['cat',{bow:'#9A7BFF'}],['dog',{}]].map(([k,o])=>['idle','happy','yum','wow'].map(m=>card('c1',A.animal(k,m,o))).join('')).join('')+card('c1',A.animal('bunny','idle',{chef:true,wave:true}));
+$('faces').innerHTML=[{},{glow:'lips'},{lip:'#FF5A7A'},{lip:'#FF5A7A',blushL:true,blushR:true},{lip:'#FF5A7A',blushL:true,blushR:true,lidL:'#B57CFF',lidR:'#B57CFF'},{lip:'#E53950',blushL:true,blushR:true,lidL:'#5EC2FF',lidR:'#5EC2FF',acc:'crown',mood:'happy'}].map(s=>card('c2',A.face(s))).join('');
+$('dresses').innerHTML=[['ball','#FF8FB1','#FFD1E0'],['ball','#B57CFF','#E6D4FF'],['tutu','#5EC2FF','#D6F0FF'],['tutu','#FF8FB1','#FFE0EC'],['star','#6C7BFF','#FFD84D'],['star','#43C59E','#FFF3B0']].map(d=>card('c3',A.dress(...d))).join('');
+$('accs').innerHTML=Object.keys(A.ACC).map(n=>card('c4',A.accSVG(n))).join('')+['#FF5A7A','#FF8FB1','#B5179E'].map(c=>card('c5',A.lipstick(c))).join('')+['#FF5A7A','#B57CFF','#5EC2FF'].map(c=>card('c5',A.polish(c))).join('');
+$('colors').innerHTML=['#FF6F91','#FF8FB1','#FFC93C','#FFD84D','#6CCB5F','#5EC2FF','#9A7BFF','#FFF3F8','#5B3A29'].map(c=>`<span class="sw" style="background:${c}"></span>`).join('');
+const flags=['#FF8FB1','#FFD84D','#5EC2FF','#B57CFF','#6CCB5F'];
+$('scene').innerHTML=`<svg class="gar" viewBox="0 0 400 70" preserveAspectRatio="none"><path d="M0 8Q200 60 400 8" fill="none" stroke="#5B3A29" stroke-width="2.5"/>${Array.from({length:11},(_,i)=>{const x=20+i*36,y=8+52*(1-Math.pow((x-200)/200,2))*.62;return `<path d="M${x-12} ${y}L${x+12} ${y}L${x} ${y+26}Z" fill="${flags[i%5]}" stroke="#5B3A29" stroke-width="2.5" stroke-linejoin="round"/>`}).join('')}</svg>
+  <div class="mirror"><svg viewBox="0 0 200 220"><ellipse cx="100" cy="104" rx="88" ry="98" fill="#FFD23F" stroke="#5B3A29" stroke-width="4"/><ellipse cx="100" cy="104" rx="72" ry="82" fill="#DDF4FF" stroke="#5B3A29" stroke-width="4"/><path d="M60 60Q80 40 110 40" stroke="#fff" stroke-width="10" fill="none" stroke-linecap="round" opacity=".8"/>${A.twinkle(150,60,12)}${A.twinkle(48,150,9)}<g transform="translate(100 12) scale(.5)">${A.ACC.ribbon}</g></svg></div>
+  <div class="who" style="left:6%">${A.animal('cat','happy',{bow:'#FF6F91'})}</div><div class="who" style="right:6%">${A.animal('bunny','wow',{bow:'#9A7BFF'})}</div>`;
+</script>
+</body>
+</html>
