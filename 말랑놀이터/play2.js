@@ -910,7 +910,110 @@ function videoCards(list){return list.map(v=>`<a class="vcard" href="${v[3]}" ta
   sec.addEventListener('click',e=>{const a=e.target.closest('.vcard');if(a){try{speechSynthesis.cancel()}catch(_){}sfx.pop()}});
   games[id]={enter:()=>say('같이 노래 영상 볼까?','Shall we watch a song?')};
 })();
-M.P2={screen,life,chip,bigBtn,hint,dotsHTML,setDots,makeScrub,makeCutter,makeDrag,makeSweep,tapItems,friendsRow,faceOf,faceBg,noise,sweepTone,siren,SFX,foamAt,boxSize,CNT_KO_UNIT,josa};
+
+/* ---------- soft machine sounds (attack >= 30ms, no sharp highs) ---------- */
+function useCount(k){const n=(M.store.get(k,0)|0);M.store.set(k,n+1);return n}
+function softNoise(dur,{type='lowpass',freq=900,q=.7,vol=.2,attack=.06}){
+  const a=actx();if(!a||!M.S.sound||vol<=0)return;
+  if(!noiseBuf){noiseBuf=a.createBuffer(1,a.sampleRate*2,a.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
+  const s=a.createBufferSource();s.buffer=noiseBuf;s.loop=true;const f=a.createBiquadFilter();f.type=type;f.frequency.value=freq;f.Q.value=q;
+  const g=a.createGain(),t=a.currentTime,rel=.3;g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(vol,t+attack);g.gain.setValueAtTime(vol,t+Math.max(attack,dur-rel));g.gain.linearRampToValueAtTime(.0001,t+dur);
+  s.connect(f);f.connect(g);g.connect(a.destination);s.start(t);s.stop(t+dur+.05);return{t,dur,g}
+}
+/* dryer: low motor hum (~180Hz) + soft warm wind. Loudness grows with how many times it was used (saved on device). */
+function dryerSound(){
+  const C=(M.CFG.sound||{}),D=C.dryer||{},vs=D.volumeByUse||[.15,.25,.35,.45],n=useCount('mallang_dryuse');
+  const parent=Number(M.S.dryer==null?1:M.S.dryer),vol=vs[Math.min(n,vs.length-1)]*parent*(C.master||.8);
+  const a=actx();if(!a||!M.S.sound||vol<=0)return 0;
+  const dur=1.2,t=a.currentTime,o=a.createOscillator(),lfo=a.createOscillator(),lg=a.createGain(),g=a.createGain();
+  o.type='sine';o.frequency.value=180;lfo.frequency.value=6;lg.gain.value=4;lfo.connect(lg);lg.connect(o.frequency);
+  g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(vol*.45,t+.08);g.gain.setValueAtTime(vol*.45,t+dur-.3);g.gain.linearRampToValueAtTime(.0001,t+dur);
+  o.connect(g);g.connect(a.destination);o.start(t);lfo.start(t);o.stop(t+dur+.05);lfo.stop(t+dur+.05);
+  softNoise(dur,{type:'lowpass',freq:900,vol:vol*1.5,attack:.08});
+  return vol;
+}
+/* shower: rain-like band noise + an occasional soft drop */
+function showerSound(){
+  const S2=(M.CFG.sound||{}).shower||{},vol=(S2.volume||.3)*((M.CFG.sound||{}).master||.8);
+  softNoise(1.2,{type:'bandpass',freq:2400,q:.6,vol:vol*.6,attack:.05});
+  const a=actx();if(!a||!M.S.sound)return vol;
+  [.3,.8].forEach(w=>{const t=a.currentTime+w,o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.setValueAtTime(900,t);o.frequency.exponentialRampToValueAtTime(500,t+.12);
+    g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(vol*.25,t+.035);g.gain.exponentialRampToValueAtTime(.0001,t+.2);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+.25)});
+  return vol;
+}
+
+/* ---------- rub v2: easy rubbing (numbers live in MLCFG.touch.rub / touch.tool / calm) ----------
+   touch on target = instant progress; keeps counting after the finger leaves the target;
+   moving adds distance; holding still adds slow progress; progress never goes down. */
+const rubCss=document.createElement('style');rubCss.textContent=
+'.rub-tool{position:absolute;left:0;top:0;z-index:7;pointer-events:none;display:none;filter:drop-shadow(0 4px 3px rgba(91,74,66,.2))}'+
+'.rub-tool svg{width:100%;height:100%;display:block}'+
+'.rub-fx{position:absolute;z-index:6;pointer-events:none;display:none;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.95) 0 38%,rgba(255,255,255,.55) 62%,rgba(255,255,255,0) 72%)}'+
+'.rub-trail{position:absolute;z-index:6;pointer-events:none;border-radius:50%;background:rgba(255,255,255,.9);border:2px solid #D8EAF4;transform:translate(-50%,-50%);animation:rubtrail .7s ease-out forwards}'+
+'@keyframes rubtrail{from{opacity:.9;transform:translate(-50%,-50%) scale(.5)}to{opacity:0;transform:translate(-50%,-90%) scale(1.2)}}';
+document.head.appendChild(rubCss);
+function makeRub(el,o={}){
+  const cfg=()=>Object.assign({},(M.CFG.touch||{}).rub,o.cfg||{}),tcfg=()=>Object.assign({},(M.CFG.touch||{}).tool);
+  const host=o.host||el;
+  let tool=null,fx=null;
+  if(o.tool){tool=document.createElement('div');tool.className='rub-tool';tool.innerHTML=o.tool;host.appendChild(tool)}
+  fx=document.createElement('div');fx.className='rub-fx';host.appendChild(fx);
+  let p=0,enabled=true,done=false,id=null,lx=0,ly=0,raf=0,lastT=0,trailD=0,total=0;
+  const hr=()=>host.getBoundingClientRect();
+  function toolSize(){const t=tcfg(),w=hr().width;return Math.max(t.minPx||130,w*(t.stageWidthRatio||.32))}
+  function place(e){
+    const r=hr(),x=e.clientX-r.left,y=e.clientY-r.top,c=cfg(),rad=r.width*(c.effectRadiusRatio||.16);
+    if(tool){const sz=toolSize();tool.style.width=sz+'px';tool.style.height=sz+'px';tool.style.display='block';tool.style.left=(x-sz/2)+'px';tool.style.top=Math.max(0,y-sz-18)+'px'}
+    fx.style.display='block';fx.style.width=fx.style.height=(rad*2)+'px';fx.style.left=(x-rad)+'px';fx.style.top=(y-rad)+'px';
+  }
+  function trail(e,rad){
+    if(host.querySelectorAll('.rub-trail').length>8)return;const r=hr(),b=document.createElement('i');b.className='rub-trail';
+    const sz=rad*(.5+Math.random()*.5);b.style.width=b.style.height=sz+'px';b.style.left=(e.clientX-r.left+(Math.random()-.5)*rad)+'px';b.style.top=(e.clientY-r.top+(Math.random()-.5)*rad)+'px';host.appendChild(b);setTimeout(()=>b.remove(),750);
+  }
+  function add(d,why){
+    if(done||!enabled)return;const before=p;p=Math.min(1,p+d);
+    if(p>before||why==='tap'){if(o.onProgress)o.onProgress(p,why)}
+    if(p>=1&&!done){done=true;stopHold();if(o.onDone)o.onDone()}
+  }
+  function holdLoop(t){
+    raf=0;if(id==null||done||!enabled)return;
+    const dt=Math.min(.1,(t-lastT)/1000);lastT=t;add((cfg().holdProgressPerSec==null?.12:cfg().holdProgressPerSec)*dt,'hold');
+    if(id!=null&&!done)raf=requestAnimationFrame(holdLoop);
+  }
+  function stopHold(){if(raf){cancelAnimationFrame(raf);raf=0}}
+  function end(e){
+    if(id==null||(e&&e.pointerId!==id))return;id=null;stopHold();
+    if(tool)tool.style.display='none';fx.style.display='none';if(o.onRelease)o.onRelease();
+  }
+  function down(e){
+    if(!enabled||done)return;e.preventDefault();actx();
+    const r=o.target?o.target():el.getBoundingClientRect(),c=cfg(),tm=(c.targetMargin==null?.25:c.targetMargin)/4,mx=(r.width||0)*tm,my=(r.height||0)*tm;
+    const inside=e.clientX>=r.left-mx&&e.clientX<=r.right+mx&&e.clientY>=r.top-my&&e.clientY<=r.bottom+my;
+    if(!inside){if(o.onMiss)o.onMiss(e);return}
+    if(o.onTouch)o.onTouch(e);
+    try{el.setPointerCapture(e.pointerId)}catch(_){}
+    id=e.pointerId;lx=e.clientX;ly=e.clientY;lastT=performance.now();place(e);
+    add(c.tapChunk==null?.08:c.tapChunk,'tap');
+    if(!done)raf=requestAnimationFrame(holdLoop);
+  }
+  function move(e){
+    if(id==null||e.pointerId!==id||done)return;
+    const c=cfg(),d=Math.hypot(e.clientX-lx,e.clientY-ly);lx=e.clientX;ly=e.clientY;place(e);
+    if(d>=(c.minMovePx==null?.5:c.minMovePx)){
+      add(d/(hr().width*(c.needStageWidths||2)),'move');
+      trailD+=d;const rad=hr().width*(c.effectRadiusRatio||.16);if(trailD>rad*.8){trailD=0;trail(e,rad)}
+    }
+  }
+  el.addEventListener('pointerdown',down);el.addEventListener('pointermove',move);
+  ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>el.addEventListener(ev,end));
+  return{
+    get progress(){return p},get active(){return id!=null},
+    stop(){enabled=false;end()},
+    destroy(){enabled=false;stopHold();el.removeEventListener('pointerdown',down);el.removeEventListener('pointermove',move);['pointerup','pointercancel','lostpointercapture'].forEach(ev=>el.removeEventListener(ev,end));if(tool)tool.remove();fx.remove();host.querySelectorAll('.rub-trail').forEach(x=>x.remove())}
+  };
+}
+
+M.P2={makeRub,dryerSound,showerSound,screen,life,chip,bigBtn,hint,dotsHTML,setDots,makeScrub,makeCutter,makeDrag,makeSweep,tapItems,friendsRow,faceOf,faceBg,noise,sweepTone,siren,SFX,foamAt,boxSize,CNT_KO_UNIT,josa};
 /* rest screen gets the hand-play videos too */
 (()=>{const r=document.querySelector('#rest .sheet');if(!r)return;const box=document.createElement('div');box.className='vlist';box.style.width='100%';
   box.innerHTML='<p class="hint">쉬는 동안 손유희 노래를 같이 따라 해 봐요.</p>'+videoCards(VIDEOS.slice(0,3));r.insertBefore(box,r.querySelector('#restHold'))})();
