@@ -1053,7 +1053,8 @@ function holdSound(kind,opt={}){
    o.cells: [[fx,fy],...] cell centres as fractions of the target rect (cells inside the picture only).
    o.cfg(): games.petsalon.tools (offsetAboveFingerRatio, coverage). Rubbing amounts come from touch.rub, tool size from touch.tool.
    o.effect: 'foam' (bubbles under the finger) | 'water' (stream from the shower head) | 'wind' (3 soft lines from the dryer mouth).
-   o.anchor: [x,y] working point inside the tool picture (fractions): sponge bottom, shower head, dryer mouth. */
+   o.anchor: [x,y] working point inside the tool picture (fractions): sponge bottom, shower head, dryer mouth.
+   Optional (nail shop): o.radius(hostRect,targetRect) → brush radius in px, o.fx({wx,wy,sz,x,y,rad,now}) → effect SVG, tool.fill(i,d). */
 const toolCss=document.createElement('style');toolCss.textContent=
 '.tl-tool{position:absolute;left:0;top:0;z-index:8;pointer-events:none;display:none;filter:drop-shadow(0 4px 3px rgba(91,74,66,.2))}'+
 '.tl-tool svg{width:100%;height:100%;display:block;overflow:visible}'+
@@ -1070,7 +1071,7 @@ function makeTool(el,o={}){
   const hr=()=>host.getBoundingClientRect();
   function geom(){
     const h=hr(),t=o.target(),[cols,rows]=(cov().grid||[6,6]);
-    const rad=(cov().radiusRatio||.16)*Math.min(h.width,h.height);
+    const rad=o.radius?o.radius(h,t):(cov().radiusRatio||.16)*Math.min(h.width,h.height);   // o.radius: own brush size (e.g. nail painting)
     const cw=t.width/cols,ch=t.height/rows;
     return{h,t,rad,pts:o.cells.map(c=>[t.left-h.left+c[0]*t.width,t.top-h.top+c[1]*t.height]),perRad:Math.max(1,Math.PI*rad*rad/Math.max(1,cw*ch))};
   }
@@ -1108,6 +1109,7 @@ function makeTool(el,o={}){
   }
   function drawFx(now){
     const W=placeTool();if(!W)return;const rad=G.rad,x=F.x,y=F.y;let s='';
+    if(o.fx){fx.innerHTML=o.fx({wx:W.wx,wy:W.wy,sz:W.sz,x,y,rad,now})||'';return}   // o.fx: the caller draws its own effect
     if(o.effect==='water'){
       const hw=W.sz*.2,fw=rad*.4,hy=W.wy;
       s+=`<path d="M${W.wx-hw} ${hy}L${W.wx+hw} ${hy}L${x+fw} ${y}L${x-fw} ${y}Z" fill="#CFE5F4" opacity=".42"/>`;
@@ -1175,6 +1177,8 @@ function makeTool(el,o={}){
   return{
     get progress(){return progress()},get ratio(){return ratio()},get doneRatio(){return doneRatio},get done(){return done},get active(){return id!=null},
     get grid(){return v.slice()},
+    /* add to one cell from outside (e.g. a brush that paints by itself after a tap) */
+    fill(i,d){if(!enabled||done)return 0;const r=add(i,d,'fill');report('fill');return r},
     cellPts(){const t=o.target();return o.cells.map(c=>[t.left+c[0]*t.width,t.top+c[1]*t.height])},
     stop(){enabled=false;release()},
     destroy(){enabled=false;release();timers.forEach(clearTimeout);timers=[];el.removeEventListener('pointerdown',down);el.removeEventListener('pointermove',move);
