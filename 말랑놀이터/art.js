@@ -264,5 +264,55 @@ function dress(kind='ball',c1='#FF8FB1',c2='#FFD1E0'){
 function lipstick(color='#FF5A7A'){return `<svg viewBox="0 0 100 140" style="overflow:visible"><path d="M36 60V34Q36 12 64 24V60Z" fill="${color}" ${S}/><path d="M42 54V34Q42 26 50 24" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" opacity=".6"/><rect x="32" y="56" width="36" height="20" rx="4" fill="#F3F5F9" ${S}/><rect x="26" y="72" width="48" height="60" rx="9" fill="#FFD23F" ${S}/><path d="M36 82v40" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity=".6"/>${twinkle(80,30,8,'#FFD84D')}</svg>`}
 function polish(color='#FF5A7A'){return `<svg viewBox="0 0 100 140" style="overflow:visible"><rect x="38" y="6" width="24" height="56" rx="9" fill="#5B4A8A" ${S}/><path d="M44 14v40" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".45"/><rect x="40" y="58" width="20" height="12" fill="#F3F5F9" ${S}/><path d="M22 84Q22 68 38 68H62Q78 68 78 84V118Q78 134 62 134H38Q22 134 22 118Z" fill="${color}" ${S}/><path d="M32 82v36" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity=".55"/><g transform="translate(58 104) scale(.28)">${ACC.heart.replace('#FF6F91','#fff')}</g></svg>`}
 
-window.ART={OL,animal,KINDS,F,TOPPING,WHOLE,wholeSVG,pieceSVG,pizza,TOOL,oven,BUILD,blob,rng,ACC,accSVG,face,FACE_ZONES,dress,lipstick,polish,star,twinkle};
+/* 종이 공예 그림체: 외곽선 없이 종이를 여러 겹 겹친 둥근 그림. 겹마다 부드러운 그림자, 종이 결.
+   paper(kind, {grow:0~3, size}) — grow가 오를수록 그림에 나무·꽃·집이 하나씩 늘어남(숫자 대신 그림이 자람). */
+let _pid=0;
+function paper(kind='forest',o={}){
+  const g=Math.max(0,Math.min(3,o.grow??3)),id='pp'+(++_pid);
+  const P={forest:{sky:'#DCEBF0',far:'#B9D3B0',mid:'#9CC293',near:'#86B27E',path:'#EBDCC0',acc:'#E9B7A6'},
+           sea:{sky:'#DDEBF2',far:'#A9CBDA',mid:'#8EBBCF',near:'#EADCC2',path:'#F3E8D3',acc:'#E8C27A'},
+           christmas:{sky:'#DCE4EE',far:'#C4D3CB',mid:'#F4F1EA',near:'#FBF9F4',path:'#E9E2D6',acc:'#D9928A'},
+           kitchen:{sky:'#F3E6DA',far:'#E8D3C0',mid:'#D9BFA6',near:'#EFE2D0',path:'#F6EEE2',acc:'#E3A79A'}}[kind]||{};
+  const L=(d)=>`<g filter="url(#${id}s)">${d}</g>`;                 // 한 겹 = 그림자 하나
+  const tree=(x,y,s=1,c='#7FA978')=>`<g transform="translate(${x} ${y}) scale(${s})"><rect x="-3" y="-4" width="6" height="16" rx="2" fill="#B89878"/><path d="M0-34L16-6H-16Z" fill="${c}"/><path d="M0-46L12-22H-12Z" fill="${c}" opacity=".92"/></g>`;
+  const bush=(x,y,s=1,c='#93BC8A')=>`<g transform="translate(${x} ${y}) scale(${s})"><circle cx="-8" cy="0" r="10" fill="${c}"/><circle cx="6" cy="-4" r="12" fill="${c}"/><circle cx="16" cy="2" r="8" fill="${c}"/></g>`;
+  const flower=(x,y,c=P.acc)=>`<g transform="translate(${x} ${y})"><rect x="-1" y="0" width="2" height="9" fill="#7FA978"/>${[0,72,144,216,288].map(a=>`<circle cx="${Math.cos(a*Math.PI/180)*4}" cy="${Math.sin(a*Math.PI/180)*4}" r="3.4" fill="${c}"/>`).join('')}<circle r="2.4" fill="#F4D58A"/></g>`;
+  const house=(x,y,roof='#D9928A',wall='#F6EEE2')=>`<g transform="translate(${x} ${y})"><path d="M-18 0V-22H18V0Z" fill="${wall}"/><path d="M-24-20L0-40L24-20Z" fill="${roof}"/><rect x="-5" y="-12" width="10" height="12" rx="4" fill="#C9A98A"/><rect x="8" y="-17" width="7" height="7" rx="2" fill="#F4D58A"/></g>`;
+  const cloud=(x,y,s=1)=>`<g transform="translate(${x} ${y}) scale(${s})" fill="#FBF9F4"><circle cx="-10" cy="0" r="8"/><circle cx="2" cy="-5" r="11"/><circle cx="14" cy="0" r="8"/><rect x="-18" y="0" width="40" height="7" rx="3.5"/></g>`;
+  let s='';
+  if(kind==='forest'){
+    s+=L(cloud(62,52,1)+cloud(140,40,.8));
+    s+=L(`<path d="M0 118Q50 84 100 104T200 96V200H0Z" fill="${P.far}"/>`);
+    s+=L(`<path d="M0 136Q60 110 120 130T200 124V200H0Z" fill="${P.mid}"/>`+(g>=1?tree(40,124,1)+tree(58,128,.75,'#8DB585'):'')+(g>=2?tree(160,122,1.1)+tree(178,128,.8,'#8DB585'):''));
+    s+=L(`<path d="M0 160Q70 146 130 158T200 154V200H0Z" fill="${P.near}"/>`+(g>=1?bush(150,160,.9):'')+(g>=3?bush(30,166,.8,'#A3C799')+flower(118,168)+flower(132,174,'#EBC9A0')+flower(70,176):''));
+    s+=L(`<path d="M84 200Q92 170 104 156Q112 148 106 140Q118 150 114 162Q104 182 120 200Z" fill="${P.path}"/>`);
+    s+=`<g transform="translate(78 92) scale(.3)">${animal('bunny','happy',{bow:'#E9A2B4'})}</g>`;
+  }else if(kind==='sea'){
+    s+=L(cloud(150,48,.9)+`<circle cx="52" cy="56" r="14" fill="#F2DDA0"/>`);
+    s+=L(`<path d="M0 112Q50 104 100 112T200 108V200H0Z" fill="${P.far}"/>`);
+    s+=L(`<path d="M0 132Q40 124 80 132T160 130T200 132V200H0Z" fill="${P.mid}"/>`+(g>=2?`<path d="M120 118L136 118L128 96Z" fill="#FBF9F4"/><path d="M112 120H146L140 128H118Z" fill="#D9928A"/>`:''));
+    s+=L(`<path d="M0 158Q60 146 120 156T200 150V200H0Z" fill="${P.near}"/>`+(g>=1?`<path d="M40 162l8-14 8 14z" fill="#E3B48A"/><circle cx="160" cy="166" r="6" fill="#E8C7B8"/>`:'')+(g>=3?`<path d="M120 172q8-12 16 0q-8 6-16 0z" fill="#E9B7A6"/><circle cx="74" cy="176" r="4" fill="#FBF9F4"/>`:''));
+    s+=`<g transform="translate(70 104) scale(.28)">${animal('cat','happy',{bow:'#9DB7E0'})}</g>`;
+  }else if(kind==='christmas'){
+    s+=L(Array.from({length:10},(_,i)=>`<circle cx="${18+i*19}" cy="${30+(i*37)%50}" r="${2+(i%3)}" fill="#FBF9F4"/>`).join(''));
+    s+=L(`<path d="M0 116Q50 96 100 110T200 104V200H0Z" fill="${P.far}"/>`+tree(150,110,.9,'#8FAE98')+tree(166,114,.7,'#8FAE98'));
+    s+=L(`<path d="M0 138Q60 122 120 136T200 130V200H0Z" fill="${P.mid}"/>`+house(62,138,'#C98A84')+(g>=2?house(126,140,'#9FB5C9'):''));
+    s+=L(`<path d="M0 164Q70 150 130 162T200 158V200H0Z" fill="${P.near}"/>`+(g>=1?tree(30,170,1,'#7FA48A'):'')+(g>=3?`<circle cx="160" cy="170" r="10" fill="#FBF9F4"/><circle cx="160" cy="154" r="7" fill="#FBF9F4"/><path d="M160 154l8 2-8 2z" fill="#E3A060"/>`:''));
+    s+=`<g transform="translate(84 112) scale(.26)">${animal('bear','happy',{bow:'#D9928A'})}</g>`;
+  }else{ // kitchen
+    s+=L(`<rect x="0" y="0" width="200" height="120" fill="${P.far}"/><rect x="30" y="30" width="50" height="40" rx="6" fill="#DDEBF0"/>`);
+    s+=L(`<rect x="0" y="120" width="200" height="80" fill="${P.mid}"/>`+(g>=1?`<rect x="120" y="70" width="50" height="50" rx="8" fill="#EFE2D0"/><rect x="130" y="82" width="30" height="22" rx="4" fill="#C9A98A"/>`:''));
+    s+=L(`<path d="M20 150H180L170 172H30Z" fill="${P.near}"/>`+(g>=2?`<circle cx="70" cy="146" r="12" fill="#E3A79A"/><circle cx="70" cy="140" r="6" fill="#F6EEE2"/>`:'')+(g>=3?`<path d="M120 148h28l-4 -16h-20z" fill="#F2DDA0"/>`:''));
+    s+=`<g transform="translate(84 92) scale(.28)">${animal('bear','yum',{apron:'#E3A79A'})}</g>`;
+  }
+  return `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" class="paper-art"><defs>
+<clipPath id="${id}c"><circle cx="100" cy="100" r="92"/></clipPath>
+<filter id="${id}s" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="2.5" stdDeviation="2" flood-color="#5B3A29" flood-opacity=".22"/></filter>
+<filter id="${id}g"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="3"/><feColorMatrix values="0 0 0 0 .36  0 0 0 0 .23  0 0 0 0 .16  0 0 0 .09 0"/></filter></defs>
+<circle cx="100" cy="103" r="97" fill="#5B3A29" opacity=".12"/><circle cx="100" cy="100" r="97" fill="#FBF9F4"/>
+<g clip-path="url(#${id}c)"><rect width="200" height="200" fill="${P.sky}"/>${s}<rect width="200" height="200" filter="url(#${id}g)"/></g>
+<circle cx="100" cy="100" r="92" fill="none" stroke="#5B3A29" stroke-opacity=".08" stroke-width="1.5"/></svg>`;
+}
+
+window.ART={paper,OL,animal,KINDS,F,TOPPING,WHOLE,wholeSVG,pieceSVG,pizza,TOOL,oven,BUILD,blob,rng,ACC,accSVG,face,FACE_ZONES,dress,lipstick,polish,star,twinkle};
 })();

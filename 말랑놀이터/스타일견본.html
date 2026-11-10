@@ -44,6 +44,11 @@ p{margin:0 0 8px;font-family:system-ui,sans-serif;font-size:13px;line-height:1.5
 <p>배경은 세 겹으로: 뒤(벽·바닥), 가운데(거울·가구), 앞(가랜드·반짝이). 장면마다 꾸밈 요소를 3개 이상 넣습니다.</p>
 <div class="scene" id="scene"></div>
 
+<h2>7. 종이 공예 그림체 (숫자마스터 참고 · 문과 지도용)</h2>
+<p>외곽선 없이 차분한 색 종이를 3~4겹 겹치고, 겹마다 부드러운 그림자와 종이 결을 줍니다. 홈의 둥근 문(최대 4개)과 단계 지도에 씁니다. 아래 줄은 같은 숲이 단계가 오를수록 자라는 모습(숫자 대신 그림으로 보여 주기).</p>
+<div class="row" id="papers"></div>
+<div class="row" id="grow" style="margin-top:10px"></div>
+
 <script src="art.js"></script>
 <script>
 const A=window.ART,$=id=>document.getElementById(id);
@@ -53,6 +58,8 @@ $('faces').innerHTML=[{},{glow:'lips'},{lip:'#FF5A7A'},{lip:'#FF5A7A',blushL:tru
 $('dresses').innerHTML=[['ball','#FF8FB1','#FFD1E0'],['ball','#B57CFF','#E6D4FF'],['tutu','#5EC2FF','#D6F0FF'],['tutu','#FF8FB1','#FFE0EC'],['star','#6C7BFF','#FFD84D'],['star','#43C59E','#FFF3B0']].map(d=>card('c3',A.dress(...d))).join('');
 $('accs').innerHTML=Object.keys(A.ACC).map(n=>card('c4',A.accSVG(n))).join('')+['#FF5A7A','#FF8FB1','#B5179E'].map(c=>card('c5',A.lipstick(c))).join('')+['#FF5A7A','#B57CFF','#5EC2FF'].map(c=>card('c5',A.polish(c))).join('');
 $('colors').innerHTML=['#FF6F91','#FF8FB1','#FFC93C','#FFD84D','#6CCB5F','#5EC2FF','#9A7BFF','#FFF3F8','#5B3A29'].map(c=>`<span class="sw" style="background:${c}"></span>`).join('');
+$('papers').innerHTML=['forest','sea','kitchen','christmas'].map(k=>`<div style="width:150px">${A.paper(k)}</div>`).join('');
+$('grow').innerHTML=[0,1,2,3].map(g=>`<div style="width:110px;text-align:center">${A.paper('forest',{grow:g})}<p>${g+1}단계</p></div>`).join('');
 const flags=['#FF8FB1','#FFD84D','#5EC2FF','#B57CFF','#6CCB5F'];
 $('scene').innerHTML=`<svg class="gar" viewBox="0 0 400 70" preserveAspectRatio="none"><path d="M0 8Q200 60 400 8" fill="none" stroke="#5B3A29" stroke-width="2.5"/>${Array.from({length:11},(_,i)=>{const x=20+i*36,y=8+52*(1-Math.pow((x-200)/200,2))*.62;return `<path d="M${x-12} ${y}L${x+12} ${y}L${x} ${y+26}Z" fill="${flags[i%5]}" stroke="#5B3A29" stroke-width="2.5" stroke-linejoin="round"/>`}).join('')}</svg>
   <div class="mirror"><svg viewBox="0 0 200 220"><ellipse cx="100" cy="104" rx="88" ry="98" fill="#FFD23F" stroke="#5B3A29" stroke-width="4"/><ellipse cx="100" cy="104" rx="72" ry="82" fill="#DDF4FF" stroke="#5B3A29" stroke-width="4"/><path d="M60 60Q80 40 110 40" stroke="#fff" stroke-width="10" fill="none" stroke-linecap="round" opacity=".8"/>${A.twinkle(150,60,12)}${A.twinkle(48,150,9)}<g transform="translate(100 12) scale(.5)">${A.ACC.ribbon}</g></svg></div>
