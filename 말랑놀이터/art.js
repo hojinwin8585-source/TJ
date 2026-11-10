@@ -33,8 +33,8 @@ function animal(kind='bunny',mood='idle',opt={}){
   /* ears behind the head */
   if(kind==='bunny')s+=`<g class="ears"><ellipse cx="72" cy="36" rx="19" ry="44" fill="${c}" ${S} transform="rotate(-10 72 36)"/><ellipse cx="72" cy="40" rx="9" ry="31" fill="${k.inner}" transform="rotate(-10 72 40)"/>
     <ellipse cx="128" cy="36" rx="19" ry="44" fill="${c}" ${S} transform="rotate(12 128 36)"/><ellipse cx="128" cy="40" rx="9" ry="31" fill="${k.inner}" transform="rotate(12 128 40)"/></g>`;
-  if(kind==='bear')s+=`<circle cx="42" cy="50" r="25" fill="${c}" ${S}/><circle cx="42" cy="52" r="13" fill="${k.inner}"/><circle cx="158" cy="50" r="25" fill="${c}" ${S}/><circle cx="158" cy="52" r="13" fill="${k.inner}"/>`;
-  if(kind==='cat')s+=`<path d="M36 74L44 12L90 44Z" fill="${c}" ${S}/><path d="M49 58L52 30L74 46Z" fill="${k.inner}"/><path d="M164 74L156 12L110 44Z" fill="${c}" ${S}/><path d="M151 58L148 30L126 46Z" fill="${k.inner}"/>`;
+  if(kind==='bear')s+=`<g class="ears"><circle cx="42" cy="50" r="25" fill="${c}" ${S}/><circle cx="42" cy="52" r="13" fill="${k.inner}"/><circle cx="158" cy="50" r="25" fill="${c}" ${S}/><circle cx="158" cy="52" r="13" fill="${k.inner}"/></g>`;
+  if(kind==='cat')s+=`<g class="ears"><path d="M36 74L44 12L90 44Z" fill="${c}" ${S}/><path d="M49 58L52 30L74 46Z" fill="${k.inner}"/><path d="M164 74L156 12L110 44Z" fill="${c}" ${S}/><path d="M151 58L148 30L126 46Z" fill="${k.inner}"/></g>`;
   /* body, feet, arms */
   s+=`<ellipse cx="78" cy="220" rx="17" ry="9" fill="${c}" ${S}/><ellipse cx="122" cy="220" rx="17" ry="9" fill="${c}" ${S}/>`;
   s+=`<ellipse cx="100" cy="188" rx="48" ry="38" fill="${c}" ${S}/><ellipse cx="100" cy="196" rx="28" ry="22" fill="${k.inner}" opacity=".92"/>`;
@@ -43,7 +43,7 @@ function animal(kind='bunny',mood='idle',opt={}){
   /* head */
   s+=`<circle cx="100" cy="100" r="70" fill="${c}" ${S}/><ellipse cx="68" cy="56" rx="25" ry="13" fill="#fff" opacity=".38" transform="rotate(-28 68 56)"/>`;
   if(kind==='cat')s+=`<path d="M100 32v15M84 35l3 13M116 35l-3 13" stroke="${k.dark}" stroke-width="5.5" stroke-linecap="round"/>`;
-  if(kind==='dog')s+=`<ellipse cx="128" cy="92" rx="21" ry="24" fill="${k.dark}" opacity=".55"/><path d="M36 68Q16 108 40 140Q58 120 58 78Z" fill="${k.dark}" ${S}/><path d="M164 68Q184 108 160 140Q142 120 142 78Z" fill="${k.dark}" ${S}/>`;
+  if(kind==='dog')s+=`<ellipse cx="128" cy="92" rx="21" ry="24" fill="${k.dark}" opacity=".55"/><g class="ears"><path d="M36 68Q16 108 40 140Q58 120 58 78Z" fill="${k.dark}" ${S}/><path d="M164 68Q184 108 160 140Q142 120 142 78Z" fill="${k.dark}" ${S}/></g>`;
   if(kind==='bunny')s+=`<path d="M90 36q10-12 20 0" stroke="${k.inner}" stroke-width="5" fill="none" stroke-linecap="round"/>`;
   if(kind==='bear'||kind==='dog')s+=`<ellipse cx="100" cy="127" rx="31" ry="23" fill="${k.inner}"/>`;else s+=`<ellipse cx="100" cy="127" rx="25" ry="17" fill="#fff" opacity=".5"/>`;
   s+=`<circle cx="52" cy="124" r="18" fill="url(#${id}c)"/><circle cx="148" cy="124" r="18" fill="url(#${id}c)"/>`;

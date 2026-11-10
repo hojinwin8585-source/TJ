@@ -1013,7 +1013,176 @@ function makeRub(el,o={}){
   };
 }
 
-M.P2={makeRub,dryerSound,showerSound,screen,life,chip,bigBtn,hint,dotsHTML,setDots,makeScrub,makeCutter,makeDrag,makeSweep,tapItems,friendsRow,faceOf,faceBg,noise,sweepTone,siren,SFX,foamAt,boxSize,CNT_KO_UNIT,josa};
+/* ---------- hold sounds (P2): on only while the finger is down, fading in and out ----------
+   shower: soft rain-like band noise + an occasional soft drop. dryer: low hum + warm wind, loudness by use count (sound.dryer). */
+const HOLD_FADE_S=.15; // games.petsalon.tools.shower.sound: "150ms 서서히 켜짐/꺼짐"
+function holdSound(kind,opt={}){
+  const none={vol:0,stop(){}};
+  const a=actx();if(!a||!M.S.sound)return none;
+  const C=M.CFG.sound||{},master=C.master||.8;
+  let vol=0;
+  if(kind==='dryer'){
+    const D=C.dryer||{},vs=D.volumeByUse||[.15,.25,.35,.45];
+    const n=opt.count?useCount('mallang_dryuse'):Math.max(0,(M.store.get('mallang_dryuse',1)|0)-1);
+    vol=vs[Math.min(n,vs.length-1)]*Number(M.S.dryer==null?1:M.S.dryer)*master;
+  }else vol=((C.shower||{}).volume||.3)*master;
+  if(vol<=0)return none;
+  if(!noiseBuf){noiseBuf=a.createBuffer(1,a.sampleRate*2,a.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
+  const t=a.currentTime,out=a.createGain(),srcs=[];let drip=0,stopped=false;
+  out.gain.setValueAtTime(.0001,t);out.gain.linearRampToValueAtTime(vol,t+HOLD_FADE_S);out.connect(a.destination);
+  const noiseTo=(type,freq,q,g)=>{const s=a.createBufferSource();s.buffer=noiseBuf;s.loop=true;const f=a.createBiquadFilter();f.type=type;f.frequency.value=freq;f.Q.value=q;const gg=a.createGain();gg.gain.value=g;s.connect(f);f.connect(gg);gg.connect(out);s.start(t);srcs.push(s)};
+  if(kind==='dryer'){
+    const o=a.createOscillator(),lfo=a.createOscillator(),lg=a.createGain(),g=a.createGain();
+    o.type='sine';o.frequency.value=180;lfo.frequency.value=6;lg.gain.value=4;lfo.connect(lg);lg.connect(o.frequency);g.gain.value=.45;o.connect(g);g.connect(out);o.start(t);lfo.start(t);srcs.push(o,lfo);
+    noiseTo('lowpass',900,.7,1.5);
+  }else{
+    noiseTo('bandpass',2400,.6,.6);
+    const drop=()=>{if(stopped)return;const t2=a.currentTime,o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.setValueAtTime(900,t2);o.frequency.exponentialRampToValueAtTime(500,t2+.12);
+      g.gain.setValueAtTime(.0001,t2);g.gain.linearRampToValueAtTime(.25,t2+.035);g.gain.exponentialRampToValueAtTime(.0001,t2+.2);o.connect(g);g.connect(out);o.start(t2);o.stop(t2+.25)};
+    drip=setInterval(()=>{if(Math.random()<.6)drop()},420);
+  }
+  return{vol,stop(){
+    if(stopped)return;stopped=true;clearInterval(drip);
+    const t2=a.currentTime;try{out.gain.cancelScheduledValues(t2);out.gain.setValueAtTime(Math.max(.0001,out.gain.value),t2);out.gain.linearRampToValueAtTime(.0001,t2+HOLD_FADE_S)}catch(e){}
+    srcs.forEach(s=>{try{s.stop(t2+HOLD_FADE_S+.05)}catch(e){}});setTimeout(()=>{try{out.disconnect()}catch(e){}},500);
+  }};
+}
+
+/* ---------- tool v3 (P2): the tool follows the finger and only the touched cells change ----------
+   el: the stage that gets the touches. o.target(): rect of the thing being washed.
+   o.cells: [[fx,fy],...] cell centres as fractions of the target rect (cells inside the picture only).
+   o.cfg(): games.petsalon.tools (offsetAboveFingerRatio, coverage). Rubbing amounts come from touch.rub, tool size from touch.tool.
+   o.effect: 'foam' (bubbles under the finger) | 'water' (stream from the shower head) | 'wind' (3 soft lines from the dryer mouth).
+   o.anchor: [x,y] working point inside the tool picture (fractions): sponge bottom, shower head, dryer mouth. */
+const toolCss=document.createElement('style');toolCss.textContent=
+'.tl-tool{position:absolute;left:0;top:0;z-index:8;pointer-events:none;display:none;filter:drop-shadow(0 4px 3px rgba(91,74,66,.2))}'+
+'.tl-tool svg{width:100%;height:100%;display:block;overflow:visible}'+
+'.tl-fx{position:absolute;left:0;top:0;width:100%;height:100%;z-index:7;pointer-events:none;overflow:visible}';
+document.head.appendChild(toolCss);
+function makeTool(el,o={}){
+  const host=o.host||el,SVGNS='http://www.w3.org/2000/svg';
+  const rub=()=>Object.assign({},(M.CFG.touch||{}).rub,o.rub||{}),tcfg=()=>Object.assign({},(M.CFG.touch||{}).tool),cfg=()=>Object.assign({offsetAboveFingerRatio:.55,coverage:{}},o.cfg?o.cfg():{});
+  const cov=()=>Object.assign({radiusRatio:.16,doneAt:.85,holdStillCleansNearest:true},cfg().coverage||{});
+  const tool=document.createElement('div');tool.className='tl-tool tl-'+(o.effect||'foam');tool.innerHTML=o.tool||'';host.appendChild(tool);
+  const fx=document.createElementNS(SVGNS,'svg');fx.setAttribute('class','tl-fx tl-fx-'+(o.effect||'foam'));fx.style.display='none';host.appendChild(fx);
+  const N=o.cells.length,v=o.cells.map(()=>0);
+  let processed=0,id=null,F=null,lastMove=0,lastT=0,raf=0,done=false,enabled=true,snd=null,doneRatio=0,timers=[],trailD=0,G=null,downs=0;
+  const hr=()=>host.getBoundingClientRect();
+  function geom(){
+    const h=hr(),t=o.target(),[cols,rows]=(cov().grid||[6,6]);
+    const rad=(cov().radiusRatio||.16)*Math.min(h.width,h.height);
+    const cw=t.width/cols,ch=t.height/rows;
+    return{h,t,rad,pts:o.cells.map(c=>[t.left-h.left+c[0]*t.width,t.top-h.top+c[1]*t.height]),perRad:Math.max(1,Math.PI*rad*rad/Math.max(1,cw*ch))};
+  }
+  const ratio=()=>processed/N,progress=()=>v.reduce((s,x)=>s+x,0)/N;
+  function add(i,d,why){
+    if(done||v[i]>=1||d<=0)return 0;const pv=v[i];v[i]=Math.min(1,pv+d);if(v[i]>=1)processed++;
+    if(o.onCell)o.onCell(i,v[i],pv,why);return v[i]-pv;
+  }
+  function report(why){if(o.onProgress)o.onProgress(progress(),ratio(),why);if(!done&&ratio()>=cov().doneAt-1e-9)finish()}
+  function nearest(x,y,maxD){let best=-1,bd=1e9;G.pts.forEach((p,i)=>{if(v[i]>=1)return;const d=Math.hypot(p[0]-x,p[1]-y);if(d<bd&&d<=maxD){bd=d;best=i}});return best}
+  /* give 'amount' cell-units to the unfinished cells nearest the finger, one after another */
+  function spend(amount,x,y,maxD,why){let guard=0;while(amount>1e-6&&guard++<N){const i=nearest(x,y,maxD);if(i<0)break;amount-=add(i,amount,why)}}
+  function within(x,y,amt,why){G.pts.forEach((p,i)=>{if(Math.hypot(p[0]-x,p[1]-y)<=G.rad)add(i,amt,why)})}
+  function finish(){
+    done=true;doneRatio=ratio();release(true);
+    const rest=[];v.forEach((x,i)=>{if(x<1)rest.push(i)});
+    if(o.onAutoFinish)o.onAutoFinish(rest.slice());
+    const step=Math.min(120,600/Math.max(1,rest.length));
+    rest.forEach((i,k)=>timers.push(setTimeout(()=>{if(!enabled)return;const pv=v[i];v[i]=1;processed++;if(o.onCell)o.onCell(i,1,pv,'auto')},k*step)));
+    timers.push(setTimeout(()=>{if(!enabled)return;if(o.onProgress)o.onProgress(1,1,'auto');if(o.onDone)o.onDone()},rest.length*step+160));
+  }
+  function toolSize(){const t=tcfg();return Math.max(t.minPx||130,hr().width*(t.stageWidthRatio||.32))}
+  /* where the tool sits for a finger at (x,y): returns working point W and the tool's rotation */
+  function placeTool(){
+    if(!F)return null;const sz=toolSize(),gap=(o.gapScale==null?1:o.gapScale)*cfg().offsetAboveFingerRatio*sz,a=o.anchor||[.5,1],h=hr();
+    let wx=F.x,wy=F.y-gap,rot=0,flip=false;
+    if(o.effect==='wind'){flip=F.x>h.width/2;wx=F.x+(flip?-1:1)*gap;wy=F.y-.6*gap;}
+    const minY=a[1]*sz-sz*.25;if(wy<minY)wy=minY;
+    if(o.effect==='wind'){const phi=Math.atan2(F.y-wy,F.x-wx)*180/Math.PI;rot=flip?phi:phi-180}
+    const ax=flip?1-a[0]:a[0];
+    tool.style.width=tool.style.height=sz+'px';tool.style.display='block';
+    tool.style.left=(wx-ax*sz)+'px';tool.style.top=(wy-a[1]*sz)+'px';tool.style.transformOrigin=`${ax*100}% ${a[1]*100}%`;
+    tool.style.transform=`rotate(${rot.toFixed(1)}deg)${flip?' scaleX(-1)':''}`;
+    return{wx,wy,sz};
+  }
+  function drawFx(now){
+    const W=placeTool();if(!W)return;const rad=G.rad,x=F.x,y=F.y;let s='';
+    if(o.effect==='water'){
+      const hw=W.sz*.2,fw=rad*.4,hy=W.wy;
+      s+=`<path d="M${W.wx-hw} ${hy}L${W.wx+hw} ${hy}L${x+fw} ${y}L${x-fw} ${y}Z" fill="#CFE5F4" opacity=".42"/>`;
+      for(let i=0;i<14;i++){const sd=((i*37)%14)/13*2-1,t=((now/650)+i/14)%1,px=W.wx+sd*hw*.8+(x+sd*fw-W.wx-sd*hw*.8)*t,py=hy+(y-hy)*t;
+        s+=`<ellipse cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" rx="2.8" ry="6" fill="#A7CFE8" stroke="#8FC3E6" stroke-width="1" opacity="${Math.min(1,t*8).toFixed(2)}"/>`}
+      const k=.85+.15*Math.sin(now/120);
+      s+=`<ellipse cx="${x}" cy="${y}" rx="${(fw*1.5*k).toFixed(1)}" ry="${(fw*.5*k).toFixed(1)}" fill="none" stroke="#A7CFE8" stroke-width="3" opacity=".85"/>`;
+    }else if(o.effect==='wind'){
+      const dx=x-W.wx,dy=y-W.wy,L=Math.hypot(dx,dy)||1,px=-dy/L,py=dx/L;
+      s+=`<circle cx="${x}" cy="${y}" r="${(rad*.6).toFixed(1)}" fill="#FFF3DA" opacity=".35"/>`;
+      for(let i=-1;i<=1;i++){
+        const n0=6*i,n1=rad*.5*i,wob=Math.sin(now/170+i*1.7)*10,mx=W.wx+dx*.5+px*(n0+n1)/2+px*wob,my=W.wy+dy*.5+py*(n0+n1)/2+py*wob;
+        const d=`M${(W.wx+px*n0).toFixed(1)} ${(W.wy+py*n0).toFixed(1)}Q${mx.toFixed(1)} ${my.toFixed(1)} ${(x+px*n1).toFixed(1)} ${(y+py*n1).toFixed(1)}`,off=(-(now/7)%32).toFixed(1);
+        s+=`<path d="${d}" fill="none" stroke="#A7CFE8" stroke-width="9" stroke-linecap="round" opacity=".8" stroke-dasharray="22 10" stroke-dashoffset="${off}"/><path d="${d}" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-dasharray="22 10" stroke-dashoffset="${off}"/>`;
+      }
+    }else{
+      s+=`<circle cx="${x}" cy="${y}" r="${(rad*.72).toFixed(1)}" fill="#fff" opacity=".5"/>`;
+      for(let i=0;i<3;i++){const t=((now/900)+i/3)%1;s+=`<circle cx="${(W.wx+(i-1)*8).toFixed(1)}" cy="${(W.wy+(y-W.wy)*t).toFixed(1)}" r="${(4+3*t).toFixed(1)}" fill="#fff" stroke="#CDE9FA" stroke-width="1.5" opacity="${(1-t*.6).toFixed(2)}"/>`}
+    }
+    fx.innerHTML=s;
+  }
+  function loop(t){
+    raf=0;if(id==null||done||!enabled)return;
+    const dt=Math.min(.1,(t-lastT)/1000);lastT=t;
+    const c=rub(),hold=c.holdProgressPerSec==null?.12:c.holdProgressPerSec;
+    if(cov().holdStillCleansNearest!==false&&performance.now()-lastMove>200&&hold>0){spend(hold*N*dt,F.x,F.y,1e9,'hold');report('hold')}
+    if(!done){drawFx(t);if(o.onFrame)o.onFrame(F,t);raf=requestAnimationFrame(loop)}
+  }
+  function release(keepDone){
+    if(raf){cancelAnimationFrame(raf);raf=0}
+    if(snd){snd.stop();snd=null}
+    const was=id!=null;id=null;F=null;tool.style.display='none';fx.style.display='none';fx.innerHTML='';
+    if(was&&o.onRelease)o.onRelease();
+  }
+  function down(e){
+    if(!enabled||done||id!=null)return;e.preventDefault();actx();
+    const r=o.target(),c=rub(),tm=(c.targetMargin==null?.25:c.targetMargin)/4,mx=r.width*tm,my=r.height*tm;
+    if(!(e.clientX>=r.left-mx&&e.clientX<=r.right+mx&&e.clientY>=r.top-my&&e.clientY<=r.bottom+my)){if(o.onMiss)o.onMiss(e);return}
+    try{el.setPointerCapture(e.pointerId)}catch(_){}
+    G=geom();const h=G.h;id=e.pointerId;F={x:e.clientX-h.left,y:e.clientY-h.top};lastMove=performance.now()+120;lastT=performance.now();downs++;
+    if(o.onTouch)o.onTouch(e,downs);
+    if(o.sound)snd=o.sound(downs);
+    fx.style.display='block';
+    spend((c.tapChunk==null?.08:c.tapChunk)*N,F.x,F.y,G.rad*1.5,'tap');report('tap');
+    if(!done){drawFx(performance.now());if(o.onFrame)o.onFrame(F,performance.now());raf=requestAnimationFrame(loop)}
+  }
+  function move(e){
+    if(id==null||e.pointerId!==id||done)return;
+    const h=G.h,x=e.clientX-h.left,y=e.clientY-h.top,c=rub(),d=Math.hypot(x-F.x,y-F.y);
+    if(d<(c.minMovePx==null?.5:c.minMovePx))return;
+    const k=N/(h.width*(c.needStageWidths||2)*G.perRad),steps=Math.max(1,Math.ceil(d/(G.rad/3))),seg=d/steps;
+    for(let s=1;s<=steps;s++){const px=F.x+(x-F.x)*(s-.5)/steps,py=F.y+(y-F.y)*(s-.5)/steps;within(px,py,k*seg,'move')}
+    if(o.onMove)o.onMove({x,y},d);
+    if(o.effect==='foam'){trailD+=d;if(trailD>G.rad*.8){trailD=0;trail(x,y)}}
+    F={x,y};lastMove=performance.now();report('move');
+  }
+  function trail(x,y){
+    if(host.querySelectorAll('.rub-trail').length>8)return;const b=document.createElement('i');b.className='rub-trail';const sz=G.rad*(.5+Math.random()*.5);
+    b.style.width=b.style.height=sz+'px';b.style.left=(x+(Math.random()-.5)*G.rad)+'px';b.style.top=(y+(Math.random()-.5)*G.rad)+'px';host.appendChild(b);setTimeout(()=>b.remove(),750);
+  }
+  function up(e){if(id==null||(e&&e.pointerId!==id))return;release()}
+  const vis=()=>{if(document.hidden)release()};
+  el.addEventListener('pointerdown',down);el.addEventListener('pointermove',move);
+  ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>el.addEventListener(ev,up));document.addEventListener('visibilitychange',vis);
+  return{
+    get progress(){return progress()},get ratio(){return ratio()},get doneRatio(){return doneRatio},get done(){return done},get active(){return id!=null},
+    get grid(){return v.slice()},
+    cellPts(){const t=o.target();return o.cells.map(c=>[t.left+c[0]*t.width,t.top+c[1]*t.height])},
+    stop(){enabled=false;release()},
+    destroy(){enabled=false;release();timers.forEach(clearTimeout);timers=[];el.removeEventListener('pointerdown',down);el.removeEventListener('pointermove',move);
+      ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>el.removeEventListener(ev,up));document.removeEventListener('visibilitychange',vis);tool.remove();fx.remove();host.querySelectorAll('.rub-trail').forEach(x=>x.remove())}
+  };
+}
+
+M.P2={makeRub,makeTool,holdSound,dryerSound,showerSound,screen,life,chip,bigBtn,hint,dotsHTML,setDots,makeScrub,makeCutter,makeDrag,makeSweep,tapItems,friendsRow,faceOf,faceBg,noise,sweepTone,siren,SFX,foamAt,boxSize,CNT_KO_UNIT,josa};
 /* rest screen gets the hand-play videos too */
 (()=>{const r=document.querySelector('#rest .sheet');if(!r)return;const box=document.createElement('div');box.className='vlist';box.style.width='100%';
   box.innerHTML='<p class="hint">쉬는 동안 손유희 노래를 같이 따라 해 봐요.</p>'+videoCards(VIDEOS.slice(0,3));r.insertBefore(box,r.querySelector('#restHold'))})();

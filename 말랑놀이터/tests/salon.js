@@ -1,5 +1,6 @@
-/* 동물 미용실 한 손님 끝까지 해 보기: node tests/salon.js
-   엉뚱한 곳을 누르면 진행되지 않는지, 문지르기와 콕 누르기만으로 끝까지 되는지 봅니다. */
+/* 동물 미용실 한 손님 끝까지 해 보기: node tests/salon.js   (SHOT_DIR=폴더 를 주면 캡처를 저장)
+   가게 앞에서 진흙 손님을 골라 들어가서, 엉뚱한 곳을 누르면 진행되지 않는지,
+   쓱쓱(손가락을 따라오는 도구)과 콕(머리·목·얼굴 → 카드)만으로 꾸미기까지 되고, 거울을 눌러 가게 앞으로 돌아오는지 봅니다. */
 const {chromium}=require('playwright');
 const path=require('path');
 const URL='file://'+path.resolve(__dirname,'..','index.html');
@@ -10,24 +11,34 @@ const SHOT=process.env.SHOT_DIR||'';
   await p.goto(URL);await p.evaluate(()=>{localStorage.clear();localStorage.setItem('mallang_settings',JSON.stringify({timer:0}))});await p.reload();await p.waitForTimeout(500);
   const W=ms=>p.waitForTimeout(ms),st=()=>p.evaluate(()=>window.ML.__ps());
   const shot=async n=>{if(SHOT)await p.screenshot({path:path.join(SHOT,'salon_'+n+'.png')})};
-  await p.evaluate(()=>window.ML.go('petsalon'));await W(1500);await shot('1enter');
+  await p.evaluate(()=>window.ML.go('petsalon'));await p.waitForFunction(()=>window.ML.__ps().phase==='lobby',null,{timeout:6000});await W(600);await shot('0lobby');
+  let s=await st();console.log('가게 앞 손님:',s.lobby.map(c=>c.kind+'('+c.need+')').join(', '));
+  const i=s.lobby.findIndex(c=>c.need==='muddy');await p.locator(`.lb-cust[data-i="${i}"]`).click();await W(1500);await shot('1enter');
   await p.waitForFunction(()=>window.ML.__ps().phase==='foam',null,{timeout:10000});await W(500);
   const sb=await p.locator('#psStage').boundingBox(),pet=async()=>p.locator('#psPet').boundingBox();
-  // wrong place: top-left corner of the stage
+  // wrong place: left edge of the stage
   for(let k=0;k<3;k++){await p.mouse.click(sb.x+10,sb.y+sb.height*.5);await W(300)}
-  let s=await st();console.log('엉뚱한 곳 3번 → 단계',s.phase,'막대',JSON.stringify(s.bar),'응원',s.misses);
+  s=await st();console.log('엉뚱한 곳 3번 → 단계',s.phase,'막대',JSON.stringify(s.bar),'응원',s.misses);
+  const wrongOk=s.phase==='foam'&&(s.bar===''||s.bar==='0%')&&s.misses===3;
   const t={};let cur=s.phase,t0=Date.now();
   const tick=async()=>{const x=await st();if(x.phase!==cur){t[cur]=((Date.now()-t0)/1000).toFixed(1);cur=x.phase;t0=Date.now()}return x};
-  for(let n=0;n<120;n++){
-    const x=await tick();if(x.phase==='done')break;const r=await pet();const cx=r.x+r.width/2,cy=r.y+r.height/2;
-    if(x.phase==='foam'){await p.mouse.move(cx,cy);await p.mouse.down();for(let k=0;k<14;k++){await p.mouse.move(cx+Math.cos(k)*r.width*.3,cy+Math.sin(k*1.3)*r.height*.3);await W(45)}if(n===2)await shot('2foam');await p.mouse.up();await W(80)}
-    else if(x.phase==='rinse'||x.phase==='dry'){await p.mouse.click(cx,cy);await W(500);if(x.bar==='33.3333%')await shot('3'+x.phase)}
-    else if(['head','neck','face'].includes(x.phase)){const c=p.locator('#psPanel .ps-card:not(.dim):not(.picked)');if(await c.count()===3){await W(700);await shot('4'+x.phase);await c.nth(n%3).dispatchEvent('pointerdown')}await W(600)}
+  const done={};
+  for(let n=0;n<200;n++){
+    const x=await tick();if(x.view==='lobby'&&done.mirror)break;
+    if(['foam','rinse','dry'].includes(x.phase)){const r=await pet(),cx=r.x+r.width/2,cy=r.y+r.height*.45;await p.mouse.move(cx,cy);await p.mouse.down();
+      for(let k=0;k<14;k++){await p.mouse.move(cx+Math.cos(k)*r.width*.3,cy+Math.sin(k*1.3)*r.height*.3);await W(45)}
+      if(!done[x.phase]){done[x.phase]=1;await shot('2'+x.phase)}await p.mouse.up();await W(80)}
+    else if(x.phase==='dress'){
+      for(const slot of ['head','neck','face']){if((await st()).worn[slot])continue;const [px,py]=(await st()).slotPts[slot];await p.mouse.click(px,py);await W(500);
+        const c=p.locator('#psPanel .ps-card');if(await c.count()===3){await shot('3'+slot);await c.nth(n%3).click();await W(900)}}
+      if(!(await st()).mirror){await W(1000);continue}
+      await shot('4dressed');await p.locator('#psMirBtn').click();done.mirror=1;await W(2000);await shot('5mirror');await W(1500)}
     else await W(300);
   }
   t[cur]=((Date.now()-t0)/1000).toFixed(1);s=await st();
-  console.log('단계별 걸린 시간(초):',JSON.stringify(t));console.log('입힌 것:',s.wear.join(', '),'· 손님',s.served,'명');
-  await W(1500);await shot('5done');await W(3600);await shot('6bell');
-  await p.locator('#psPanel .ps-card.one').dispatchEvent('pointerdown');await W(5500);console.log('벨 → 다음 손님 단계:',(await st()).phase);
-  console.log('오류:',JSON.stringify(errs));await b.close();process.exit(errs.length?1:0);
+  console.log('단계별 걸린 시간(초):',JSON.stringify(t));console.log('꾸민 손님:',s.served,'명 · 벽 액자',s.frames,'개 · 지금',s.view,s.phase);
+  await W(3500);await shot('6lobby');s=await st();
+  console.log('다음 손님까지 온 가게 앞:',s.lobby.map(c=>c.kind+'('+c.need+')').join(', '));
+  const pass=wrongOk&&s.served===1&&s.frames===1&&s.view==='lobby'&&errs.length===0;
+  console.log('오류:',JSON.stringify(errs));console.log(pass?'통과':'실패');await b.close();process.exit(pass?0:1);
 })().catch(e=>{console.error('실패',e.message.split('\n')[0]);process.exit(1)});
