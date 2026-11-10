@@ -314,5 +314,171 @@ function paper(kind='forest',o={}){
 <circle cx="100" cy="100" r="92" fill="none" stroke="#5B3A29" stroke-opacity=".08" stroke-width="1.5"/></svg>`;
 }
 
-window.ART={paper,OL,animal,KINDS,F,TOPPING,WHOLE,wholeSVG,pieceSVG,pizza,TOOL,oven,BUILD,blob,rng,ACC,accSVG,face,FACE_ZONES,dress,lipstick,polish,star,twinkle};
+/* =========================== HANDS & NAILS (네일숍, 말랑 그림체) ===========================
+   HAND.KINDS: 엄마 손 · 아기 손 · 토토 발. 손가락 [x, 폭, 위, 아래], 손톱 [x, y, 폭, 높이] (viewBox 단위, 손톱은 똑바로 서 있음)
+   HAND.nail(g, st, cid): 손톱 하나를 손톱 좌표(0..w, 0..h)로 그림. st = view.nailState 한 칸
+     {filed:[6], base:[칸], col:[{c,h,t}|null], cured, top:[칸], topCured, oil:[칸], drop, art:[], parts:[], shine, dust} */
+const HAND=(()=>{
+  const NAT='#FBE3E0',CLAW='#FFF3EA',GRID=6;
+  const KINDS={
+    mom:{vb:[296,330],skin:'#FFE4D0',shade:'#F3C7AC',sleeve:'#C3B4E6',cuff:'#DCD4F3',
+      fingers:[[2,58,150,270],[58,62,46,236],[118,62,22,236],[178,60,40,236],[236,57,92,236]],
+      nails:[[6,158,50,54],[63,54,52,62],[123,30,52,64],[183,48,50,62],[240,100,49,56]],
+      palm:[10,186,282,118,52],arm:[64,280,168,60],round:.82},
+    baby:{vb:[296,330],skin:'#FFEADB',shade:'#F6CDB6',sleeve:'#F0D58A',cuff:'#F7E8B8',
+      fingers:[[2,58,176,272],[58,62,84,236],[118,62,64,236],[178,60,80,236],[236,57,122,236]],
+      nails:[[6,183,50,46],[63,91,52,50],[123,71,52,52],[183,87,50,50],[240,129,49,44]],
+      palm:[6,184,284,122,60],arm:[70,284,156,56],round:.95},
+    bunnyPaw:{vb:[290,330],skin:'#FFF9F2',shade:'#F3DCC8',paw:true,bean:'#FFB3C6',
+      fingers:[[4,72,74,236],[74,72,44,236],[144,72,44,236],[214,72,74,236]],
+      nails:[[15,80,50,44],[85,50,50,44],[155,50,50,44],[225,80,50,44]],
+      palm:[4,166,282,140,70],arm:[72,280,146,60],round:1}
+  };
+  KINDS.family=KINDS.mom;
+  const f1=n=>+n.toFixed(1);
+  const geo=(kind,i)=>{const k=KINDS[kind]||KINDS.mom,n=k.nails[i];return{x:n[0],y:n[1],w:n[2],h:n[3],ry:n[2]/2*k.round,k:n[3]*.07,paw:!!k.paw}};
+  /* nail outline: round tip on top, soft curve at the root */
+  const path=g=>{const {w,h,ry,k}=g;return `M0 ${f1(ry)}A${f1(w/2)} ${f1(ry)} 0 0 1 ${w} ${f1(ry)}L${w} ${f1(h-k)}Q${f1(w/2)} ${f1(h+k)} 0 ${f1(h-k)}Z`};
+  const inside=(g,x,y)=>{const {w,h,ry,k}=g;if(x<0||x>w||y<0)return false;const u=(x-w/2)/(w/2);
+    if(y<ry)return u*u+((y-ry)/ry)**2<=1;return y<=h-k+2*k*(1-u*u)*.5};
+  /* coverage cells (6×6 over the nail box, only those inside the nail) with a rect that also covers empty neighbours */
+  const cache={};
+  function cells(g){
+    const key=[g.w,g.h,g.ry].join(',');if(cache[key])return cache[key];
+    const cw=g.w/GRID,ch=g.h/GRID,list=[],has={};
+    for(let r=0;r<GRID;r++)for(let c=0;c<GRID;c++){let n=0;for(let a=0;a<5;a++)for(let b=0;b<5;b++)if(inside(g,c*cw+(a+.5)*cw/5,r*ch+(b+.5)*ch/5))n++;
+      if(n>=3){has[c+','+r]=1;list.push({c,r,fx:(c+.5)/GRID,fy:(r+.5)/GRID})}}
+    list.forEach(e=>{let x0=e.c*cw,x1=x0+cw,y0=e.r*ch,y1=y0+ch;
+      if(!has[(e.c-1)+','+e.r])x0-=cw;if(!has[(e.c+1)+','+e.r])x1+=cw;if(!has[e.c+','+(e.r-1)])y0-=ch;if(!has[e.c+','+(e.r+1)])y1+=ch;
+      e.rect=[f1(x0-1),f1(y0-1),f1(x1-x0+2),f1(y1-y0+2)]});
+    return cache[key]=list;
+  }
+  /* the six spots along the tip that the file smooths */
+  const tipAng=c=>Math.PI+(c+.5)/GRID*Math.PI;
+  const tipCells=g=>Array.from({length:GRID},(_,c)=>{const a=tipAng(c);return{fx:(g.w/2+g.w/2*Math.cos(a)*.8)/g.w,fy:Math.max(.02,(g.ry+g.ry*Math.sin(a)*.8)/g.h)}});
+  function jag(g,c,v){   // rough, uneven free edge for one tip column (shrinks as it is filed)
+    const a0=Math.PI+c/GRID*Math.PI,a1=Math.PI+(c+1)/GRID*Math.PI,cx=g.w/2,cy=g.ry,d=g.w*.12*(1-v);if(d<.6)return'';
+    let p=`M${f1(cx)} ${f1(cy)}`;for(let j=0;j<=4;j++){const a=a0+(a1-a0)*j/4,o=(j%2?1:.45)*d+(j===0||j===4?0:1.5);p+=`L${f1(cx+(g.w/2+o)*Math.cos(a))} ${f1(cy+(g.ry+o)*Math.sin(a))}`}
+    return `<path class="ns-jag" d="${p}Z" fill="#FFF8F1" stroke="${OL}" stroke-width="2.4" stroke-linejoin="round"/>`;
+  }
+  /* stamps (flat ink, about 20 units around 0,0) and parts (glossy, about 20 units) */
+  const HEART='M0 16C-24 0 -21 -18 -10 -18C-4 -18 -1 -15 0 -10C1 -15 4 -18 10 -18C21 -18 24 0 0 16Z';
+  const STAMP={
+    heart:c=>`<path d="${HEART}" fill="${c}"/>`,
+    star:c=>star(0,0,20,c),
+    flower:c=>[0,1,2,3,4].map(i=>{const a=-Math.PI/2+i*Math.PI*2/5;return `<circle cx="${f1(10*Math.cos(a))}" cy="${f1(10*Math.sin(a))}" r="8" fill="${c}"/>`}).join('')+`<circle r="5.5" fill="#fff" opacity=".75"/>`,
+    dots:c=>`<circle cx="-10" cy="-7" r="5.5" fill="${c}"/><circle cx="9" cy="-11" r="5.5" fill="${c}"/><circle cx="2" cy="9" r="5.5" fill="${c}"/><circle cx="-12" cy="12" r="4" fill="${c}"/><circle cx="14" cy="6" r="4" fill="${c}"/>`,
+    stripes:c=>[-12,0,12].map(o=>`<path d="M${o-14} 16L${o+14} -16" stroke="${c}" stroke-width="5.5" stroke-linecap="round"/>`).join(''),
+    moon:c=>`<path d="M6 -18A18 18 0 1 0 6 18A13 13 0 1 1 6 -18Z" fill="${c}"/>`
+  };
+  const SO=`stroke="${OL}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"`;
+  const PART={
+    'round gem':(c,l)=>`<circle r="15" fill="${c}" ${SO}/><path d="M-15 0H15M-8 -13L0 0L8 -13M-8 13L0 0L8 13" stroke="${l}" stroke-width="2" fill="none"/><circle cx="-5" cy="-6" r="3.5" fill="#fff" opacity=".9"/>`,
+    'heart gem':(c,l)=>`<path d="${HEART}" fill="${c}" ${SO}/><path d="M0 -10V14M-14 -6L0 4L14 -6" stroke="${l}" stroke-width="2" fill="none"/><ellipse cx="-9" cy="-9" rx="4" ry="2.6" fill="#fff" opacity=".85" transform="rotate(-30 -9 -9)"/>`,
+    pearl:(c,l)=>`<circle r="13" fill="${l}" ${SO}/><circle r="13" fill="none" stroke="${c}" stroke-width="3" opacity=".7"/><circle cx="-4" cy="-5" r="4" fill="#fff"/>`,
+    'tiny ribbon':(c,l)=>`<path d="M0 0L-18 -11Q-22 0 -18 11Z" fill="${c}" ${SO}/><path d="M0 0L18 -11Q22 0 18 11Z" fill="${c}" ${SO}/><path d="M-3 3L-9 16M3 3L9 16" stroke="${c}" stroke-width="4" stroke-linecap="round"/><circle r="5.5" fill="${l}" ${SO}/>`,
+    'star stud':(c,l)=>star(0,0,17,c,SO)+`<circle cx="-4" cy="-4" r="2.6" fill="#fff" opacity=".9"/>`,
+    'flower part':(c,l)=>[0,1,2,3,4].map(i=>{const a=-Math.PI/2+i*Math.PI*2/5;return `<circle cx="${f1(9*Math.cos(a))}" cy="${f1(9*Math.sin(a))}" r="7.5" fill="${c}" ${SO}/>`}).join('')+`<circle r="6" fill="#F0D58A" ${SO}/>`
+  };
+  function nail(g,st,cid){
+    st=st||{};const {w,h}=g,P=path(g),C=cells(g),cw=w/GRID;let s='';
+    if(st.filed)for(let c=0;c<GRID;c++)s+=jag(g,c,st.filed[c]||0);
+    s+=`<path d="${P}" fill="${g.paw?CLAW:NAT}"/>`;
+    s+=`<clipPath id="${cid}"><path d="${P}"/></clipPath><g clip-path="url(#${cid})">`;
+    s+=`<path d="M${f1(w*.2)} ${f1(h*.92)}Q${f1(w/2)} ${f1(h*.78)} ${f1(w*.8)} ${f1(h*.92)}" stroke="#fff" stroke-width="${f1(w*.08)}" fill="none" opacity=".55" stroke-linecap="round"/>`;
+    const now=performance.now();
+    if(st.base)C.forEach((e,i)=>{const v=st.base[i];if(v>.05)s+=`<rect x="${e.rect[0]}" y="${e.rect[1]}" width="${e.rect[2]}" height="${e.rect[3]}" fill="#EAF6FF" opacity="${f1(.55*Math.min(1,v))}"/>`});
+    if(st.col)C.forEach((e,i)=>{const p=st.col[i];if(!p)return;const fresh=now-p.t<500;   // steps.color.how: 0.5초 뒤 매끈하게
+      s+=`<rect x="${e.rect[0]}" y="${e.rect[1]}" width="${e.rect[2]}" height="${e.rect[3]}" fill="${fresh?p.h:p.c}"/>`;
+      if(fresh){const x=e.c*cw;s+=`<path d="M${f1(x+cw*.3)} ${e.rect[1]}v${e.rect[3]}M${f1(x+cw*.72)} ${e.rect[1]}v${e.rect[3]}" stroke="#fff" stroke-width="1.6" opacity=".45"/>`}});
+    (st.art||[]).forEach(a=>{
+      if(a.type==='line'){if(!a.pts.length)return;const d=a.pts.map((p,j)=>(j?'L':'M')+f1(p[0])+' '+f1(p[1])).join('');
+        s+=a.pts.length>1?`<path d="${d}" stroke="${a.c}" stroke-width="${f1(w*.09)}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`:`<circle cx="${f1(a.pts[0][0])}" cy="${f1(a.pts[0][1])}" r="${f1(w*.05)}" fill="${a.c}"/>`}
+      else if(a.type==='stamp'&&STAMP[a.shape])s+=`<g transform="translate(${f1(a.x)} ${f1(a.y)}) scale(${f1(w*.012)})">${STAMP[a.shape](a.c)}</g>`});
+    if(st.top)C.forEach((e,i)=>{const v=st.top[i];if(v>.05&&!st.topCured)s+=`<rect x="${e.rect[0]}" y="${e.rect[1]}" width="${e.rect[2]}" height="${e.rect[3]}" fill="#fff" opacity="${f1(.3*Math.min(1,v))}"/>`});
+    if(st.oil)C.forEach((e,i)=>{const v=st.oil[i];if(v>.05&&e.fy>.5)s+=`<rect x="${e.rect[0]}" y="${e.rect[1]}" width="${e.rect[2]}" height="${e.rect[3]}" fill="#F7D98B" opacity="${f1(.3*Math.min(1,v)*(e.fy))}"/>`});
+    if(st.cured)s+=`<path class="ns-gloss" d="M${f1(w*.24)} ${f1(h*.22)}Q${f1(w*.16)} ${f1(h*.48)} ${f1(w*.24)} ${f1(h*.74)}" stroke="#fff" stroke-width="${f1(w*.1)}" fill="none" opacity=".6" stroke-linecap="round"/><circle cx="${f1(w*.36)}" cy="${f1(h*.16)}" r="${f1(w*.05)}" fill="#fff" opacity=".7"/>`;
+    if(st.topCured)s+=`<path class="ns-gloss2" d="M${f1(w*.74)} ${f1(h*.26)}Q${f1(w*.82)} ${f1(h*.45)} ${f1(w*.76)} ${f1(h*.62)}" stroke="#fff" stroke-width="${f1(w*.07)}" fill="none" opacity=".8" stroke-linecap="round"/><path d="M${f1(w*.2)} ${f1(h*.2)}Q${f1(w*.12)} ${f1(h*.48)} ${f1(w*.2)} ${f1(h*.78)}" stroke="#fff" stroke-width="${f1(w*.05)}" fill="none" opacity=".9" stroke-linecap="round"/><rect width="${w}" height="${f1(h*.45)}" fill="#fff" opacity=".12"/>`;
+    if(st.shine)s+=`<path d="${P}" fill="none" stroke="#FFF6D8" stroke-width="6" opacity=".9"/>`;
+    s+=`</g><path d="${P}" fill="none" stroke="${OL}" stroke-width="3" stroke-linejoin="round"/>`;
+    if(st.shine)s+=twinkle(f1(w*.86),f1(h*.1),f1(w*.11),'#FFF6D8');
+    if(st.drop)s+=`<path d="M${f1(w/2)} ${f1(h-14)}Q${f1(w/2+7)} ${f1(h-4)} ${f1(w/2)} ${f1(h)}Q${f1(w/2-7)} ${f1(h-4)} ${f1(w/2)} ${f1(h-14)}Z" fill="#F4CD6C" stroke="#D9A94A" stroke-width="1.5"/>`;
+    (st.parts||[]).forEach((p,j)=>{if(p.hide||!PART[p.item])return;s+=`<g class="ns-part" data-j="${j}" transform="translate(${f1(p.x)} ${f1(p.y)}) scale(${f1(w*.0095)})">${PART[p.item](p.c,p.l)}</g>`});
+    if(st.dust)for(let j=0;j<6;j++)s+=`<circle class="ns-dust" cx="${f1(w*(.15+.14*j))}" cy="${f1(-3-(j%2)*5)}" r="2.2" fill="#E9D8C8"/>`;
+    return s;
+  }
+  /* finger, toe and palm silhouettes: outline layer first, fill layer on top, so the hand reads as one soft shape */
+  const capsule=([x,w,t,b])=>`M${x} ${b}V${t+w/2}A${w/2} ${w/2} 0 0 1 ${x+w} ${t+w/2}V${b}Z`;
+  const rr=(x,y,w,h,r)=>`M${x+r} ${y}H${x+w-r}Q${x+w} ${y} ${x+w} ${y+r}V${y+h-r}Q${x+w} ${y+h} ${x+w-r} ${y+h}H${x+r}Q${x} ${y+h} ${x} ${y+h-r}V${y+r}Q${x} ${y} ${x+r} ${y}Z`;
+  function body(kind){
+    const k=KINDS[kind]||KINDS.mom,shapes=k.fingers.map(capsule).concat([rr(...k.palm),rr(k.arm[0],k.arm[1],k.arm[2],k.arm[3]+20,20)]);
+    let s=shapes.map(d=>`<path d="${d}" fill="none" stroke="${OL}" stroke-width="7" stroke-linejoin="round"/>`).join('')+shapes.map(d=>`<path d="${d}" fill="${k.skin}"/>`).join('');
+    const F=k.fingers;
+    for(let i=1;i<F.length;i++){const x=F[i][0]+1,t=Math.max(F[i-1][2],F[i][2])+Math.min(F[i][1],F[i-1][1])*.5+10;s+=`<path d="M${x} ${t}V${k.palm[1]+12}" stroke="${OL}" stroke-width="3" stroke-linecap="round"/>`}
+    if(k.paw){
+      F.forEach(f=>{s+=`<ellipse cx="${f[0]+f[1]/2}" cy="${f[2]+76}" rx="14" ry="11" fill="${k.bean}"/>`});
+      s+=`<path d="M${k.palm[0]+92} 236Q${k.palm[0]+141} 186 ${k.palm[0]+190} 236Q${k.palm[0]+196} 276 ${k.palm[0]+141} 276Q${k.palm[0]+86} 276 ${k.palm[0]+92} 236Z" fill="${k.bean}"/><ellipse cx="${k.palm[0]+122}" cy="232" rx="10" ry="6" fill="#fff" opacity=".55"/>`;
+    }else{
+      F.forEach((f,i)=>{const n=k.nails[i],y=n[1]+n[3]+22;s+=`<path d="M${f[0]+f[1]*.3} ${y}Q${f[0]+f[1]/2} ${y+5} ${f[0]+f[1]*.7} ${y}" stroke="${k.shade}" stroke-width="3" fill="none" stroke-linecap="round"/>`});
+      s+=`<ellipse cx="${k.palm[0]+k.palm[2]*.62}" cy="${k.palm[1]+40}" rx="46" ry="20" fill="#fff" opacity=".3"/>`;
+      s+=`<path d="${rr(k.arm[0]-8,k.arm[1]+20,k.arm[2]+16,60,18)}" fill="${k.sleeve}" ${S}/><path d="M${k.arm[0]-8} ${k.arm[1]+34}H${k.arm[0]+k.arm[2]+8}" stroke="${k.cuff}" stroke-width="8"/>`;
+    }
+    return s;
+  }
+  /* the whole hand with every nail drawn from its state. o.id: unique prefix for clip paths */
+  function hand(kind,states,o={}){
+    const k=KINDS[kind]||KINDS.mom,id=o.id||uid('hd');let s=body(kind);
+    k.nails.forEach((n,i)=>{const g=geo(kind,i);s+=`<g class="ns-n" data-i="${i}" transform="translate(${g.x} ${g.y})">${nail(g,(states||[])[i],id+'c'+i)}</g>`});
+    return `<svg class="ns-handart" data-hand="${kind}" viewBox="0 0 ${k.vb[0]} ${k.vb[1]}" style="overflow:visible" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
+  }
+  /* one fingertip (or toe) with its nail, for the zoom view. returns {svg, vb:[x,y,w,h]} in nail coordinates */
+  function zoom(kind,i,st,cid){
+    const k=KINDS[kind]||KINDS.mom,g=geo(kind,i),f=k.fingers[i],fx=f[0]-g.x,ft=f[2]-g.y,pad=10,vb=[fx-pad,-g.h*.24,f[1]+pad*2,g.h*1.24+g.h*.6];
+    const tip=`M${fx} ${vb[1]+vb[3]+20}V${ft+f[1]/2}A${f[1]/2} ${f[1]/2} 0 0 1 ${fx+f[1]} ${ft+f[1]/2}V${vb[1]+vb[3]+20}Z`;
+    const s=`<path d="${tip}" fill="${k.skin}" stroke="${OL}" stroke-width="2.4"/>`+(k.paw?`<ellipse cx="${fx+f[1]/2}" cy="${ft+76}" rx="14" ry="11" fill="${k.bean}"/>`:`<path d="M${fx+f[1]*.3} ${g.h+22}Q${fx+f[1]/2} ${g.h+27} ${fx+f[1]*.7} ${g.h+22}" stroke="${k.shade}" stroke-width="2" fill="none" stroke-linecap="round"/>`)+nail(g,st,cid);
+    return{vb,svg:`<svg viewBox="${vb.map(f1).join(' ')}" style="overflow:visible" xmlns="http://www.w3.org/2000/svg">${s}</svg>`};
+  }
+  /* customers: mom (the makeup face), baby, Toto */
+  function baby(mood){
+    const EYE='#4A2E20',hp=mood==='happy';
+    const eye=x=>hp?`<path d="M${x-11} 104Q${x} 88 ${x+11} 104" stroke="${EYE}" stroke-width="5" fill="none" stroke-linecap="round"/>`:`<ellipse cx="${x}" cy="100" rx="10" ry="12" fill="${EYE}"/><circle cx="${x+3.5}" cy="95" r="4" fill="#fff"/>`;
+    return `<svg viewBox="0 0 200 230" style="overflow:visible" xmlns="http://www.w3.org/2000/svg"><ellipse cx="100" cy="225" rx="58" ry="6" fill="rgba(91,58,41,.16)"/>
+      <ellipse cx="100" cy="196" rx="50" ry="34" fill="#F7E8B8" ${S}/><circle cx="100" cy="182" r="7" fill="#fff" ${S}/>
+      <ellipse cx="34" cy="108" rx="13" ry="16" fill="#FFEADB" ${S}/><ellipse cx="166" cy="108" rx="13" ry="16" fill="#FFEADB" ${S}/>
+      <circle cx="100" cy="104" r="68" fill="#FFEADB" ${S}/><path d="M92 38Q100 22 112 30Q118 38 108 42" stroke="#7A4A2A" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <ellipse cx="72" cy="66" rx="20" ry="10" fill="#fff" opacity=".4" transform="rotate(-25 72 66)"/>
+      <circle cx="56" cy="126" r="15" fill="#FFB3C6" opacity=".6"/><circle cx="144" cy="126" r="15" fill="#FFB3C6" opacity=".6"/>${eye(76)}${eye(124)}
+      ${hp?`<path d="M86 124Q100 144 114 124Z" fill="#B8474B" ${S}/>`:`<path d="M92 126q8 7 16 0" stroke="${OL}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`}</svg>`;
+  }
+  const inner=s=>s.replace(/^<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'');
+  function portrait(kind,mood){
+    mood=mood||'idle';
+    if(kind==='bunnyPaw')return animal('bunny',mood,{lash:true});
+    if(kind==='baby')return baby(mood);
+    const fc=face({mood:mood==='happy'?'happy':'idle'});
+    if(kind==='family')return `<svg viewBox="0 0 200 230" style="overflow:visible" xmlns="http://www.w3.org/2000/svg"><g transform="translate(-6 40) scale(.46)">${inner(fc)}</g><g transform="translate(100 80) scale(.62)">${inner(baby(mood))}</g></svg>`;
+    return `<svg viewBox="0 0 200 230" style="overflow:visible" xmlns="http://www.w3.org/2000/svg"><g transform="translate(6 14) scale(.63)">${inner(fc)}</g></svg>`;
+  }
+  /* tools, drawn in 100×100, working end at the lower left (anchor about [.18,.77]) */
+  const TOOLS={
+    file:`<svg viewBox="0 0 100 100"><g transform="rotate(-40 50 50)"><rect x="8" y="40" width="84" height="20" rx="10" fill="#C3B4E6" ${S}/><path d="M18 40H50V60H18Q8 60 8 50Q8 40 18 40Z" fill="#F2B48C"/><rect x="8" y="40" width="84" height="20" rx="10" fill="none" ${S}/>${[16,24,32,40,20,28,36,44].map((x,i)=>`<circle cx="${x}" cy="${i<4?46:54}" r="1.6" fill="#D98F62"/>`).join('')}</g></svg>`,
+    brush:(tip,clear)=>`<svg viewBox="0 0 100 100"><g transform="rotate(-40 50 50)"><rect x="40" y="43" width="54" height="14" rx="7" fill="#E8A0AE" ${S}/><rect x="26" y="41" width="16" height="18" rx="3" fill="#E6EAF0" ${S}/><path d="M27 43Q12 44 7 50Q12 56 27 57Z" fill="${tip}" ${S} ${clear?'opacity=".8"':''}/>${clear?'<path d="M14 48h9" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>':''}</g></svg>`,
+    dropper:`<svg viewBox="0 0 100 100"><g transform="rotate(-40 50 50)"><rect x="16" y="44" width="48" height="12" rx="6" fill="#EAF6FF" ${S}/><rect x="20" y="47" width="30" height="6" rx="3" fill="#F4CD6C"/><path d="M16 46L8 50L16 54Z" fill="#EAF6FF" ${S}/><rect x="60" y="40" width="10" height="20" rx="3" fill="#E6EAF0" ${S}/><ellipse cx="80" cy="50" rx="14" ry="13" fill="#E8A0AE" ${S}/><ellipse cx="76" cy="45" rx="4" ry="2.5" fill="#fff" opacity=".7"/></g></svg>`,
+    stamp:c=>`<svg viewBox="0 0 100 100"><rect x="40" y="10" width="20" height="34" rx="9" fill="#D9BFA6" ${S}/><rect x="22" y="42" width="56" height="20" rx="8" fill="#C3B4E6" ${S}/><rect x="26" y="60" width="48" height="12" rx="4" fill="#E6EAF0" ${S}/><g transform="translate(50 86) scale(.5)">${STAMP.heart(c)}</g></svg>`,
+    gem:c=>`<svg viewBox="0 0 100 100"><g transform="translate(50 52) scale(2.2)">${PART['round gem'](c,'#fff')}</g>${twinkle(80,20,7,'#F0D58A')}</svg>`,
+    handIcon:`<svg viewBox="0 0 100 100"><path d="M30 92V60L20 50Q14 42 22 38Q28 36 32 44V22Q32 14 39 14Q45 14 45 22V18Q45 10 52 10Q58 10 58 18V22Q58 14 65 14Q71 14 71 22V30Q71 24 77 24Q83 24 83 32V64Q83 80 70 92Z" fill="#FFE4D0" ${S}/>${[[38,20],[51,16],[64,20],[77,30]].map(([x,y])=>`<rect x="${x-4}" y="${y-2}" width="9" height="9" rx="4" fill="#FF6F91"/>`).join('')}</svg>`
+  };
+  /* gel lamp: dome with a smiling face. back = inside, glow = soft lilac light, front = shell with the opening. viewBox 0 0 300 220 */
+  const DOME='M14 206V120Q14 20 150 20Q286 20 286 120V206Z',OPEN='M46 206V142Q46 72 150 72Q254 72 254 142V206Z';
+  const LAMP={vb:[300,220],open:[46,72,208,134],
+    back:`<svg viewBox="0 0 300 220"><path d="${OPEN}" fill="#EDE7F6"/><rect x="2" y="198" width="296" height="20" rx="10" fill="#E6DCCB" ${S}/></svg>`,
+    glow:`<svg viewBox="0 0 300 220"><defs><radialGradient id="nsLampGlow" cx=".5" cy=".3" r=".8"><stop offset="0" stop-color="#E9DDFF" stop-opacity=".95"/><stop offset="1" stop-color="#C3B4E6" stop-opacity=".55"/></radialGradient></defs><path d="${OPEN}" fill="url(#nsLampGlow)"/></svg>`,
+    front:`<svg viewBox="0 0 300 220"><path d="${DOME} ${OPEN}" fill="#FFFDF9" fill-rule="evenodd" ${S}/><path d="M40 108Q48 52 104 36" stroke="#fff" stroke-width="9" fill="none" stroke-linecap="round" opacity=".9"/>
+      <circle cx="128" cy="48" r="5" fill="${OL}"/><circle cx="172" cy="48" r="5" fill="${OL}"/><path d="M138 56Q150 66 162 56" stroke="${OL}" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="114" cy="58" r="7" fill="#F6D3DB"/><circle cx="186" cy="58" r="7" fill="#F6D3DB"/></svg>`,
+    icon:on=>`<svg viewBox="0 0 100 100"><path d="M8 84V56Q8 16 50 16Q92 16 92 56V84Z" fill="#FFFDF9" ${S}/><path d="M22 84V62Q22 40 50 40Q78 40 78 62V84Z" fill="${on?'#DCD4F3':'#EDE7F6'}" ${S}/><circle cx="42" cy="28" r="3" fill="${OL}"/><circle cx="58" cy="28" r="3" fill="${OL}"/><path d="M45 32Q50 36 55 32" stroke="${OL}" stroke-width="2.5" fill="none" stroke-linecap="round"/><rect x="4" y="82" width="92" height="10" rx="5" fill="#E6DCCB" ${S}/></svg>`
+  };
+  return{KINDS,geo,path,inside,cells,tipCells,nail,hand,zoom,portrait,TOOLS,LAMP,STAMP,PART,bottle:c=>polish(c),GRID};
+})();
+
+window.ART={paper,OL,animal,KINDS,F,TOPPING,WHOLE,wholeSVG,pieceSVG,pizza,TOOL,oven,BUILD,blob,rng,ACC,accSVG,face,FACE_ZONES,dress,lipstick,polish,star,twinkle,HAND};
 })();
