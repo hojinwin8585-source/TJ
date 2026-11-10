@@ -1203,9 +1203,9 @@ function toolIntro(host,from,html,o={}){
   if(!host||!from)return()=>{};const hr=host.getBoundingClientRect(),fr=from.getBoundingClientRect();if(!fr.width||!hr.width)return()=>{};
   const sz=o.size||Math.max(180,hr.width*.45),el=document.createElement('div');el.className='tl-intro';el.innerHTML=html;
   Object.assign(el.style,{width:sz+'px',height:sz+'px',left:(fr.left-hr.left+fr.width/2-sz/2)+'px',top:(fr.top-hr.top+fr.height/2-sz/2)+'px'});host.appendChild(el);
-  const s0=fr.width/sz,up=Math.min(hr.height*.5,fr.top-hr.top-sz*.1);
-  const a=el.animate([{transform:`translateY(0) scale(${s0})`,opacity:.3},{transform:`translateY(${-up}px) scale(1)`,opacity:1,offset:.25},{transform:`translateY(${-up+30}px) scale(1.04,.96)`,offset:.38},
-    {transform:`translateY(${-up-10}px) scale(1)`,offset:.5},{transform:`translateY(${-up}px) scale(1)`,opacity:1,offset:.75},{transform:`translateY(0) scale(${s0})`,opacity:0}],{duration:o.ms||2000,easing:'ease-in-out',fill:'forwards'});
+  const s0=fr.width/sz,up=Math.min(hr.height*.5,fr.top-hr.top-sz*.1),dx=hr.width/2-(fr.left-hr.left+fr.width/2),T=(x,y,k)=>`translate(${x}px,${y}px) scale(${k})`;
+  const a=el.animate([{transform:T(0,0,s0),opacity:.3},{transform:T(dx,-up,1),opacity:1,offset:.25},{transform:T(dx,-up+30,'1.04,.96'),offset:.38},
+    {transform:T(dx,-up-10,1),offset:.5},{transform:T(dx,-up,1),opacity:1,offset:.75},{transform:T(0,0,s0),opacity:0}],{duration:o.ms||2000,easing:'ease-in-out',fill:'forwards'});
   if(o.ko)say(o.ko,o.en||'');
   const stop=()=>{try{a.cancel()}catch(e){}el.remove()};a.onfinish=stop;return stop;
 }

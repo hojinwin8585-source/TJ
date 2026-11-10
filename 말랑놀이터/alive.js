@@ -154,7 +154,7 @@ function vowel(a,t,dur,f0,f1,F,vol){
   g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(vol,t+Math.min(.05,dur*.3));g.gain.setValueAtTime(vol,t+dur*.6);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
   g.connect(out);out.connect(a.destination);o.start(t);o.stop(t+dur+.05);
 }
-const I=[[300,6,1],[2300,10,.7]],A=[[800,5,1],[1200,7,.6]],U=[[330,6,1],[800,8,.4]];
+const I=[[300,6,1],[2300,10,.7]],A=[[800,5,1],[1200,7,.6]];   // vowel formants: 'i', 'a'
 function sound(name){
   const a=M.actx&&M.actx();if(!a||!M.S||!M.S.sound)return false;const t=a.currentTime+.01,v=.09;
   if(name==='giggle')[0,1,2].forEach(k=>vowel(a,t+k*.13,.09,560+k*40,600+k*40,I,v));
@@ -224,7 +224,7 @@ function attach(el,o={}){
       if(me.play){me.queued={name,op};return 'queued'}
       lim();let dur=PLAYS[name];const cls=['al-p-'+name];
       if(name==='hop'){const n=Math.max(1,Math.min(3,op.n||1));sv('--al-n',String(n));dur=600*n;if(op.wave){cls.push('al-pw');dur=Math.max(dur,1800)}}
-      const rec={who:id,name,t0:performance.now(),t1:0};LOG.push(rec);me.play=rec;
+      const rec={who:id,name,t0:performance.now(),t1:0};LOG.push(rec);if(LOG.length>300)LOG.splice(0,LOG.length-300);me.play=rec;
       el.classList.remove(...Object.keys(PLAYS).map(k=>'al-p-'+k),'al-pw');void el.getBoundingClientRect();el.classList.add(...cls);
       if(op.sound)sound(op.sound);
       clear(me.tm.play);me.tm.play=later(()=>{delete me.tm.play;el.classList.remove(...cls);rec.t1=performance.now();me.play=null;
@@ -263,15 +263,17 @@ document.addEventListener('pointerdown',e=>{P.down=true;P.x=e.clientX;P.y=e.clie
 document.addEventListener('pointermove',e=>{if(!P.down)return;P.x=e.clientX;P.y=e.clientY;kick()},{capture:true,passive:true});
 const up=()=>{if(!P.down)return;P.down=false;if(raf){cancelAnimationFrame(raf);raf=0}list.forEach(me=>{if(me.follow&&!me.dead)me.h._gaze(0,0,0,0)})};
 ['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,up,{capture:true,passive:true}));
-document.addEventListener('visibilitychange',()=>{hidden=document.hidden;if(hidden){if(raf){cancelAnimationFrame(raf);raf=0}P.down=false}list.slice().forEach(me=>me.h._pause(hidden))});
+document.addEventListener('visibilitychange',()=>{hidden=document.hidden;if(hidden){if(raf){cancelAnimationFrame(raf);raf=0}P.down=false}list.slice().forEach(me=>me.h._pause(hidden));TURNS.forEach(x=>x._pause(hidden))});
 
 /* ---------------- waiting customers: one at a time, in turn, waves 'pick me' ---------------- */
+const TURNS=new Set();
 function takeTurns(hs,o={}){
-  let i=0,t=0,stopped=false;const every=o.every||3600;
-  const go=()=>{t=later(()=>{if(stopped)return;const live=hs.filter(x=>x&&x._me&&!x._me.dead&&x.el.isConnected);if(!live.length)return;
+  let i=0,t=0;const every=o.every||3600;   // config has no number for this: one wave about every 3.6 s
+  const go=()=>{clear(t);t=later(()=>{const live=hs.filter(x=>x&&x._me&&!x._me.dead&&x.el.isConnected);if(!live.length){me.stop();return}
     const x=live[i++%live.length];x.play(o.play||'wave');go()},every+rnd(-400,600))};
-  go();
-  return{stop(){stopped=true;clear(t)}};
+  const me={stop(){TURNS.delete(me);clear(t);t=0},_pause(on){clear(t);t=0;if(!on)go()}};
+  TURNS.add(me);if(!hidden)go();
+  return me;
 }
 
 M.Alive={attach,takeTurns,sound,LIMITS:LIM,CFG:C,log:LOG,

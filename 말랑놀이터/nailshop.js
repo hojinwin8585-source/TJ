@@ -114,7 +114,7 @@ const css=`
 .ns-cust{z-index:1;transition:transform .5s ease-in-out,opacity .4s}
 .ns-cust.enter{animation:nscin .8s cubic-bezier(.3,1.3,.5,1)}
 @keyframes nscin{from{transform:translateY(40%);opacity:0}}
-.ns-stage.cure .ns-cust{z-index:6;transform:translateX(var(--peek,0px)) scale(.62);transform-origin:50% 0}
+.ns-stage.cure .ns-cust{z-index:6;transform:translate(var(--peek,0px),18px) scale(.62);transform-origin:50% 0}
 /* P12: the hand taps its fingers while waiting, wiggles a little while being painted; Toto's toe beans are soft jelly */
 #nsHand.wait{animation:nstap 2.8s ease-in-out infinite}
 @keyframes nstap{0%,62%,100%{translate:0 0;rotate:0deg}70%{translate:0 -5px;rotate:-1deg}78%{translate:0 0;rotate:0deg}86%{translate:0 -4px;rotate:-.8deg}94%{translate:0 0;rotate:0deg}}
@@ -185,7 +185,7 @@ const G=M.Guide.make(sec,{say});
 /* P12: living customers (alive.js) and big tools */
 const AL=M.Alive||null;let al=null,lobbyAl=[],turns=null,lastWig=0;
 const alKind=k=>k==='bunnyPaw'?'bunny':k;
-const alPlay=(n,o)=>{if(al&&al.play(n,o)===true)LOG.push('play:'+n)};
+const alPlay=(n,o)=>{if(al&&al.play(n,o))LOG.push('play:'+n)};   // started now or right after the current one
 function lobbyAlive(){if(!AL)return;lobbyAliveOff();seatsEl.querySelectorAll('.nl-cust .nl-ani').forEach(e=>{const c=lobby[+e.closest('.nl-cust').dataset.i];lobbyAl.push(AL.attach(e,{kind:alKind(c?c.kind:'mom'),waiting:true}))});turns=AL.takeTurns(lobbyAl)}
 function lobbyAliveOff(){lobbyAl.forEach(h=>h.detach());lobbyAl=[];if(turns){turns.stop();turns=null}}
 /* touch.tool.nailToolRatio: "손 그림 폭의 55% …" → the brush, file and dropper are 55% of the hand picture */
@@ -353,7 +353,7 @@ function toolStep(k){
   phase=k;armTools(k);handWait(true);
   if(k==='color')colorCards(true);else{panel.innerHTML=`<div class="ns-toolcard">${toolIcon(k)}</div>`;
     const nm=TOOL_NAME[k];if(nm&&P.toolIntro){const stop=P.toolIntro(stage,panel.querySelector('.ns-toolcard'),toolIcon(k),{ko:nm[0],en:nm[1],size:handEl.getBoundingClientRect().width*NAIL_TOOL});L.onEnd(stop)}}
-  const l=STEP_LINE(k);if(k!=='color'){if(k==='file')say(VO.actionWords.rub.ko,VO.actionWords.rub.en);sayL(l)}
+  const l=STEP_LINE(k);if(k!=='color'){if(k==='file')say(VO.actionWords.rub.ko,VO.actionWords.rub.en,!!TOOL_NAME[k]);say(l[0],l[1],!!TOOL_NAME[k])}   // after the tool's name (intro)
   G.start({type:'scrub',at:()=>{const i=[...Array(nailCount()).keys()].find(j=>!doneN.has(j));const r=nailRect(i==null?1:i);return secXY(r.left+r.width/2,r.top+r.height/2)},ko:l[0],en:l[1]});
 }
 function nailDone(i,k){
@@ -403,7 +403,7 @@ function humStart(){const a=actx();if(!a||!M.S.sound)return;const t=a.currentTim
   g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.05,t+.6);o.connect(g);o2.connect(g);g.connect(a.destination);o.start(t);o2.start(t);
   hum={stop(){const t2=a.currentTime;try{g.gain.cancelScheduledValues(t2);g.gain.setValueAtTime(g.gain.value,t2);g.gain.linearRampToValueAtTime(.0001,t2+.4);o.stop(t2+.45);o2.stop(t2+.45)}catch(e){}hum=null}}}
 function cureStep(){
-  phase='cure';cards={type:'lamp'};stage.classList.add('cure');handWait(false);if(al)al.setTool('lamp');   // the guest peeks into the lampdotsEl.innerHTML='<i></i>'.repeat(CURE_S);
+  phase='cure';cards={type:'lamp'};stage.classList.add('cure');handWait(false);if(al)al.setTool('lamp');dotsEl.innerHTML='<i></i>'.repeat(CURE_S);   // the guest peeks into the lamp
   panel.innerHTML=`<button class="ns-card in" aria-label="램프" style="max-width:150px">${H.LAMP.icon(false)}</button>`;
   sayL(cureN?NV.top:LINE.lamp);
   G.start({type:'tap',at:()=>{const b=panel.querySelector('.ns-card');const r=b.getBoundingClientRect();return secXY(r.left+r.width/2,r.top+r.height/2)},ko:LINE.lamp[0],en:LINE.lamp[1]});

@@ -225,7 +225,7 @@ const DATA=Object.assign({served:0,wall:[]},store.get('mallang_salon',{}));if(!A
 const save=()=>store.set('mallang_salon',DATA);
 /* P12: living characters (alive.js). al = the customer in the salon, lobbyAl = the three waiting outside */
 const AL=M.Alive||null;let al=null,lobbyAl=[],turns=null,lastTickle=0;
-const alPlay=(n,o)=>{if(al&&al.play(n,o)===true)LOG.push('play:'+n)};
+const alPlay=(n,o)=>{if(al&&al.play(n,o))LOG.push('play:'+n)};   // started now or right after the current one
 const alMood=m=>{if(al)al.setMood(m)};
 function lobbyAlive(){
   if(!AL)return;lobbyAl.forEach(h=>h.detach());lobbyAl=[];if(turns)turns.stop();
@@ -273,7 +273,6 @@ function drawOver(popSlot){
   if(phase==='dress'&&!st.hintOff)SLOTS.forEach(k=>{if(!st.wear[k])out[k==='neck'?'b':'h']+=A.twinkle(HINT_PT[k][0],HINT_PT[k][1],10,'#F0D58A')});
   ovBody.innerHTML=out.b;ovHead.innerHTML=out.h;
 }
-function clearOver(){ovBody.innerHTML='';ovHead.innerHTML=''}
 function drawPet(m,extra){mood=m||mood;if(!st)return;baseEl.innerHTML=A.animal(st.kind,mood,Object.assign({lash:true},extra||{}));if(al)al.refresh()}
 /* the face area on screen (head circle of the picture), so a big tool turns see-through over it */
 const faceRect=()=>{const r=petEl.getBoundingClientRect(),u=r.width/200,v=r.height/230;return{left:r.left+40*u,right:r.left+160*u,top:r.top+48*v,bottom:r.top+150*v,width:120*u,height:102*v}};
@@ -409,7 +408,7 @@ function toolStep(key){
   if(key==='foam')alMood('ticklish');else if(key==='dry')alMood('shiver');   // moods: 씻는 중 = 간질간질, 젖음 = 부르르
   /* touch.tool.intro: the tool jumps out of the tray and says its name */
   const nm=TOOL_NAME[key];let introStop=P.toolIntro?P.toolIntro(stage,panel.querySelector('.mi'),T.icon,{ko:nm[0],en:nm[1]}):null;L.onEnd(()=>{if(introStop)introStop()});
-  if(key==='foam'){word('rub');say(LINE.foam[0],LINE.foam[1],true)}
+  if(key==='foam'){const w=VO.actionWords.rub;say(w.ko,w.en,true);say(LINE.foam[0],LINE.foam[1],true)}   // queued after the tool's name
   else{const w=(key==='rinse'?CF.sound.shower:CF.sound.dryer).warnBefore;LOG.push('warn:'+lk);say(w.ko,w.en,true);say(LINE[key][0],LINE[key][1],true)}
   let lastS=0,lastPop=0,qk=0,belly=0,nose=0,lastF=null,lastT=0;killTool();
   const side=F=>{const r=petEl.getBoundingClientRect(),s=stage.getBoundingClientRect();return F.x+s.left<r.left+r.width/2?'l':'r'};
@@ -514,7 +513,8 @@ function putOn(slot,idx,col,fromEl){
 }
 function takeOff(slot,f){
   if(!st)return;delete st.wear[slot];st.drag=null;LOG.push('off:'+slot);drawOver();markWorn();
-  sfx.pop();tone(520,.08,'sine',.1,.05);alPlay('oops');say('어?','Oh?');   // bigMoments: '어?' and touches its headconst [px,py]=panelPt();if(f)flyTo(f,px,py,70,420,null,true);
+  sfx.pop();tone(520,.08,'sine',.1,.05);alPlay('oops');say('어?','Oh?');   // bigMoments: '어?' and touches its head
+  const [px,py]=panelPt();if(f)flyTo(f,px,py,70,420,null,true);
   if(!wornCount())hideMirror();
 }
 function colorNext(slot){
@@ -580,12 +580,12 @@ mirBtn.addEventListener('click',()=>{
   phase='mirror';H.dress=false;G.stop();cards=null;panel.innerHTML='';mirBtn.classList.remove('on');mirBtn.hidden=true;st.hintOff=true;LOG.push('mirror');
   petEl.classList.remove('up');stage.classList.remove('up');drawPet('happy');drawOver();sfx.pop();
   L.later(()=>{alPlay('dance');sweep()},450);   // bigMoments: dance (4 beats), then thanks and a wave
-  L.later(()=>{noise(.05,{type:'lowpass',freq:2200,vol:.12});noise(.07,{type:'lowpass',freq:1400,vol:.1,when:.07});photo()},1700);
+  L.later(()=>{noise(.05,{type:'lowpass',freq:2200,vol:.12});noise(.07,{type:'lowpass',freq:1400,vol:.1,when:.07});photo()},2900);   // the photo after the dance
   L.later(()=>{
     const rec={kind:st.kind,wear:JSON.parse(JSON.stringify(st.wear))};DATA.wall.unshift(rec);DATA.wall=DATA.wall.slice(0,3);DATA.served++;save();stars();
-    drawPet('happy');alPlay('wave');say(LINE.thanks[0],LINE.thanks[1]);tone(1318,.4,'sine',.12);tone(1046,.6,'sine',.12,.3)},3100);
-  L.later(()=>{anim('leave')},4700);
-  L.later(()=>{const c=lobby[seatIdx]||{kind:st.kind};const served={kind:st.kind,wear:st.wear};const i=seatIdx;lobby[i]=c;showLobby({served,slot:i})},5500);
+    drawPet('happy');alPlay('wave');say(LINE.thanks[0],LINE.thanks[1]);tone(1318,.4,'sine',.12);tone(1046,.6,'sine',.12,.3)},4300);
+  L.later(()=>{anim('leave')},5900);
+  L.later(()=>{const c=lobby[seatIdx]||{kind:st.kind};const served={kind:st.kind,wear:st.wear};const i=seatIdx;lobby[i]=c;showLobby({served,slot:i})},6700);
 });
 function sweep(){[1318,1568,2093].forEach((f,i)=>tone(f,.25,'sine',.06,i*.12))}
 function photo(){

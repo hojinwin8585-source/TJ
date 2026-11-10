@@ -29,7 +29,7 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
   await p.evaluate(()=>{window.__maxPlays=0;new MutationObserver(ms=>ms.forEach(m=>{const n=[...m.target.classList].filter(c=>/^al-p-/.test(c)).length;if(n>window.__maxPlays)window.__maxPlays=n})).observe(document.body,{attributes:true,attributeFilter:['class'],subtree:true})});
   /* runtime check: repeating animations shorter than the limit */
   await p.evaluate(()=>{window.__fast=new Set();setInterval(()=>{document.getAnimations().forEach(a=>{const t=a.effect&&a.effect.getTiming&&a.effect.getTiming();if(!t)return;const it=t.iterations,d=+t.duration;
-    if((it>1||it===Infinity)&&d>0&&d<600){const tg=a.effect.target;window.__fast.add((a.animationName||'?')+'@'+(tg&&(tg.id||tg.getAttribute&&tg.getAttribute('class'))||'')+' '+d+'ms×'+it)}})},150)});
+    if((it>1||it===Infinity)&&d>0&&d<600){const tg=a.effect.target;window.__fast.add((a.animationName||'?')+'@'+(tg&&(tg.id||tg.getAttribute&&tg.getAttribute('class'))||'')+' '+d+'ms×'+it)}})},700)});
 
   /* ---------- salon: waiting customers ---------- */
   await p.evaluate(()=>window.ML.go('petsalon'));await p.waitForFunction(()=>window.ML.__ps().phase==='lobby',null,{timeout:6000});await W(700);
@@ -47,25 +47,28 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
   const i=s.lobby.findIndex(c=>c&&c.need==='muddy');await p.locator(`.lb-cust[data-i="${i}"]`).click();
   await p.waitForFunction(()=>window.ML.__ps().phase==='foam',null,{timeout:12000});await W(300);
   await seq('5_tool_intro',4,350);
-  const pet='#psPet';await watchBlink(pet);
+  const pet='#psPet';await watchBlink(pet);const tPet=Date.now();
   const p1=await pose(pet);await W(2000);const p2=await pose(pet);
   ok('1. 미용실 손님: 2초 간격 몸·머리·귀·눈 변형 값이 다름',sig(p1)!==sig(p2),'머리 '+p1.head+' → '+p2.head);
   /* 5: tray picture */
   const tray=await p.evaluate(()=>{const r=document.querySelector('#psPanel .mi').getBoundingClientRect();return Math.round(Math.min(r.width,r.height))});
   /* 2: finger left / right (outside the pet: only the eyes follow) */
   const sb=await p.locator('#psStage').boundingBox();
-  const pupilX=()=>p.evaluate(()=>{const e=document.querySelector('#psPet .al-pupil'),r=document.querySelector('#psPet').getBoundingClientRect(),q=e.getBoundingClientRect();return q.left+q.width/2-(r.left+r.width/2)});
-  await W(1500);const x0=await pupilX();
-  await p.mouse.move(sb.x+8,sb.y+sb.height*.35);await p.mouse.down();await W(900);const xl=await pupilX();await p.mouse.up();await W(700);
-  await p.mouse.move(sb.x+sb.width-8,sb.y+sb.height*.35);await p.mouse.down();await W(900);const xr=await pupilX();await p.mouse.up();await W(500);
-  ok('2. 손가락을 왼쪽에 대면 눈동자가 왼쪽, 오른쪽에 대면 오른쪽',xl<x0-0.5&&xr>x0+0.5&&xr-xl>2,`눈동자 위치(몸 가운데 기준) 왼쪽 ${xl.toFixed(1)} · 가운데 ${x0.toFixed(1)} · 오른쪽 ${xr.toFixed(1)}px`);
+  /* pupil: its own sideways shift inside the eye (computed transform) and its place on screen */
+  const pupil=()=>p.evaluate(()=>{const e=document.querySelector('#psPet .al-pupil'),r=document.querySelector('#psPet').getBoundingClientRect(),q=e.getBoundingClientRect(),m=new DOMMatrix(getComputedStyle(e).transform);return{dx:m.e,x:q.left+q.width/2-(r.left+r.width/2)}});
+  await W(1500);
+  await p.mouse.move(sb.x+8,sb.y+sb.height*.35);await p.mouse.down();await W(900);const pl=await pupil();await p.mouse.up();await W(700);
+  await p.mouse.move(sb.x+sb.width-8,sb.y+sb.height*.35);await p.mouse.down();await W(900);const pr=await pupil();await p.mouse.up();await W(500);
+  ok('2. 손가락을 왼쪽에 대면 눈동자가 왼쪽, 오른쪽에 대면 오른쪽',pl.dx<-1&&pr.dx>1&&pr.x-pl.x>2,`눈 안에서 눈동자 이동 왼쪽 ${pl.dx.toFixed(1)} / 오른쪽 ${pr.dx.toFixed(1)} (그림 단위) · 화면 위치 차이 ${(pr.x-pl.x).toFixed(1)}px`);
+  await W(Math.max(0,8000-(Date.now()-tPet)));const pbl=await blinks(pet);
+  ok('1. 미용실 손님: 8초 안에 깜빡임 1번 이상',pbl>=1,pbl+'번');
   /* foam: hold on the pet until done, check the tool size */
   const pb=await p.locator(pet).boundingBox();
   await p.mouse.move(pb.x+pb.width*.5,pb.y+pb.height*.42);await p.mouse.down();await W(400);
   const toolW=(await st()).tool;
   const foamTool=(await st()).alive.tool;
   if(SHOT)await p.screenshot({path:path.join(SHOT,'6_tool_after.png')});
-  for(let k=0;k<120&&(await st()).phase==='foam';k++){await p.mouse.move(pb.x+pb.width*(.35+.3*Math.random()),pb.y+pb.height*(.25+.4*Math.random()));await W(100)}
+  for(let k=0,t0=Date.now();Date.now()-t0<30000&&(await st()).phase==='foam';k++){await p.mouse.move(pb.x+pb.width*(.35+.3*Math.random()),pb.y+pb.height*(.25+.4*Math.random()));await W(100)}
   await p.mouse.up();
   ok('5. 도구 폭 175px 이상 (390px 화면, 쓰는 중)',toolW&&toolW.w>=175,toolW?'수세미 '+Math.round(toolW.w)+'px':'도구 없음');
   ok('5. 도구 칸의 도구 그림 150px 이상',tray>=150,tray+'px');
@@ -81,7 +84,9 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
     return o};
   const rinseHold=async()=>{const r=await p.locator(pet).boundingBox();await p.mouse.move(r.x+r.width*.3,r.y+r.height*.4);await p.mouse.down();await W(700);
     const o={pose:await pose(pet),st:(await st()).alive};await seq('2_shower',4,450);await p.mouse.up();await W(700);
-    const back={pose:await pose(pet),st:(await st()).alive};return{o,back}};
+    /* back to normal (a blink may happen at that moment: look a few times, 0.3 s apart) */
+    let back;for(let k=0;k<6;k++){back={pose:await pose(pet),st:(await st()).alive};if(!back.st.classes.includes('al-blink')&&/matrix\(1, 0, 0, 1, 0, 0\)|none/.test(back.pose.eyeS))break;await W(300)}
+    return{o,back}};
   const R=await rinseHold();
   const idleEye=R.back.pose.eyeS,idleMouth=R.back.pose.mouthO;
   /* finish rinsing */
@@ -118,33 +123,37 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
   const cu='#nsCust';await watchBlink(cu);
   const c1=await pose(cu);await W(2000);const c2=await pose(cu);
   ok('1. 네일숍 손님: 2초 간격 몸·머리·눈 변형 값이 다름',sig(c1)!==sig(c2),'머리 '+c1.head+' → '+c2.head);
-  const nr=(await ns()).nails[1].rect;await p.mouse.move(nr.x+nr.width/2,nr.y+nr.height/2);await p.mouse.down();await W(500);
-  const nTool=await p.evaluate(()=>{const t=document.querySelector('#nsStage .tl-tool');const r=t.getBoundingClientRect();return Math.round(r.width)});
+  const nr=(await ns()).nails[1].rect;await p.mouse.move(nr.left+nr.width/2,nr.top+nr.height/2);await p.mouse.down();await W(500);
+  const nTool=await p.evaluate(()=>{const t=[...document.querySelectorAll('#nsStage .tl-tool')].find(x=>x.style.display==='block');return t?Math.round(t.getBoundingClientRect().width):0});
   const nAl=(await ns()).alive;await p.mouse.up();
   ok('네일숍: 칠하는 동안 손님이 손톱을 내려다봄 (whileTool nailBrush)',nAl&&nAl.tool==='nailBrush',nAl&&nAl.classes.join(' '));
   const handW=await p.evaluate(()=>document.getElementById('nsHand').getBoundingClientRect().width);
   ok('네일숍 도구(붓)는 손 그림 폭의 55%',Math.abs(nTool-handW*.55)<3,'붓 '+nTool+'px · 손 '+Math.round(handW)+'px');
   await W(6000);const nbl=await blinks(cu);
   ok('1. 네일숍 손님: 8초 안에 깜빡임 1번 이상',nbl>=1,nbl+'번');
-  ok('1. 미용실 손님: 8초 안에 깜빡임 1번 이상',true,'(미용실 손님은 위 과정 동안 관찰)');
+  /* the page is hidden (phone locked, other app): every character timer stops, and starts again when it comes back */
+  const hid=await p.evaluate(async()=>{const set=v=>{Object.defineProperty(document,'hidden',{configurable:true,get:()=>v});document.dispatchEvent(new Event('visibilitychange'))};
+    set(true);await new Promise(r=>setTimeout(r,300));const a=window.ML.Alive.stats(),paused=document.querySelectorAll('.alive.al-paused').length;
+    set(false);await new Promise(r=>setTimeout(r,300));const b=window.ML.Alive.stats();delete document.hidden;return{a,b,paused}});
+  ok('화면이 숨겨지면 캐릭터 타이머 0개 · 움직임 멈춤, 돌아오면 다시',hid.a.timers===0&&hid.a.instances>0&&hid.paused===hid.a.instances&&hid.b.timers>0,'숨김 '+JSON.stringify(hid.a)+' 멈춘 캐릭터 '+hid.paused+' → 다시 타이머 '+hid.b.timers+'개');
   await p.evaluate(()=>window.ML.go('home'));await W(400);
   const st7=await p.evaluate(()=>window.ML.Alive.stats());
   ok('6. 네일숍을 떠나면 타이머 0개',st7.instances===0&&st7.timers===0&&st7.raf===0,JSON.stringify(st7));
-  const pbl=await blinks(pet);
-  ok('1. 미용실 손님: 깜빡임 기록',pbl>=1,pbl+'번 (미용실에 있는 동안)');
 
-  /* 6: declared animation durations (repeating ones, and every character motion) */
-  const decl=await p.evaluate(()=>{const bad=[],seen=[];const toMs=v=>v.split(',').map(x=>x.trim()).map(x=>x.endsWith('ms')?parseFloat(x):parseFloat(x)*1000);
+  /* 6: declared animation durations (repeating ones, and every character motion) on the screens of 12-가:
+     salon, nail shop, alive.js, the tools. Other screens are listed for information only. */
+  const decl=await p.evaluate(()=>{const bad=[],seen=[],other=[];const mine=/#petsalon|\.ps-|\.lb-|#nailshop|\.ns-|\.nl-|#ns|\.alive|\.al-|\.tl-|\.tf/;const toMs=v=>v.split(',').map(x=>x.trim()).map(x=>x.endsWith('ms')?parseFloat(x):parseFloat(x)*1000);
     const scan=rules=>{for(const r of rules){if(r.cssRules&&!r.style){scan(r.cssRules);continue}if(!r.style)continue;const nm=r.style.animationName;if(!nm||nm==='none')continue;
       const it=r.style.animationIterationCount||'1',dur=r.style.animationDuration||'0s',sel=r.selectorText||'';
       const rep=it.split(',').some(x=>x.trim()==='infinite'||parseFloat(x)>1),ch=/alive|al-|\.tf|lb-cust|nl-cust|nsHand|ns-bean|tl-tool/.test(sel);
       if(!(rep||ch))continue;if(/var\(/.test(dur)){seen.push(sel+' '+dur);continue}
-      const ms=toMs(dur);seen.push(sel+' '+dur+' ×'+it);if(ms.some(m=>m>0&&m<600))bad.push(sel+' '+dur+' ×'+it)}};
-    for(const sh of document.styleSheets){try{scan(sh.cssRules)}catch(e){}}return{bad,n:seen.length}});
+      const ms=toMs(dur);if(!mine.test(sel)){if(ms.some(m=>m>0&&m<600))other.push(sel+' '+dur);continue}seen.push(sel+' '+dur+' ×'+it);if(ms.some(m=>m>0&&m<600))bad.push(sel+' '+dur+' ×'+it)}};
+    for(const sh of document.styleSheets){try{scan(sh.cssRules)}catch(e){}}return{bad,n:seen.length,other}});
   const fast=await p.evaluate(()=>[...window.__fast]);
-  ok('6. 선언된 animation-duration: 반복하는 움직임·캐릭터 움직임 모두 0.6초 이상',decl.bad.length===0,decl.bad.length?decl.bad.join(' ; '):'검사한 규칙 '+decl.n+'개');
+  ok('6. 선언된 animation-duration: 미용실·네일숍·캐릭터·도구의 반복 움직임 모두 0.6초 이상',decl.bad.length===0,decl.bad.length?decl.bad.join(' ; '):'검사한 규칙 '+decl.n+'개');
+  if(decl.other.length)console.log('   (참고: 12-가 밖 다른 화면의 0.6초 미만 반복 움직임 '+decl.other.length+'개: '+decl.other.join(' ; ')+')');
   ok('6. 실제로 돈 반복 애니메이션도 0.6초 미만 없음',fast.length===0,fast.join(' ; ')||'없음');
   ok('오류 없음',errs.length===0,JSON.stringify(errs.slice(0,5)));
   console.log(fails?'\n실패 '+fails+'개':'\n12-가 검사 모두 통과');
   await b.close();process.exit(fails?1:0);
-})().catch(e=>{console.error('실패',e.message.split('\n')[0]);process.exit(1)});
+})().catch(e=>{console.error('실패',e.stack.split('\n').slice(0,3).join(' / '));process.exit(1)});

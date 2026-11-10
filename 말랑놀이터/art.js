@@ -451,7 +451,7 @@ const HAND=(()=>{
     for(let i=1;i<F.length;i++){const x=F[i][0]+1,t=Math.max(F[i-1][2],F[i][2])+Math.min(F[i][1],F[i-1][1])*.5+10;s+=`<path d="M${x} ${t}V${k.palm[1]+12}" stroke="${OL}" stroke-width="3" stroke-linecap="round"/>`}
     if(k.paw){
       F.forEach(f=>{s+=`<ellipse class="ns-bean" cx="${f[0]+f[1]/2}" cy="${f[2]+76}" rx="14" ry="11" fill="${k.bean}"/>`});
-      s+=`<path class="ns-bean" d=""M${k.palm[0]+92} 236Q${k.palm[0]+141} 186 ${k.palm[0]+190} 236Q${k.palm[0]+196} 276 ${k.palm[0]+141} 276Q${k.palm[0]+86} 276 ${k.palm[0]+92} 236Z" fill="${k.bean}"/><ellipse cx="${k.palm[0]+122}" cy="232" rx="10" ry="6" fill="#fff" opacity=".55"/>`;
+      s+=`<path class="ns-bean" d="M${k.palm[0]+92} 236Q${k.palm[0]+141} 186 ${k.palm[0]+190} 236Q${k.palm[0]+196} 276 ${k.palm[0]+141} 276Q${k.palm[0]+86} 276 ${k.palm[0]+92} 236Z" fill="${k.bean}"/><ellipse cx="${k.palm[0]+122}" cy="232" rx="10" ry="6" fill="#fff" opacity=".55"/>`;
     }else{
       F.forEach((f,i)=>{const n=k.nails[i],y=n[1]+n[3]+22;s+=`<path d="M${f[0]+f[1]*.3} ${y}Q${f[0]+f[1]/2} ${y+5} ${f[0]+f[1]*.7} ${y}" stroke="${k.shade}" stroke-width="3" fill="none" stroke-linecap="round"/>`});
       s+=`<ellipse cx="${k.palm[0]+k.palm[2]*.62}" cy="${k.palm[1]+40}" rx="46" ry="20" fill="#fff" opacity=".3"/>`;
