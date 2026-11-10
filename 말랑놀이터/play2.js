@@ -1100,7 +1100,7 @@ function makeTool(el,o={}){
     if(o.effect==='wind'){flip=F.x>h.width/2;wx=F.x+(flip?-1:1)*gap;wy=F.y-.6*gap;}
     const minY=a[1]*sz-sz*.25;if(wy<minY)wy=minY;
     if(o.effect==='wind'){const phi=Math.atan2(F.y-wy,F.x-wx)*180/Math.PI;rot=flip?phi:phi-180}
-    const ax=flip?1-a[0]:a[0];
+    const ax=a[0];   // flip mirrors the picture around its working point
     tool.style.width=tool.style.height=sz+'px';tool.style.display='block';
     tool.style.left=(wx-ax*sz)+'px';tool.style.top=(wy-a[1]*sz)+'px';tool.style.transformOrigin=`${ax*100}% ${a[1]*100}%`;
     tool.style.transform=`rotate(${rot.toFixed(1)}deg)${flip?' scaleX(-1)':''}`;
