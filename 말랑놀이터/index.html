@@ -534,6 +534,8 @@ body{background:linear-gradient(180deg,var(--bg),color-mix(in srgb,var(--bg) 82%
     <div class="row"><span>소리</span><div class="seg" id="setSound"><button data-v="1">켜기</button><button data-v="0">끄기</button></div></div>
     <div class="row"><span>배경음</span><div class="seg" id="setBgm"><button data-v="1">동요</button><button data-v="0">끔</button></div></div>
     <div class="row"><span>드라이기 소리</span><div class="seg" id="setDryer"><button data-v="0">끔</button><button data-v="0.5">작게</button><button data-v="1">보통</button></div></div>
+    <div class="row"><span>목소리</span><button class="btn small alt" id="openVoicePick">목소리 고르기</button></div>
+    <div class="row"><span>엄마 목소리 녹음</span><button class="btn small alt" id="openRecs">녹음하기</button></div>
     <div class="row"><span>주인공·친구 사진</span><button class="btn small alt" id="openFriendsEdit">사진 바꾸기</button></div>
     <div class="row"><span>칭찬 도장·진짜 드레스</span><button class="btn small alt" id="openStamps">도장판 열기</button></div>
     <div class="row"><span>모험 진행</span><button class="pillhold holdbtn" id="resetQuest">처음부터 다시 (꾹 2초)</button></div>
@@ -557,6 +559,7 @@ body{background:linear-gradient(180deg,var(--bg),color-mix(in srgb,var(--bg) 82%
 <div class="toast" id="toast" hidden></div>
 <div id="fx" aria-hidden="true"></div>
 
+<script src="voice.js"></script>
 <script>
 (()=>{
 'use strict';
@@ -583,25 +586,16 @@ const EMOJI_FONT='"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-s
 let toastT=0;
 function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{t.hidden=true},3800)}
 
-/* ---------- voice ---------- */
+/* ---------- voice (목소리 고르기·녹음·말 대기열은 voice.js) ---------- */
 const hasTTS='speechSynthesis' in window;
-let voices=[];
-function loadVoices(){try{voices=speechSynthesis.getVoices()}catch(e){}}
-if(hasTTS){loadVoices();try{speechSynthesis.onvoiceschanged=loadVoices}catch(e){}}
-function speak(text,lang){
-  const u=new SpeechSynthesisUtterance(text);
-  u.lang=lang;u.rate=lang==='ko-KR'?0.92:0.85;u.pitch=1.15;
-  const v=voices.find(v=>v.lang&&v.lang.replace('_','-').toLowerCase().startsWith(lang.slice(0,2).toLowerCase()));
-  if(v)u.voice=v;
-  speechSynthesis.speak(u);
-}
+const VOICE=window.ML_VOICE;
+const stopSpeech=()=>{try{VOICE.cancel()}catch(e){if(hasTTS)try{speechSynthesis.cancel()}catch(_){}}};
 let quietUntil=0;
 function say(ko,en,queue){
-  if(!S.sound||!hasTTS)return;
+  if(!S.sound)return;
   try{
-    if(!queue&&Date.now()>quietUntil)speechSynthesis.cancel();
-    if(S.lang!=='en'&&ko)speak(ko,'ko-KR');
-    if(S.lang!=='ko'&&en)speak(en,'en-US');
+    if(!queue&&Date.now()>quietUntil)VOICE.cancel();
+    VOICE.say(ko,en,S.lang);
   }catch(e){}
 }
 
@@ -647,7 +641,7 @@ const BGM=(()=>{
       next+=d;ni++;
       if(ni>=song.length){ni=0;si=(si+1)%notes.length;next+=(b.gapBetweenSongsMs||6000)/1000}
     }
-    const duck=hasTTS&&speechSynthesis.speaking?(b.duckWhileSpeaking||.3):1;
+    const duck=VOICE.speaking()?(b.duckWhileSpeaking||.3):1;
     gain.gain.setTargetAtTime(duck*(b.volume||.12)*((CFG.sound&&CFG.sound.master)||.8),ac.currentTime,.15);
   }
   return{
@@ -779,7 +773,7 @@ function go(id,noEnter){
   document.querySelectorAll('.screen').forEach(s=>{s.hidden=s.id!==id});
   current=id;
   if(id!=='home'){if(!sessionStart)sessionStart=Date.now();bump(id)}
-  else if(hasTTS){try{speechSynthesis.cancel()}catch(e){}}
+  else stopSpeech();
   try{bgmSync()}catch(e){}
   if(!noEnter&&games[id]&&games[id].enter){
     try{games[id].enter()}catch(err){console.error(err);if(id!=='home'){toast('앗, 잠깐 문제가 생겨서 처음 화면으로 왔어요.');go('home')}}
@@ -805,7 +799,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});
 document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault()},{passive:false});
 document.addEventListener('contextmenu',e=>{if(!e.target.closest('input'))e.preventDefault()});
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&hasTTS){try{speechSynthesis.cancel()}catch(_){}}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)stopSpeech()});
 window.addEventListener('error',e=>console.error('mallang:',e.message));
 window.addEventListener('unhandledrejection',e=>e.preventDefault());
 let lastFx=0;

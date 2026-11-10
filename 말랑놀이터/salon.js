@@ -491,7 +491,7 @@ function putOn(slot,idx,col,fromEl){
     st.wear[slot]={idx,col};st.bloom={slot,t:performance.now()};LOG.push('wear:'+slot);
     drawPet('happy');drawOver(slot);L.later(()=>{if(st&&st.bloom&&performance.now()-st.bloom.t>=BLOOM){st.bloom=null;drawOver()}},BLOOM+60);
     anim('hop');sfx.pop();SFX.sparkle();const it=WEAR[slot][idx],c=COLORS[col];say(`${c[0]} ${it.ko}!`,`${cap(c[1])} ${it.en}!`);markWorn();
-    L.later(()=>{if(phase==='dress'&&mood==='happy')drawPet('idle')},1300);armMirror();
+    L.later(()=>{if(phase==='dress'&&mood==='happy')drawPet('idle')},1300);if(mirBtn.hidden)G.stop();armMirror();
     if(!st.used.peek&&wornCount()>=2)L.later(peek,2600);
   };
   if(fromEl){flyTo(fromEl,tx,ty,slotPx(slot),350,done)}else done();
