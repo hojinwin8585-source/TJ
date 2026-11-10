@@ -1,6 +1,6 @@
 {
   "_설명": "말랑 놀이터의 모든 숫자·문구·단계를 여기 한 곳에 둡니다. 코드에 숫자를 직접 쓰지 말고 이 파일 값을 읽어 쓰세요. 값을 바꾸면 놀이가 바뀌어야 합니다.",
-  "version": "2.3",
+  "version": "2.4",
   "child": {
     "ageMonths": 29,
     "birthYear": 2024,
@@ -302,7 +302,104 @@
         "en": "puppy",
         "name": "콩이"
       }
-    ]
+    ],
+    "tts": {
+      "_설명": "사용 후기: 음성이 기계 같다. 지금은 그 언어의 첫 번째 목소리를 쓰고 음 높이를 1.15로 올려서 더 어색함. → 기기에서 가장 자연스러운 목소리를 점수로 골라 쓰고, 어른이 들어 보고 바꿀 수 있게.",
+      "pick": "getVoices()에서 언어가 맞는 목소리마다 점수를 매겨 가장 높은 것. 목소리 목록은 늦게 오므로 voiceschanged 뒤에 다시 고름",
+      "score": {
+        "nameContains+5": [
+          "Natural",
+          "Neural",
+          "Online",
+          "Premium",
+          "Enhanced",
+          "프리미엄",
+          "향상됨",
+          "고품질"
+        ],
+        "nameContains+3": [
+          "Google",
+          "Yuna",
+          "유나",
+          "SunHi",
+          "선히",
+          "InJoon",
+          "Heami",
+          "Ava",
+          "Samantha",
+          "Aria",
+          "Jenny",
+          "Allison",
+          "Zoe"
+        ],
+        "localService+1": true,
+        "nameContains-10": [
+          "Compact",
+          "compact",
+          "eSpeak",
+          "espeak",
+          "Grandpa",
+          "Grandma",
+          "Bad News",
+          "Good News",
+          "Bells",
+          "Bubbles",
+          "Jester",
+          "Whisper",
+          "Zarvox",
+          "Trinoids",
+          "Cellos",
+          "Organ",
+          "Boing",
+          "Albert",
+          "Fred",
+          "Junior",
+          "Ralph",
+          "Bahh",
+          "Superstar",
+          "Wobble",
+          "Hysterical",
+          "Deranged"
+        ]
+      },
+      "enPreferLangs": [
+        "en-US",
+        "en-GB",
+        "en-AU"
+      ],
+      "rate": {
+        "ko": 0.95,
+        "en": 0.9
+      },
+      "pitch": 1.0,
+      "gapBetweenLangsMs": 250,
+      "parentPicker": {
+        "where": "어른 설정 > 목소리",
+        "what": "한국어 목소리와 영어 목소리를 각각 목록에서 고름(점수 높은 순, 위 5개만 먼저 보이고 '더 보기'). 고르면 바로 예시 문장을 들려줌. 빠르기 '천천히 / 보통' 두 가지",
+        "sample": {
+          "ko": "안녕! 나는 토토야. 같이 놀자!",
+          "en": "Hi! I'm Toto. Let's play!"
+        },
+        "storageKey": "mallang_voice",
+        "help": "기기에 좋은 목소리를 내려받는 방법을 한 줄씩 보여 줌(아래 installHelp)"
+      },
+      "installHelp": {
+        "iPhone": "설정 > 손쉬운 사용 > 읽기 및 말하기 > 음성 > 한국어 > '유나(향상됨)' 또는 '프리미엄' 내려받기, 영어도 같은 곳에서 'Ava(향상됨)'",
+        "Android": "설정 > 일반(또는 접근성) > 텍스트 음성 변환 > 기본 엔진 'Google 음성 서비스' > 음성 데이터 설치 > 한국어·영어(미국) 내려받기",
+        "note": "내려받은 뒤 앱을 다시 열면 목록에 나옴. 기기와 브라우저마다 보이는 목소리가 다름"
+      }
+    },
+    "recordings": {
+      "_설명": "가장 자연스러운 방법: 엄마(가족)가 자주 나오는 말을 직접 녹음. 녹음이 있는 말은 녹음을 틀고, 없는 말은 기기 목소리.",
+      "where": "어른 설정 > 엄마 목소리 녹음 (어른 확인 뒤)",
+      "how": "문장 카드 하나씩: 문장을 보여 주고 큰 녹음 버튼(누르는 동안 녹음, 최대 4초) → 바로 들어 보기 → 저장 / 다시. MediaRecorder 사용, 지원 안 되면 이 메뉴를 숨김",
+      "bothLanguages": "카드에 한국어와 영어가 함께 적혀 있고, 한 번에 둘 다 말하면 '영어도 함께' 표시를 켬(그러면 영어 기기 목소리는 생략). 영어가 어려우면 한국어만 녹음하고 영어는 기기 목소리",
+      "phrases": "앱에서 가장 자주 나오는 말 30개 정도: voice.praise 9개, voice.onWrongPlace 2개, voice.actionWords 6개, 동물 이름 부르기 4개('토끼야, 들어와!' 등), 미용실 안내(거품, 물, 바람 예고, 거울, 고마워), 홈 인사. 실제 문장은 코드에서 찾아 같은 글자로",
+      "match": "say(ko, en)의 ko 문장과 글자가 같으면 녹음을 틈(앞뒤 공백·문장부호 차이는 무시)",
+      "storage": "IndexedDB 'mallang_voice_rec' (기기에만 저장)",
+      "playback": "배경음은 녹음을 트는 동안 작아짐(sound.bgm.duckWhileSpeaking). 녹음 소리 크기는 자동으로 고르게(최대 음량 기준 맞춤)",
+      "manage": "문장마다 녹음됨 표시, 지우기, 전체 지우기"
+    }
   },
   "progress": {
     "_설명": "같은 단계를 3번 끝내면 다음 단계가 열립니다. 별 3칸이 차는 것이 보여야 합니다.",
