@@ -1054,11 +1054,20 @@ function holdSound(kind,opt={}){
    o.cfg(): games.petsalon.tools (offsetAboveFingerRatio, coverage). Rubbing amounts come from touch.rub, tool size from touch.tool.
    o.effect: 'foam' (bubbles under the finger) | 'water' (stream from the shower head) | 'wind' (3 soft lines from the dryer mouth).
    o.anchor: [x,y] working point inside the tool picture (fractions): sponge bottom, shower head, dryer mouth.
-   Optional (nail shop): o.radius(hostRect,targetRect) → brush radius in px, o.fx({wx,wy,sz,x,y,rad,now}) → effect SVG, tool.fill(i,d). */
+   Optional (nail shop): o.radius(hostRect,targetRect) → brush radius in px, o.fx({wx,wy,sz,x,y,rad,now}) → effect SVG, tool.fill(i,d).
+   P12: tool size = touch.tool (stage width × stageWidthRatio, minPx..maxPx) or o.size(hostRect) px (nail shop: hand width × 55%).
+   o.face() → client rect of the character's face: when the tool covers it, the tool turns 60% see-through.
+   Tool pictures may carry a small face (.tf: .tf-eye, .tf-smile, .tf-grin): while in use the eyes blink and the smile opens. */
 const toolCss=document.createElement('style');toolCss.textContent=
 '.tl-tool{position:absolute;left:0;top:0;z-index:8;pointer-events:none;display:none;filter:drop-shadow(0 4px 3px rgba(91,74,66,.2))}'+
 '.tl-tool svg{width:100%;height:100%;display:block;overflow:visible}'+
-'.tl-fx{position:absolute;left:0;top:0;width:100%;height:100%;z-index:7;pointer-events:none;overflow:visible}';
+'.tl-fx{position:absolute;left:0;top:0;width:100%;height:100%;z-index:7;pointer-events:none;overflow:visible}'+
+'.tl-tool{transition:opacity .2s}.tl-tool.over-face{opacity:.6}'+
+'.tl-tool .tf-eye{transform-box:fill-box;transform-origin:50% 50%;animation:tfblink 2.6s ease-in-out infinite}'+
+'.tl-tool .tf-smile{opacity:0}.tl-tool .tf-grin{opacity:1}'+
+'@keyframes tfblink{0%,88%,100%{transform:scaleY(1)}94%{transform:scaleY(.12)}}'+
+'.tl-intro{position:absolute;z-index:30;pointer-events:none;filter:drop-shadow(0 6px 5px rgba(91,74,66,.22))}'+
+'.tl-intro svg{width:100%;height:100%;display:block;overflow:visible}';
 document.head.appendChild(toolCss);
 function makeTool(el,o={}){
   const host=o.host||el,SVGNS='http://www.w3.org/2000/svg';
@@ -1093,7 +1102,7 @@ function makeTool(el,o={}){
     rest.forEach((i,k)=>timers.push(setTimeout(()=>{if(!enabled)return;const pv=v[i];v[i]=1;processed++;if(o.onCell)o.onCell(i,1,pv,'auto')},k*step)));
     timers.push(setTimeout(()=>{if(!enabled)return;if(o.onProgress)o.onProgress(1,1,'auto');if(o.onDone)o.onDone()},rest.length*step+160));
   }
-  function toolSize(){const t=tcfg();return Math.max(t.minPx||130,hr().width*(t.stageWidthRatio||.32))}
+  function toolSize(){const t=tcfg(),mx=t.maxPx||1e9;if(o.size)return Math.min(mx,o.size(hr()));return Math.min(mx,Math.max(t.minPx||130,hr().width*(t.stageWidthRatio||.32)))}
   /* where the tool sits for a finger at (x,y): returns working point W and the tool's rotation */
   function placeTool(){
     if(!F)return null;const sz=toolSize(),gap=(o.gapScale==null?1:o.gapScale)*cfg().offsetAboveFingerRatio*sz,a=o.anchor||[.5,1],h=hr();
@@ -1105,6 +1114,8 @@ function makeTool(el,o={}){
     tool.style.width=tool.style.height=sz+'px';tool.style.display='block';
     tool.style.left=(wx-ax*sz)+'px';tool.style.top=(wy-a[1]*sz)+'px';tool.style.transformOrigin=`${ax*100}% ${a[1]*100}%`;
     tool.style.transform=`rotate(${rot.toFixed(1)}deg)${flip?' scaleX(-1)':''}`;
+    if(o.face){const f=o.face();let over=false;if(f&&f.width){const tl=h.left+wx-ax*sz,tt=h.top+wy-a[1]*sz,ix=Math.max(0,Math.min(tl+sz,f.right)-Math.max(tl,f.left)),iy=Math.max(0,Math.min(tt+sz,f.bottom)-Math.max(tt,f.top));
+      over=ix*iy>f.width*f.height*.3}tool.classList.toggle('over-face',over)}
     return{wx,wy,sz};
   }
   function drawFx(now){
@@ -1186,7 +1197,19 @@ function makeTool(el,o={}){
   };
 }
 
-M.P2={makeRub,makeTool,holdSound,dryerSound,showerSound,screen,life,chip,bigBtn,hint,dotsHTML,setDots,makeScrub,makeCutter,makeDrag,makeSweep,tapItems,friendsRow,faceOf,faceBg,noise,sweepTone,siren,SFX,foamAt,boxSize,CNT_KO_UNIT,josa};
+/* P12 touch.tool.intro: when a step starts, the tool jumps up out of the tool tray (bounces twice), says its name, then sits back.
+   from: the tray picture element, host: the stage, size: px of the tool while used. Returns a stop function. */
+function toolIntro(host,from,html,o={}){
+  if(!host||!from)return()=>{};const hr=host.getBoundingClientRect(),fr=from.getBoundingClientRect();if(!fr.width||!hr.width)return()=>{};
+  const sz=o.size||Math.max(180,hr.width*.45),el=document.createElement('div');el.className='tl-intro';el.innerHTML=html;
+  Object.assign(el.style,{width:sz+'px',height:sz+'px',left:(fr.left-hr.left+fr.width/2-sz/2)+'px',top:(fr.top-hr.top+fr.height/2-sz/2)+'px'});host.appendChild(el);
+  const s0=fr.width/sz,up=Math.min(hr.height*.5,fr.top-hr.top-sz*.1);
+  const a=el.animate([{transform:`translateY(0) scale(${s0})`,opacity:.3},{transform:`translateY(${-up}px) scale(1)`,opacity:1,offset:.25},{transform:`translateY(${-up+30}px) scale(1.04,.96)`,offset:.38},
+    {transform:`translateY(${-up-10}px) scale(1)`,offset:.5},{transform:`translateY(${-up}px) scale(1)`,opacity:1,offset:.75},{transform:`translateY(0) scale(${s0})`,opacity:0}],{duration:o.ms||2000,easing:'ease-in-out',fill:'forwards'});
+  if(o.ko)say(o.ko,o.en||'');
+  const stop=()=>{try{a.cancel()}catch(e){}el.remove()};a.onfinish=stop;return stop;
+}
+M.P2={makeRub,makeTool,toolIntro,holdSound,dryerSound,showerSound,screen,life,chip,bigBtn,hint,dotsHTML,setDots,makeScrub,makeCutter,makeDrag,makeSweep,tapItems,friendsRow,faceOf,faceBg,noise,sweepTone,siren,SFX,foamAt,boxSize,CNT_KO_UNIT,josa};
 /* rest screen gets the hand-play videos too */
 (()=>{const r=document.querySelector('#rest .sheet');if(!r)return;const box=document.createElement('div');box.className='vlist';box.style.width='100%';
   box.innerHTML='<p class="hint">쉬는 동안 손유희 노래를 같이 따라 해 봐요.</p>'+videoCards(VIDEOS.slice(0,3));r.insertBefore(box,r.querySelector('#restHold'))})();

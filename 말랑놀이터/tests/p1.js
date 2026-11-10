@@ -1,7 +1,7 @@
 /* P1 완료 기준 검사: node tests/p1.js
    1) 손가락을 거의 움직이지 않아도 10초 안에 거품 단계 끝
    2) config 의 needStageWidths 를 바꾸면 실제 문지르기 양이 바뀜
-   3) 미용실에 반복 무늬 배경이 없고, 동시에 움직이는 것이 2개 이하, 카드(차분) → 동물(또렷) 색이 다름
+   3) 미용실에 반복 무늬 배경이 없고, 동시에 움직이는 것(배경·효과·버튼, 캐릭터 몸 제외)이 2개 이하, 카드(차분) → 동물(또렷) 색이 다름
    4) 도구 그림 폭 130px 이상, 손가락 위쪽에 보임
    5) 드라이 단계에서 예고 음성 → 누름 → 소리 순서
    (P2 2-가부터: 가게 앞에서 진흙 손님을 골라 들어가고, 샤워기·드라이기도 손가락을 대고 있는 동안 작동) */
@@ -19,8 +19,10 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
     await p.waitForFunction(()=>window.ML.__ps().phase==='lobby',null,{timeout:6000});const i=(await st()).lobby.findIndex(c=>c&&c.need==='muddy');await p.locator(`.lb-cust[data-i="${i}"]`).click();
     await p.waitForFunction(()=>window.ML.__ps().phase==='enter',null,{timeout:4000}).catch(()=>{});await p.waitForFunction(()=>window.ML.__ps().phase==='foam',null,{timeout:12000});await W(300)};
   const petBox=()=>p.locator('#psPet').boundingBox();
+  /* P12: 캐릭터(손님 몸과 도구 얼굴)의 느린 움직임(calm.characterLife)은 빼고, 배경·효과·버튼의 끝없는 움직임만 셉니다 */
   const anims=()=>p.evaluate(()=>{const g=new Set();document.getAnimations().forEach(a=>{const t=a.effect&&a.effect.target,tm=a.effect&&a.effect.getTiming();
     if(!t||!tm||tm.iterations!==Infinity||a.playState!=='running')return;const r=t.getBoundingClientRect();if(!r.width||!r.height||t.closest('[hidden]'))return;
+    if(t.closest('.alive,.tf'))return;
     g.add(t.closest('.ghand')?'ghand':(t.id||t.className&&t.className.baseVal||t.className||t.tagName))});return[...g]});
   const cfgRead=()=>p.evaluate(()=>({need:window.MLCFG.touch.rub.needStageWidths,hold:window.MLCFG.touch.rub.holdProgressPerSec,chunk:window.MLCFG.touch.rub.tapChunk}));
   console.log('config.js:',JSON.stringify(await cfgRead()));
@@ -79,7 +81,7 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
   const pat=await p.evaluate(()=>{const bad=[];[document.body,...document.querySelectorAll('#petsalon *')].forEach(e=>{const b=getComputedStyle(e).backgroundImage;
     if(/repeating-|radial-gradient/.test(b)){const s=getComputedStyle(e).backgroundSize;if(/repeating-/.test(b)||(s&&s!=='auto'))bad.push((e.id||e.className&&e.className.baseVal||e.className||e.tagName)+':'+b.slice(0,40))}});return bad});
   ok('미용실 화면에 반복 무늬 배경 없음',pat.length===0,pat.join(' ; ')||'없음');
-  ok('동시에 움직이는 것(끝없는 움직임) 2개 이하',maxAnim.length<=2,'최대 '+maxAnim.length+'개: '+maxAnim.join(', '));
+  ok('동시에 움직이는 것(끝없는 움직임, 캐릭터 몸 제외) 2개 이하',maxAnim.length<=2,'최대 '+maxAnim.length+'개: '+maxAnim.join(', '));
   const home=await p.evaluate(()=>{window.ML.go('home');return[document.body,...document.querySelectorAll('#home *,.bg-home *')].filter(e=>/repeating-|px/.test(getComputedStyle(e).backgroundImage+getComputedStyle(e).backgroundSize)&&/repeating-|(\d+px \d+px)/.test(getComputedStyle(e).backgroundImage+' '+getComputedStyle(e).backgroundSize)&&!/is-hero/.test(e.className)).length});
   ok('홈·공통 배경에 점 무늬 없음',home===0,'무늬 요소 '+home+'개');
 

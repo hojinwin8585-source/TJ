@@ -68,18 +68,20 @@ const ASK={head:['머리에 뭘 달아 줄까? 하나 골라 봐!','What goes on
 
 /* ---------- little drawings ---------- */
 const ICON={
-  sponge:`<svg viewBox="0 0 100 100"><rect x="14" y="26" width="72" height="50" rx="16" fill="${PAL.butter}" ${S}/><circle cx="34" cy="44" r="5" fill="#DDBB60"/><circle cx="56" cy="38" r="4" fill="#DDBB60"/><circle cx="68" cy="56" r="6" fill="#DDBB60"/><circle cx="42" cy="62" r="4.5" fill="#DDBB60"/><circle cx="22" cy="24" r="9" fill="#fff" ${S}/><circle cx="80" cy="76" r="7" fill="#fff" ${S}/></svg>`,
-  shower:`<svg viewBox="0 0 100 100"><path d="M86 6Q88 28 62 36" fill="none" stroke="${OL}" stroke-width="13" stroke-linecap="round"/><path d="M86 6Q88 28 62 36" fill="none" stroke="#C8CDD6" stroke-width="6.5" stroke-linecap="round"/><path d="M22 60Q22 34 52 34Q82 34 82 60Z" fill="${PAL.sky}" ${S}/><circle cx="44" cy="47" r="3.6" fill="${OL}"/><circle cx="60" cy="47" r="3.6" fill="${OL}"/><path d="M47 53Q52 57 57 53" fill="none" stroke="${OL}" stroke-width="3" stroke-linecap="round"/><rect x="18" y="58" width="68" height="11" rx="5.5" fill="#CFE5F4" ${S}/>${[28,40,52,64,76].map(x=>`<circle cx="${x}" cy="63.5" r="2.2" fill="#8FC3E6"/>`).join('')}</svg>`,
-  dryer:`<svg viewBox="0 0 100 100"><path d="M52 52L60 90H44L40 54Z" fill="${PAL.lilac}" ${S}/><path d="M16 24H62Q84 24 84 40Q84 56 62 56H16Z" fill="${PAL.rose}" ${S}/><rect x="8" y="26" width="12" height="28" rx="4" fill="#8F7F9C" ${S}/><circle cx="40" cy="36" r="4.5" fill="${OL}"/><circle cx="58" cy="36" r="4.5" fill="${OL}"/><circle cx="41.5" cy="34.5" r="1.5" fill="#fff"/><circle cx="59.5" cy="34.5" r="1.5" fill="#fff"/><path d="M42 44Q49 52 56 44" fill="none" stroke="${OL}" stroke-width="3.5" stroke-linecap="round"/></svg>`,
+  sponge:`<svg viewBox="0 0 100 100"><rect x="14" y="26" width="72" height="50" rx="16" fill="${PAL.butter}" ${S}/><circle cx="26" cy="40" r="4" fill="#DDBB60"/><circle cx="74" cy="38" r="4" fill="#DDBB60"/><circle cx="72" cy="62" r="5" fill="#DDBB60"/><circle cx="28" cy="64" r="4.5" fill="#DDBB60"/><g class="tf"><circle class="tf-eye" cx="42" cy="47" r="3.8" fill="${OL}"/><circle class="tf-eye" cx="58" cy="47" r="3.8" fill="${OL}"/><path class="tf-smile" d="M44 55Q50 61 56 55" fill="none" stroke="${OL}" stroke-width="3" stroke-linecap="round"/><path class="tf-grin" opacity="0" d="M43 54Q50 65 57 54Z" fill="#B8474B" stroke="${OL}" stroke-width="2" stroke-linejoin="round"/></g><circle cx="22" cy="24" r="9" fill="#fff" ${S}/><circle cx="80" cy="76" r="7" fill="#fff" ${S}/></svg>`,
+  shower:`<svg viewBox="0 0 100 100"><path d="M86 6Q88 28 62 36" fill="none" stroke="${OL}" stroke-width="13" stroke-linecap="round"/><path d="M86 6Q88 28 62 36" fill="none" stroke="#C8CDD6" stroke-width="6.5" stroke-linecap="round"/><path d="M22 60Q22 34 52 34Q82 34 82 60Z" fill="${PAL.sky}" ${S}/><g class="tf"><circle class="tf-eye" cx="44" cy="47" r="3.6" fill="${OL}"/><circle class="tf-eye" cx="60" cy="47" r="3.6" fill="${OL}"/><path class="tf-smile" d="M47 53Q52 57 57 53" fill="none" stroke="${OL}" stroke-width="3" stroke-linecap="round"/><path class="tf-grin" opacity="0" d="M46 52Q52 60 58 52Z" fill="#B8474B" stroke="${OL}" stroke-width="2" stroke-linejoin="round"/></g><rect x="18" y="58" width="68" height="11" rx="5.5" fill="#CFE5F4" ${S}/>${[28,40,52,64,76].map(x=>`<circle cx="${x}" cy="63.5" r="2.2" fill="#8FC3E6"/>`).join('')}</svg>`,
+  dryer:`<svg viewBox="0 0 100 100"><path d="M52 52L60 90H44L40 54Z" fill="${PAL.lilac}" ${S}/><path d="M16 24H62Q84 24 84 40Q84 56 62 56H16Z" fill="${PAL.rose}" ${S}/><rect x="8" y="26" width="12" height="28" rx="4" fill="#8F7F9C" ${S}/><g class="tf"><g class="tf-eye"><circle cx="40" cy="36" r="4.5" fill="${OL}"/><circle cx="41.5" cy="34.5" r="1.5" fill="#fff"/></g><g class="tf-eye"><circle cx="58" cy="36" r="4.5" fill="${OL}"/><circle cx="59.5" cy="34.5" r="1.5" fill="#fff"/></g><path class="tf-smile" d="M42 44Q49 52 56 44" fill="none" stroke="${OL}" stroke-width="3.5" stroke-linecap="round"/><path class="tf-grin" opacity="0" d="M41 43Q49 55 57 43Z" fill="#B8474B" stroke="${OL}" stroke-width="2.2" stroke-linejoin="round"/></g></svg>`,
   mirror:`<svg viewBox="0 0 100 100"><ellipse cx="50" cy="44" rx="30" ry="36" fill="${PAL.butter}" ${S}/><ellipse cx="50" cy="44" rx="21" ry="27" fill="#EAF3F6" ${S}/><path d="M38 30Q43 22 53 21" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M50 81V92M36 94H64" stroke="${OL}" stroke-width="9" stroke-linecap="round"/><path d="M50 81V92M36 94H64" stroke="${PAL.butter}" stroke-width="3.5" stroke-linecap="round"/>${A.twinkle(82,16,7,'#F0D58A')}</svg>`,
   back:`<svg viewBox="0 0 40 40" width="30" height="30"><path d="M25 8L12 20L25 32" fill="none" stroke="${OL}" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   star:'<svg viewBox="0 0 20 20"><path d="M10 1l2.6 5.6 6 .7-4.5 4.1 1.2 6L10 14.5 4.7 17.4l1.2-6L1.4 7.3l6-.7z" fill="#F0D58A" stroke="#5B3A29" stroke-width="1.2"/></svg>'
 };
+/* P12 touch.tool.intro: the name the tool says when it jumps out of the tray */
+const TOOL_NAME={foam:['수세미!','Sponge!'],rinse:['샤워기!','Shower!'],dry:['드라이기!','Dryer!']};
 /* tool pictures and their working point (sponge bottom, shower head, dryer mouth) */
 const TOOL_OF={
-  foam:{icon:ICON.sponge,effect:'foam',anchor:[.5,.86],gapScale:.35,log:'rub'}   /* 수세미는 문지르는 도구라 손가락에 더 가깝게 */,
-  rinse:{icon:ICON.shower,effect:'water',anchor:[.52,.69],log:'water'},
-  dry:{icon:ICON.dryer,effect:'wind',anchor:[.08,.4],log:'dry'}
+  foam:{icon:ICON.sponge,effect:'foam',anchor:[.5,.86],gapScale:.35,log:'rub',alive:'sponge'}   /* 수세미는 문지르는 도구라 손가락에 더 가깝게 */,
+  rinse:{icon:ICON.shower,effect:'water',anchor:[.52,.69],log:'water',alive:'shower'},
+  dry:{icon:ICON.dryer,effect:'wind',anchor:[.08,.4],log:'dry',alive:'dryer'}
 };
 /* need bubbles: what the customer wants, as a picture (no letters) */
 const NEED_ICON={
@@ -143,22 +145,8 @@ const css=`
 @keyframes psin{from{transform:translateX(120%)}to{transform:translateX(-50%)}}
 .ps-pet.leave{animation:psout .8s ease-in forwards}
 @keyframes psout{to{transform:translateX(-220%)}}
-.ps-pet.hop{animation:pshop .5s}
-@keyframes pshop{0%,100%{transform:translateX(-50%)}40%{transform:translateX(-50%) translateY(-18px)}}
 .ps-pet.callme{animation:pscall .7s ease-in-out}
 @keyframes pscall{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.05)}}
-.ps-pet.giggle{animation:psgig 1s ease-in-out}
-@keyframes psgig{0%,100%{transform:translateX(-50%)}20%,60%{transform:translateX(-50%) translateY(-6px) rotate(-3deg)}40%,80%{transform:translateX(-50%) translateY(-2px) rotate(3deg)}}
-.ps-pet.sneeze{animation:pssnz .5s ease-out}
-@keyframes pssnz{0%,100%{transform:translateX(-50%)}30%{transform:translateX(-50%) translateY(4px) scale(1.03,.97)}55%{transform:translateX(-50%) translateY(-8px)}}
-.ps-pet.shake{animation:psshake .8s ease-in-out}
-@keyframes psshake{0%,100%{transform:translateX(-50%)}12%,37%,62%,87%{transform:translateX(calc(-50% - 9px)) rotate(-3deg)}25%,50%,75%{transform:translateX(calc(-50% + 9px)) rotate(3deg)}}
-.ps-pet.peek{animation:pspeek 1.4s ease-in-out}
-@keyframes pspeek{0%,100%{transform:translateX(-50%)}30%,70%{transform:translateX(-50%) translateY(-8px) rotate(-5deg)}}
-.ps-pet.spin{animation:psspin 1.1s ease-in-out}
-@keyframes psspin{from{transform:translateX(-50%) rotateY(0)}to{transform:translateX(-50%) rotateY(360deg)}}
-.ps-pet.bye .wave{animation:pswave .4s ease-in-out 4 alternate;transform-box:fill-box;transform-origin:20% 90%}
-@keyframes pswave{from{transform:rotate(0)}to{transform:rotate(-24deg)}}
 .ps-pet .pop{animation:pspop .5s cubic-bezier(.3,1.6,.5,1);transform-box:fill-box;transform-origin:center}
 @keyframes pspop{from{opacity:0}}
 .ps-tub{position:absolute;left:50%;bottom:3%;transform:translateX(-50%) translateY(130%);z-index:4;pointer-events:none;transition:transform .7s cubic-bezier(.3,1.2,.5,1)}
@@ -174,7 +162,8 @@ const css=`
 #petsalon .ani-idle .eyes,#petsalon .wave{animation:none}
 @keyframes psbloom{from{opacity:0}to{opacity:1}}
 .ps-pet .bloom{animation:psbloom .6s ease-out both}
-.ps-panel{flex:none;height:136px;display:flex;gap:10px;align-items:center;justify-content:center;padding:6px 0;touch-action:none}
+.ps-panel{flex:none;height:170px;display:flex;gap:10px;align-items:center;justify-content:center;padding:6px 0;touch-action:none}
+.ps-panel .pzmeter .mi{width:150px;height:150px;padding:10px}
 .ps-panel .pzmeter{background:color-mix(in srgb,var(--paper) 80%,transparent);border-radius:28px;padding:12px 10px;box-shadow:0 3px 10px rgba(91,74,66,.1)}
 .ps-panel .pzmeter .mbar i{background:${PAL.rose};box-shadow:none;border-radius:0 12px 12px 0;transition:width .3s ease-out}
 .ps-card{flex:1;min-width:0;max-width:200px;height:124px;border-radius:28px;border:0;padding:8px;background:var(--paper);display:grid;place-items:center;touch-action:none;
@@ -213,7 +202,7 @@ const css=`
 .lb-cust{position:absolute;left:0;bottom:0;width:100%;height:100%;border:0;padding:0;background:none;pointer-events:auto;touch-action:manipulation;transition:transform 2s linear}
 .lb-cust .lb-ani{position:absolute;left:3%;right:3%;bottom:19%;aspect-ratio:200/230}
 .lb-cust .lb-bub{position:absolute;right:-2%;top:0;width:42%;aspect-ratio:60/56}
-.lb-cust.walk .lb-ani{animation:lbwalk .5s ease-in-out 4}
+.lb-cust.walk .lb-ani{animation:lbwalk .66s ease-in-out 3}
 .lb-cust.arriving{pointer-events:none}
 .lb-cust:active .lb-ani{transform:translateY(3px)}
 @keyframes lbwalk{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
@@ -224,16 +213,26 @@ const stEl=document.createElement('style');stEl.textContent=css;document.head.ap
 const sec=document.createElement('section');sec.id=id;sec.className='screen';sec.hidden=true;
 sec.innerHTML=`${PAPER_DEFS}<div class="bar"><button class="round" data-go="home" id="psHome" aria-label="처음으로">🏠</button><button class="round" id="psBack" aria-label="가게 앞으로" hidden>${ICON.back}</button><h2>동물 미용실</h2><div class="psstars" id="psStars"></div></div>
 <div class="ps-lobby" id="psLobby"><div class="lb-bg">${LB_WALL}</div><div class="lb-awn">${LB_AWN}</div><div class="lb-frames" id="psFrames"></div><div class="lb-win">${LB_WIN}</div><div class="lb-door" id="psDoor">${LB_DOOR}</div><div class="lb-seats" id="psSeats"></div></div>
-<div class="ps-salon" id="psSalon" hidden><div class="ps-stage" id="psStage">${BG}<div class="ps-pet" id="psPet"><div class="psbase"></div><svg class="over" viewBox="0 0 200 230"></svg></div>
+<div class="ps-salon" id="psSalon" hidden><div class="ps-stage" id="psStage">${BG}<div class="ps-pet" id="psPet"><div class="psbase"></div><svg class="over" viewBox="0 0 200 230">${A.animalOverlay()}</svg></div>
 <div class="ps-tub" id="psTub">${TUB}</div><div class="ps-pfx" id="psPfx"></div><button class="ps-mirbtn" id="psMirBtn" aria-label="거울" hidden>${ICON.mirror}</button></div>
 <div class="ps-panel" id="psPanel"></div></div>`;
 document.getElementById('app').appendChild(sec);M.NAMES[id]='동물 미용실';
 const $=s=>sec.querySelector(s);
-const stage=$('#psStage'),petEl=$('#psPet'),baseEl=petEl.querySelector('.psbase'),overEl=petEl.querySelector('.over'),tub=$('#psTub'),panel=$('#psPanel'),pfx=$('#psPfx'),mirBtn=$('#psMirBtn');
+const stage=$('#psStage'),petEl=$('#psPet'),baseEl=petEl.querySelector('.psbase'),overEl=petEl.querySelector('.over'),ovBody=overEl.querySelector('.ov-body'),ovHead=overEl.querySelector('.ov-head'),tub=$('#psTub'),panel=$('#psPanel'),pfx=$('#psPfx'),mirBtn=$('#psMirBtn');
 const lobbyEl=$('#psLobby'),salonEl=$('#psSalon'),seatsEl=$('#psSeats'),framesEl=$('#psFrames'),doorEl=$('#psDoor'),homeBtn=$('#psHome'),backBtn=$('#psBack');
 const G=M.Guide.make(sec,{say});
 const DATA=Object.assign({served:0,wall:[]},store.get('mallang_salon',{}));if(!Array.isArray(DATA.wall))DATA.wall=[];
 const save=()=>store.set('mallang_salon',DATA);
+/* P12: living characters (alive.js). al = the customer in the salon, lobbyAl = the three waiting outside */
+const AL=M.Alive||null;let al=null,lobbyAl=[],turns=null,lastTickle=0;
+const alPlay=(n,o)=>{if(al&&al.play(n,o)===true)LOG.push('play:'+n)};
+const alMood=m=>{if(al)al.setMood(m)};
+function lobbyAlive(){
+  if(!AL)return;lobbyAl.forEach(h=>h.detach());lobbyAl=[];if(turns)turns.stop();
+  seatsEl.querySelectorAll('.lb-cust .lb-ani').forEach(e=>{const b=e.closest('.lb-cust'),c=lobby[+b.dataset.i];lobbyAl.push(AL.attach(e,{kind:c?c.kind:'bunny',waiting:true}))});
+  turns=AL.takeTurns(lobbyAl);
+}
+function lobbyAliveOff(){lobbyAl.forEach(h=>h.detach());lobbyAl=[];if(turns){turns.stop();turns=null}}
 let view='lobby',phase='',mood='idle',raf=0,lastMiss=0,misses=0,toolE=null,st=null,lobby=[],seatIdx=-1,cards=null,mirrorShown=false,mirrorT=0,dd=null,cd=null,flying=0;
 const killTool=()=>{if(toolE){toolE.destroy();toolE=null}};
 const clearFloats=()=>{sec.querySelectorAll('.ps-float,.ps-photo').forEach(f=>f.remove());pfx.innerHTML=''};
@@ -256,23 +255,28 @@ for(let r=0;r<GR[1];r++)for(let c=0;c<GR[0];c++){
 }
 
 /* ---------- drawing ---------- */
+/* cells on the head go into the head group of the overlay, so mud, foam and head wear move with the head (P12) */
+const HEAD_Y=158,onHead=P0=>P0.cy<HEAD_Y;
 function drawOver(popSlot){
-  if(!st)return;let s='';const K=A.KINDS[st.kind]||A.KINDS.bunny;
+  if(!st)return;const out={b:'',h:''},K=A.KINDS[st.kind]||A.KINDS.bunny,put=(P0,x)=>{out[onHead(P0)?'h':'b']+=x};
   st.cells.forEach((c,i)=>{const P0=CELLS[i];
-    const mud=c.mud*(1-.6*c.foam)*(1-c.rinse);if(mud>.02)s+=`<path d="${A.blob(P0.dx,P0.dy,c.mr,.5,7,i+11)}" fill="#8A5A36" opacity="${(mud*.85).toFixed(2)}"/>`;
-    const lf=c.leaf*(1-c.rinse);if(lf>.02)s+=LEAF(P0.dx,P0.dy,c.lr,.6+.4*lf)});
-  st.cells.forEach((c,i)=>{const P0=CELLS[i],f=c.foam*(1-c.rinse);if(f>.02)s+=FOAM(P0.dx,P0.dy,(P0.face?.6:.85)*(.35+.65*f))});
-  st.cells.forEach((c,i)=>{const P0=CELLS[i],w=c.rinse*(1-c.dry);if(w>.04)s+=DROP(P0.dx+6,P0.dy-4,.5+.5*w)});
+    const mud=c.mud*(1-.6*c.foam)*(1-c.rinse);if(mud>.02)put(P0,`<path d="${A.blob(P0.dx,P0.dy,c.mr,.5,7,i+11)}" fill="#8A5A36" opacity="${(mud*.85).toFixed(2)}"/>`);
+    const lf=c.leaf*(1-c.rinse);if(lf>.02)put(P0,LEAF(P0.dx,P0.dy,c.lr,.6+.4*lf))});
+  st.cells.forEach((c,i)=>{const P0=CELLS[i],f=c.foam*(1-c.rinse);if(f>.02)put(P0,FOAM(P0.dx,P0.dy,(P0.face?.6:.85)*(.35+.65*f)))});
+  st.cells.forEach((c,i)=>{const P0=CELLS[i],w=c.rinse*(1-c.dry);if(w>.04)put(P0,DROP(P0.dx+6,P0.dy-4,.5+.5*w))});
   st.cells.forEach((c,i)=>{const P0=CELLS[i],d=c.dry;if(d<=.02)return;
-    if(P0.edge)s+=TUFT(P0.edge[0],P0.edge[1],.35+.45*d,P0.edge[2],K.body);
-    if(P0.face)s+=A.twinkle(P0.dx,P0.dy-6,2+3*d,'#fff');else s+=CURL(P0.dx,P0.dy,.5+.5*d,K.dark)});
+    if(P0.edge)put(P0,TUFT(P0.edge[0],P0.edge[1],.35+.45*d,P0.edge[2],K.body));
+    if(P0.face)put(P0,A.twinkle(P0.dx,P0.dy-6,2+3*d,'#fff'));else put(P0,CURL(P0.dx,P0.dy,.5+.5*d,K.dark))});
   ['neck','face','head'].forEach(k=>{const w=st.wear[k];if(!w||st.drag===k)return;const it=WEAR[k][w.idx],col=COLORS[w.col],viv=it.d(col[4],col[3]);
     const b=st.bloom&&st.bloom.slot===k?performance.now()-st.bloom.t:1e9;
-    s+=`<g data-slot="${k}" transform="${SLOT[k]}">`+(b<BLOOM?`<g class="${popSlot===k?'pop':''}"><g>${it.d(col[2],col[3])}</g><g class="bloom" style="animation-duration:${BLOOM}ms;animation-delay:${-Math.round(b)}ms">${viv}</g></g>`:`<g>${viv}</g>`)+`</g>`});
-  if(phase==='dress'&&!st.hintOff)SLOTS.forEach(k=>{if(!st.wear[k])s+=A.twinkle(HINT_PT[k][0],HINT_PT[k][1],10,'#F0D58A')});
-  overEl.innerHTML=s;
+    out[k==='neck'?'b':'h']+=`<g data-slot="${k}" transform="${SLOT[k]}">`+(b<BLOOM?`<g class="${popSlot===k?'pop':''}"><g>${it.d(col[2],col[3])}</g><g class="bloom" style="animation-duration:${BLOOM}ms;animation-delay:${-Math.round(b)}ms">${viv}</g></g>`:`<g>${viv}</g>`)+`</g>`});
+  if(phase==='dress'&&!st.hintOff)SLOTS.forEach(k=>{if(!st.wear[k])out[k==='neck'?'b':'h']+=A.twinkle(HINT_PT[k][0],HINT_PT[k][1],10,'#F0D58A')});
+  ovBody.innerHTML=out.b;ovHead.innerHTML=out.h;
 }
-function drawPet(m,extra){mood=m||mood;if(!st)return;baseEl.innerHTML=A.animal(st.kind,mood,Object.assign({lash:true},extra||{}))}
+function clearOver(){ovBody.innerHTML='';ovHead.innerHTML=''}
+function drawPet(m,extra){mood=m||mood;if(!st)return;baseEl.innerHTML=A.animal(st.kind,mood,Object.assign({lash:true},extra||{}));if(al)al.refresh()}
+/* the face area on screen (head circle of the picture), so a big tool turns see-through over it */
+const faceRect=()=>{const r=petEl.getBoundingClientRect(),u=r.width/200,v=r.height/230;return{left:r.left+40*u,right:r.left+160*u,top:r.top+48*v,bottom:r.top+150*v,width:120*u,height:102*v}};
 function rd(){if(!raf)raf=requestAnimationFrame(()=>{raf=0;drawOver()})}
 const svgInner=s=>s.replace(/^<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'');
 function wearSVG(wear){return['neck','face','head'].map(k=>{const w=wear[k];if(!w||!WEAR[k][w.idx])return'';const col=COLORS[w.col]||COLORS[0];return `<g transform="${SLOT[k]}">${WEAR[k][w.idx].d(col[4],col[3])}</g>`}).join('')}
@@ -286,7 +290,7 @@ function size(){
 function stars(){$('#psStars').innerHTML=Array.from({length:Math.min(8,DATA.served)},()=>ICON.star).join('')}
 function meter(icon){panel.innerHTML=`<div class="pzmeter"><span class="mi">${icon}</span><div class="mbar"><i></i></div><span class="mstar">${ICON.star}</span></div>`}
 function prog(p){p=Math.max(0,Math.min(1,p));const b=panel.querySelector('.mbar i');if(b)b.style.width=(p*100)+'%';const s=panel.querySelector('.mstar');if(s)s.classList.toggle('full',p>=1)}
-function anim(cls){petEl.classList.remove('enter','hop','callme','leave','giggle','sneeze','shake','peek','spin','bye');void petEl.offsetWidth;if(cls)petEl.classList.add(cls)}
+function anim(cls){petEl.classList.remove('enter','callme','leave');void petEl.offsetWidth;if(cls)petEl.classList.add(cls)}
 const secXY=(x,y)=>{const sr=sec.getBoundingClientRect();return[x-sr.left,y-sr.top]};
 const petXY=(fx,fy)=>{const r=petEl.getBoundingClientRect();return secXY(r.left+r.width*fx,r.top+r.height*fy)};
 const petPt=(sx,sy)=>{const r=petEl.getBoundingClientRect();return[r.left+r.width*sx/200,r.top+r.height*sy/230]};   // pet units → client
@@ -319,6 +323,7 @@ function renderSeats(skip){
   for(let i=0;i<WAITING;i++){const b=seatBox(i),slot=document.createElement('div');slot.className='lb-slot';slot.dataset.i=i;
     Object.assign(slot.style,{left:b.left+'px',bottom:b.bottom+'px',width:b.w+'px',height:b.h+'px'});
     slot.innerHTML=`<div class="lb-chair">${LB_CHAIR}</div>`+(lobby[i]&&!lobby[i].inside&&i!==skip?custHTML(lobby[i],i):'');seatsEl.appendChild(slot)}
+  lobbyAlive();
 }
 function layoutLobby(){if(view!=='lobby'||!lobbyEl.getBoundingClientRect().width)return;seatsEl.querySelectorAll('.lb-slot').forEach(sl=>{const b=seatBox(+sl.dataset.i);Object.assign(sl.style,{left:b.left+'px',bottom:b.bottom+'px',width:b.w+'px',height:b.h+'px'})})}
 function renderFrames(fresh){
@@ -328,7 +333,7 @@ seatsEl.addEventListener('click',e=>{const b=e.target.closest('.lb-cust');if(!b|
 lobbyEl.addEventListener('pointerdown',e=>{actx();if(phase!=='lobby'||e.target.closest('.lb-cust'))return;miss()});
 function showLobby(o={}){
   L.begin();killTool();G.stop();clearFloats();
-  view='lobby';phase='lobby';st=null;seatIdx=-1;cards=null;dd=null;cd=null;
+  view='lobby';phase='lobby';st=null;seatIdx=-1;cards=null;dd=null;cd=null;L.onEnd(lobbyAliveOff);
   lobbyEl.hidden=false;salonEl.hidden=true;homeBtn.hidden=false;backBtn.hidden=true;
   lobby.forEach(c=>{if(c)c.inside=false});fillLobby();
   renderFrames(!!o.served);
@@ -355,7 +360,7 @@ function arrive(i){
   const fromLeft=i<WAITING-1,dx=fromLeft?-(sr.right-lr.left+10):(lr.right-sr.left+10);
   b.classList.add('arriving');b.style.transition='none';b.style.transform=`translateX(${dx}px)`;void b.offsetWidth;b.style.transition='';b.classList.add('walk');b.style.transform='translateX(0)';
   tone(523,.12,'sine',.08);tone(659,.12,'sine',.08,.25);
-  L.later(()=>{b.classList.remove('arriving','walk');const a=kindOf(c.kind);say(a.ko+'!',cap(a.en)+'!');greet()},2050);
+  L.later(()=>{b.classList.remove('arriving','walk');const a=kindOf(c.kind);say(a.ko+'!',cap(a.en)+'!');lobbyAlive();greet()},2050);
 }
 function pickCustomer(i,btn){
   if(phase!=='lobby'||view!=='lobby')return;const c=lobby[i];if(!c)return;
@@ -384,11 +389,14 @@ function enterSalon(i){
   view='salon';phase='enter';seatIdx=i;c.inside=true;st=freshState(c);cards=null;mirrorShown=false;
   lobbyEl.hidden=true;salonEl.hidden=false;homeBtn.hidden=true;backBtn.hidden=false;
   panel.innerHTML='';tub.classList.remove('on');mirBtn.hidden=true;mirBtn.classList.remove('on');petEl.classList.remove('up');stage.classList.remove('up');
-  size();drawPet('idle',{wave:true});drawOver();stars();anim('enter');
+  if(AL){al=AL.attach(petEl,{kind:st.kind});const me=al;L.onEnd(()=>{me.detach();if(al===me)al=null})}
+  size();drawPet('idle');drawOver();stars();anim('enter');
+  /* bigMoments: comes in with two hops and a wave; moods: dirty = sad, party = happy */
+  alMood(c.need==='party'?'happy':'sad');L.later(()=>{alPlay('hop',{n:2,wave:true});if(al)al.sound('hehe')},900);
   const need=NEEDS.find(n=>n.id===c.need)||{},hello=c.need==='party'&&need.say?need.say:(LINE[c.need]||LINE.muddy)(c.name);
   L.later(()=>say(hello[0],hello[1],true),500);
   if(!st.steps.length){L.later(()=>{drawPet('idle');dress()},2600);return}
-  L.later(()=>{drawPet('idle');tub.classList.add('on');noise(.4,{type:'lowpass',freq:900,vol:.2})},2400);
+  L.later(()=>{tub.classList.add('on');noise(.4,{type:'lowpass',freq:900,vol:.2})},2400);
   L.later(()=>nextStep(),3200);
 }
 function nextStep(){
@@ -398,13 +406,17 @@ function nextStep(){
 }
 function toolStep(key){
   phase=key;H.dress=false;const T=TOOL_OF[key],lk=T.log;meter(T.icon);prog(0);
+  if(key==='foam')alMood('ticklish');else if(key==='dry')alMood('shiver');   // moods: 씻는 중 = 간질간질, 젖음 = 부르르
+  /* touch.tool.intro: the tool jumps out of the tray and says its name */
+  const nm=TOOL_NAME[key];let introStop=P.toolIntro?P.toolIntro(stage,panel.querySelector('.mi'),T.icon,{ko:nm[0],en:nm[1]}):null;L.onEnd(()=>{if(introStop)introStop()});
   if(key==='foam'){word('rub');say(LINE.foam[0],LINE.foam[1],true)}
-  else{const w=(key==='rinse'?CF.sound.shower:CF.sound.dryer).warnBefore;LOG.push('warn:'+lk);say(w.ko,w.en);say(LINE[key][0],LINE[key][1],true)}
+  else{const w=(key==='rinse'?CF.sound.shower:CF.sound.dryer).warnBefore;LOG.push('warn:'+lk);say(w.ko,w.en,true);say(LINE[key][0],LINE[key][1],true)}
   let lastS=0,lastPop=0,qk=0,belly=0,nose=0,lastF=null,lastT=0;killTool();
-  toolE=P.makeTool(stage,{tool:T.icon,effect:T.effect,anchor:T.anchor,gapScale:T.gapScale,cells:CELLS.map(c=>[c.fx,c.fy]),cfg:()=>TOOLS,target:()=>petEl.getBoundingClientRect(),
+  const side=F=>{const r=petEl.getBoundingClientRect(),s=stage.getBoundingClientRect();return F.x+s.left<r.left+r.width/2?'l':'r'};
+  toolE=P.makeTool(stage,{tool:T.icon,effect:T.effect,anchor:T.anchor,gapScale:T.gapScale,cells:CELLS.map(c=>[c.fx,c.fy]),cfg:()=>TOOLS,target:()=>petEl.getBoundingClientRect(),face:faceRect,
     onMiss:miss,
-    onTouch:()=>{G.touch();LOG.push('press:'+lk)},
-    onRelease:()=>{G.release();lastF=null;const e=baseEl.querySelector('.ears');if(e)e.style.transform=''},
+    onTouch:()=>{G.touch();LOG.push('press:'+lk);if(introStop){introStop();introStop=null}if(al)al.setTool(T.alive)},
+    onRelease:()=>{G.release();lastF=null;if(al)al.setTool(null)},
     sound:n=>{if(key==='foam')return null;const h=P.holdSound(key==='dry'?'dryer':'shower',{count:key==='dry'&&n===1});LOG.push('sound:'+lk);return h},
     onCell:(i,v,pv,why)=>{const c=st.cells[i];c[key]=v;
       const n=performance.now();
@@ -416,34 +428,39 @@ function toolStep(key){
       rd()},
     onProgress:(p,ratio,why)=>{prog(p);if(key==='foam'&&why==='move'){const n=performance.now();if(n-lastS>130){lastS=n;SFX.scrub()}}
       const k=Math.floor(ratio*3);if(k>qk&&k<3){qk=k;word(key==='foam'?'bubbles':key==='rinse'?'water':'dry')}},
-    onMove:(pt,d)=>{lastF=pt;if(st.used.tickle)return;const r=petEl.getBoundingClientRect(),s=stage.getBoundingClientRect(),px=(pt.x+s.left-r.left)/r.width*200,py=(pt.y+s.top-r.top)/r.height*230;
-      if(Math.hypot(px-100,py-196)<34){belly+=d;if(belly>r.width*.9)tickle()}},
+    onMove:(pt,d)=>{lastF=pt;const r=petEl.getBoundingClientRect(),s=stage.getBoundingClientRect(),px=(pt.x+s.left-r.left)/r.width*200,py=(pt.y+s.top-r.top)/r.height*230;
+      if(Math.hypot(px-100,py-196)<34){belly+=d;if(belly>r.width*.9){belly=0;tickle()}}},
     onFrame:(F,t)=>{lastF=F;const dt=lastT?Math.min(.1,(t-lastT)/1000):0;lastT=t;
-      if(key==='dry'){const e=baseEl.querySelector('.ears');if(e)e.style.transform=`rotate(${(Math.sin(t/140)*5).toFixed(2)}deg)`}
+      /* the side the tool works on (wink, wet ear) and the wind direction (the dryer sits on the other side of the finger) */
+      if(al){const sd=side(F);al.setTool(T.alive,{side:sd,wind:key==='dry'?(F.x>stage.clientWidth/2?1:-1):0})}
       if(key==='foam'&&!st.used.sneeze){const r=petEl.getBoundingClientRect(),s=stage.getBoundingClientRect(),px=(F.x+s.left-r.left)/r.width*200,py=(F.y+s.top-r.top)/r.height*230;
         if(Math.hypot(px-100,py-116)<30){nose+=dt;if(nose>.5)sneeze()}}},
     onAutoFinish:rest=>{rest.slice(0,6).forEach((i,k)=>L.later(()=>{const [x,y]=cellXY(i);spawn(A.twinkle(0,0,10,'#F0D58A'),x,y,'pop',{ms:600})},k*90))},
-    onDone:()=>{st.doneRatio[key]=toolE?toolE.doneRatio:0;killTool();G.stop();prog(1);drawPet('happy');drawOver();SFX.sparkle();
+    onDone:()=>{st.doneRatio[key]=toolE?toolE.doneRatio:0;killTool();if(al)al.setTool(null);G.stop();prog(1);drawPet('happy');drawOver();SFX.sparkle();
       const w=VO.actionWords[key==='foam'?'bubbles':key==='rinse'?'clean':'fluffy'],t=praise(w.ko,w.en);say(t[0],t[1]);
-      if(key==='rinse')L.later(shake,700);
-      L.later(()=>{drawPet('idle');nextStep()},key==='rinse'?2100:1500)}});
+      /* bigMoments: each step ends with a hop and a clap; after rinsing it shakes the water off first */
+      if(key==='rinse')L.later(shake,700);else alPlay('clap');
+      if(key==='dry')alMood('happy');   // 보송 = 활짝
+      L.later(()=>{drawPet('idle');nextStep()},key==='rinse'?2400:1800)}});
   L.onEnd(killTool);
   G.start({type:'scrub',at:()=>petXY(.5,.5),ko:LINE[key][0],en:LINE[key][1]});
 }
 /* reactions: each at most once per customer (games.petsalon.reactions) */
-function tickle(){if(st.used.tickle)return;st.used.tickle=1;LOG.push('react:tickle');const m=mood;drawPet('happy');anim('giggle');say(LINE.tickle[0],LINE.tickle[1]);[784,988,1175].forEach((f,i)=>tone(f,.09,'sine',.08,i*.11));L.later(()=>drawPet(m==='happy'?'idle':m),1000)}
-function sneeze(){if(st.used.sneeze)return;st.used.sneeze=1;LOG.push('react:sneeze');drawPet('wow');anim('sneeze');say(LINE.sneeze[0],LINE.sneeze[1]);noise(.18,{type:'lowpass',freq:1200,vol:.12});
+/* reactions (P12: through Alive). Only the sneeze stays once per customer; giggles and faces keep coming (a few seconds apart) */
+function tickle(){const n=performance.now();if(n-lastTickle<4000)return;lastTickle=n;st.used.tickle=1;LOG.push('react:tickle');const m=mood;drawPet('happy');if(al)al.sound('giggle');say(LINE.tickle[0],LINE.tickle[1]);L.later(()=>{if(st)drawPet(m==='happy'?'idle':m)},1000)}
+function sneeze(){if(st.used.sneeze)return;st.used.sneeze=1;LOG.push('react:sneeze');drawPet('wow');alPlay('sneeze');say(LINE.sneeze[0],LINE.sneeze[1]);noise(.18,{type:'lowpass',freq:1200,vol:.12});
   const r=petEl.getBoundingClientRect(),s=stage.getBoundingClientRect(),x=r.left-s.left+r.width/2,y=r.top-s.top+r.height*116/230;
   [-1,0,1].forEach(k=>spawn('<circle r="7" fill="#fff" stroke="#CDE9FA" stroke-width="2"/>',x,y,'fly',{dx:k*40,dy:-40-Math.abs(k)*10,ms:700}));L.later(()=>drawPet('idle'),700)}
-function shake(){if(st.used.shake)return;st.used.shake=1;LOG.push('react:shake');anim('shake');say(LINE.shake[0],LINE.shake[1]);noise(.6,{type:'bandpass',freq:700,q:.8,vol:.08});
+function shake(){st.used.shake=1;LOG.push('react:shake');alPlay('shiver');say(LINE.shake[0],LINE.shake[1]);noise(.6,{type:'bandpass',freq:700,q:.8,vol:.08});
   const r=petEl.getBoundingClientRect(),s=stage.getBoundingClientRect(),cx=r.left-s.left+r.width/2,cy=r.top-s.top+r.height*.45;
   for(let k=0;k<8;k++){const a=k/8*Math.PI*2;spawn(DROP(0,0,1.1),cx+Math.cos(a)*r.width*.3,cy+Math.sin(a)*r.height*.3,'fly',{dx:Math.cos(a)*70,dy:Math.sin(a)*70,rot:a*57,ms:750})}}
-function peek(){if(!st||st.used.peek||phase!=='dress')return;st.used.peek=1;LOG.push('react:peek');drawPet('happy');anim('peek');tone(1046,.12,'sine',.06);L.later(()=>{if(phase==='dress')drawPet('idle')},1400)}
+/* a new decoration: turns to look in the mirror and twirls (bigMoments) */
+function peek(){if(!st||phase!=='dress')return;st.used.peek=1;LOG.push('react:peek');drawPet('happy');alPlay('peekMirror');tone(1046,.12,'sine',.06);L.later(()=>{if(phase==='dress'&&mood==='happy')drawPet('idle')},2400)}
 
 /* ============================== free dressing (자유 꾸미기) ============================== */
 const H={dress:false};
 function dress(){
-  phase='dress';H.dress=true;killTool();panel.innerHTML='';tub.classList.remove('on');petEl.classList.add('up');stage.classList.add('up');st.hintOff=false;drawPet('idle');drawOver();
+  phase='dress';H.dress=true;killTool();if(al)al.setTool(null);alMood('happy');panel.innerHTML='';tub.classList.remove('on');petEl.classList.add('up');stage.classList.add('up');st.hintOff=false;drawPet('idle');drawOver();
   say(LINE.dress[0],LINE.dress[1],true);
   G.start({type:'tap',at:()=>{const [x,y]=petPt(...SLOT_PT.head);return secXY(x,y)},ko:LINE.dress[0],en:LINE.dress[1]});
 }
@@ -483,22 +500,21 @@ const panelPt=()=>{const r=panel.getBoundingClientRect();return[r.left+r.width/2
 /* put an item on (from a card tap or a drop), swapping out what was there */
 function putOn(slot,idx,col,fromEl){
   if(!st||phase!=='dress')return;const old=st.wear[slot];
-  if(old&&old.idx===idx&&old.col===col){anim('hop');sfx.pop();return}
+  if(old&&old.idx===idx&&old.col===col){alPlay('hop');sfx.pop();return}
   const [tx,ty]=petPt(...SLOT_PT[slot]);
   if(old){const f=floatItem(slot,old.idx,old.col,true,tx,ty,slotPx(slot)),[px,py]=panelPt();delete st.wear[slot];drawOver();flyTo(f,px,py,80,450,null,true)}
   flying++;
   const done=()=>{flying=Math.max(0,flying-1);if(!st||phase!=='dress')return;
     st.wear[slot]={idx,col};st.bloom={slot,t:performance.now()};LOG.push('wear:'+slot);
     drawPet('happy');drawOver(slot);L.later(()=>{if(st&&st.bloom&&performance.now()-st.bloom.t>=BLOOM){st.bloom=null;drawOver()}},BLOOM+60);
-    anim('hop');sfx.pop();SFX.sparkle();const it=WEAR[slot][idx],c=COLORS[col];say(`${c[0]} ${it.ko}!`,`${cap(c[1])} ${it.en}!`);markWorn();
-    L.later(()=>{if(phase==='dress'&&mood==='happy')drawPet('idle')},1300);if(mirBtn.hidden)G.stop();armMirror();
-    if(!st.used.peek&&wornCount()>=2)L.later(peek,2600);
+    sfx.pop();SFX.sparkle();const it=WEAR[slot][idx],c=COLORS[col];say(`${c[0]} ${it.ko}!`,`${cap(c[1])} ${it.en}!`);markWorn();if(al)al.sound('wow');
+    peek();if(mirBtn.hidden)G.stop();armMirror();
   };
   if(fromEl){flyTo(fromEl,tx,ty,slotPx(slot),350,done)}else done();
 }
 function takeOff(slot,f){
   if(!st)return;delete st.wear[slot];st.drag=null;LOG.push('off:'+slot);drawOver();markWorn();
-  sfx.pop();tone(520,.08,'sine',.1,.05);const [px,py]=panelPt();if(f)flyTo(f,px,py,70,420,null,true);
+  sfx.pop();tone(520,.08,'sine',.1,.05);alPlay('oops');say('어?','Oh?');   // bigMoments: '어?' and touches its headconst [px,py]=panelPt();if(f)flyTo(f,px,py,70,420,null,true);
   if(!wornCount())hideMirror();
 }
 function colorNext(slot){
@@ -563,11 +579,11 @@ mirBtn.addEventListener('click',()=>{
   if(phase!=='dress'||!st||mirBtn.hidden)return;actx();
   phase='mirror';H.dress=false;G.stop();cards=null;panel.innerHTML='';mirBtn.classList.remove('on');mirBtn.hidden=true;st.hintOff=true;LOG.push('mirror');
   petEl.classList.remove('up');stage.classList.remove('up');drawPet('happy');drawOver();sfx.pop();
-  L.later(()=>{anim('spin');sweep()},450);
+  L.later(()=>{alPlay('dance');sweep()},450);   // bigMoments: dance (4 beats), then thanks and a wave
   L.later(()=>{noise(.05,{type:'lowpass',freq:2200,vol:.12});noise(.07,{type:'lowpass',freq:1400,vol:.1,when:.07});photo()},1700);
   L.later(()=>{
     const rec={kind:st.kind,wear:JSON.parse(JSON.stringify(st.wear))};DATA.wall.unshift(rec);DATA.wall=DATA.wall.slice(0,3);DATA.served++;save();stars();
-    drawPet('happy',{wave:true});anim('bye');say(LINE.thanks[0],LINE.thanks[1]);tone(1318,.4,'sine',.12);tone(1046,.6,'sine',.12,.3)},3100);
+    drawPet('happy');alPlay('wave');say(LINE.thanks[0],LINE.thanks[1]);tone(1318,.4,'sine',.12);tone(1046,.6,'sine',.12,.3)},3100);
   L.later(()=>{anim('leave')},4700);
   L.later(()=>{const c=lobby[seatIdx]||{kind:st.kind};const served={kind:st.kind,wear:st.wear};const i=seatIdx;lobby[i]=c;showLobby({served,slot:i})},5500);
 });
@@ -598,9 +614,9 @@ M.__ps=()=>{
     itemPts:st?Object.fromEntries(Object.keys(st.wear).map(k=>{const g=overEl.querySelector(`g[data-slot="${k}"]`);if(!g)return[k,null];const r=g.getBoundingClientRect();return[k,[r.left+r.width/2,r.top+r.height/2]]})):{},
     cards:cards?{slot:cards.slot,items:cards.items.map(c=>WEAR[cards.slot][c.idx].en)}:null,
     mirror:!mirBtn.hidden,served:DATA.served,wall:DATA.wall.length,frames:framesEl.querySelectorAll('.lb-frame.full').length,
-    used:st?Object.keys(st.used):[],guide:G.state(),log:LOG.slice()};
+    used:st?Object.keys(st.used):[],guide:G.state(),log:LOG.slice(),alive:al?al.state():null,lobbyAlive:lobbyAl.map(h=>h.state())};
 };
-function exitAll(){L.begin();killTool();G.stop();clearFloats();dd=null;cd=null;cards=null;lobby.forEach(c=>{if(c)c.inside=false})}
+function exitAll(){L.begin();killTool();G.stop();clearFloats();lobbyAliveOff();if(al){al.detach();al=null}dd=null;cd=null;cards=null;lobby.forEach(c=>{if(c)c.inside=false})}
 games[id]={enter:()=>{requestAnimationFrame(()=>{if(cur()===id)showLobby()})},exit:()=>{exitAll();view='lobby';phase=''},resize:()=>{size();layoutLobby()}};
 window.addEventListener('resize',()=>{if(cur()===id){size();layoutLobby()}});
 
