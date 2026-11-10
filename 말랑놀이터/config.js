@@ -1,6 +1,6 @@
 window.MLCFG = {
   "_설명": "말랑 놀이터의 모든 숫자·문구·단계를 여기 한 곳에 둡니다. 코드에 숫자를 직접 쓰지 말고 이 파일 값을 읽어 쓰세요. 값을 바꾸면 놀이가 바뀌어야 합니다.",
-  "version": "2.2",
+  "version": "2.3",
   "child": {
     "ageMonths": 29,
     "birthYear": 2024,
@@ -436,7 +436,7 @@ window.MLCFG = {
           ],
           "optionsPerChoice": 3,
           "colors": 10,
-          "new": "사진으로 넣은 진짜 물건"
+          "new": "손님 모두, 사진 장식이 많아짐 (사진 장식 자체는 P6 이후 언제든 나옴)"
         }
       ],
       "petStates": [
@@ -569,7 +569,88 @@ window.MLCFG = {
         "mirrorMoment": "거울 앞에서 동물이 빙글 돌고 웃음 → 부드러운 찰칵 → 액자가 되어 가게 벽으로(3초)",
         "leave": "'고마워! Thank you!' 하고 손 흔들며 문 밖으로 → 가게 앞 화면"
       },
-      "progressBar": "막대는 빗금 없는 단색(차분한 색), 채워질 때만 부드럽게 늘어남"
+      "progressBar": "막대는 빗금 없는 단색(차분한 색), 채워질 때만 부드럽게 늘어남",
+      "itemUnlock": {
+        "_설명": "자주 할수록 장식이 늘어남. 단계(꾸밀 자리)와 따로, 손님 수로 늘어남.",
+        "start": {
+          "head": [
+            "ribbon",
+            "flower"
+          ],
+          "neck": [
+            "bow tie"
+          ],
+          "face": [
+            "round glasses"
+          ]
+        },
+        "everyCustomers": 3,
+        "order": [
+          "crown",
+          "necklace",
+          "party hat",
+          "sunglasses",
+          "scarf",
+          "star clip",
+          "bell collar",
+          "heart clip",
+          "cheek stickers",
+          "headband",
+          "sun hat",
+          "flower lei",
+          "pearl necklace",
+          "heart glasses",
+          "star stickers"
+        ],
+        "toDraw": {
+          "headband": "머리띠",
+          "sun hat": "밀짚모자",
+          "flower lei": "꽃목걸이",
+          "pearl necklace": "진주 목걸이",
+          "heart glasses": "하트 안경",
+          "star stickers": "별 스티커"
+        },
+        "slotOf": {
+          "crown": "head",
+          "party hat": "head",
+          "star clip": "head",
+          "heart clip": "head",
+          "headband": "head",
+          "sun hat": "head",
+          "necklace": "neck",
+          "scarf": "neck",
+          "bell collar": "neck",
+          "flower lei": "neck",
+          "pearl necklace": "neck",
+          "sunglasses": "face",
+          "cheek stickers": "face",
+          "heart glasses": "face",
+          "star stickers": "face"
+        },
+        "newBadge": "새 장식 카드에 작은 리본 표시. 처음 나올 때 그 자리의 카드 3장 중 맨 앞",
+        "newVoice": [
+          "새 {ko}이(가) 생겼어요!",
+          "A new {en}!"
+        ],
+        "whenSlotClosed": "아직 열리지 않은 자리(단계)의 장식은 모아 두었다가 그 자리가 열리면 함께 나옴",
+        "storage": "mallang_salon.items"
+      },
+      "photoItems": {
+        "_설명": "엄마가 사진으로 넣은 아이의 진짜 장식(P6). 단계와 상관없이, 그 자리가 열려 있으면 바로 꾸미기 카드에 섞여 나옴.",
+        "fromWardrobe": {
+          "머리띠·모자": "head",
+          "목걸이·목도리": "neck",
+          "안경": "face"
+        },
+        "mix": "카드 3장 중 최대 1장이 사진 장식. 새로 들어온 것은 다음 손님 때 꼭 1번 나옴",
+        "badge": "카드 모서리에 작은 하트 액자 표시(글자 없음)",
+        "voice": [
+          "엄마가 넣어 준 {ko}!",
+          "Mommy's {en}!"
+        ],
+        "colorTap": "사진 장식은 색을 바꾸지 않고, 콕 하면 반짝이며 살랑 흔들림",
+        "sameRules": "붙이기·바꾸기·끌어서 떼기는 그림 장식과 똑같이"
+      }
     },
     "coloring": {
       "_설명": "새 놀이. 큰 그림의 칸을 색칠. 처음엔 콕 누르면 한 칸이 채워지고, 단계가 오르면 칸과 색이 늘어남.",
