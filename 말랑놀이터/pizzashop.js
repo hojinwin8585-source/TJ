@@ -72,6 +72,11 @@ const stepIcon=st=>(st.k==='prep'||st.k==='top')&&!st.t?ICON.cards:st.k==='prep'
 
 /* ============================== screen: the three zones (same structure as salon.js) ============================== */
 const css=`
+/* animal pictures outside ML.Alive (home host, etc.): slow blink and wave. These lived in the old pizza shop styles; kept so other screens look the same */
+.ani-idle .eyes{animation:blink 4s infinite;transform-origin:100px 102px}
+@keyframes blink{0%,94%,100%{transform:scaleY(1)}97%{transform:scaleY(.1)}}
+.ani .wave{animation:wave .6s infinite alternate;transform-origin:140px 165px}
+@keyframes wave{to{transform:rotate(-30deg)}}
 #pizza{gap:6px}
 #pizza .pz-head{flex:none;height:${HEAD_PX}px;gap:8px}
 #pizza .pz-back{width:${BACK_PX}px;height:${BACK_PX}px;padding:10px}
@@ -412,8 +417,8 @@ const STEP={
     say(`접시의 ${eul(T(t).ko)} 콕 누르면 피자로 날아가요!`,`Tap the plate to put the ${T(t).en} on the pizza!`,true);
     let drag=null;
     const launch=(pc,from,svgAt)=>{
-      const i=S.plate.indexOf(pc);if(i<0)return;S.plate.splice(i,1);renderPlate();flying++;
-      const at=svgAt||nextSpot(),to=toClient(at[0],at[1]),szTo=mainRect().width*(2*(PR[t]||18)+4)/240,g=gen,rot=rand(360);
+      const i=S.plate.indexOf(pc);if(i<0)return;S.plate.splice(i,1);renderPlate();flying++;counts[t].launched=(counts[t].launched||0)+1;
+      const at=svgAt||nextSpot(t),to=toClient(at[0],at[1]),szTo=mainRect().width*(2*(PR[t]||18)+4)/240,g=gen,rot=rand(360);
       fly(pieceIcon(t),from,to,szTo*1.2,szTo,520,()=>{flying--;if(g!==gen)return;S.pz.tops.push([t,+at[0].toFixed(1),+at[1].toFixed(1),rot]);counts[t].placed++;LOG.push('put:'+t);draw();sfx.pop();
         const k=counts[t].placed;say(CNT_KO[k-1]+'!',cap(CNT_EN[k-1])+'!');alMood('wow',700);   // 토핑을 올릴 때마다 눈이 커짐
         if(!S.plate.length&&!flying){H={};G.stop();const g2=gen;L.later(()=>{if(g2!==gen)return;SFX.sparkle();alPlay('clap');say('다 올렸어요! 접시가 비었네!','All on! The plate is empty!');finish(()=>{plateEl.hidden=true;size()})},500)}});
@@ -475,7 +480,8 @@ const STEP={
 const toolPx=()=>{const t=TOUCH.tool||{},w=stage.getBoundingClientRect().width;return Math.min(t.maxPx||300,Math.max(t.minPx||180,w*(t.stageWidthRatio||.45)))};
 function toPizza(keepPlate){S.main='pizza';if(!S.pz.r)S.pz.r=PZR;if(!keepPlate)plateEl.hidden=true;size()}
 /* the next free spot on the pizza (sunflower pattern, so pieces spread out) */
-function nextSpot(){const n=S.pz.tops.length+flying-1,N=Math.max(8,lv.pieces*lv.count),k=(n%N)+.5,r=(PZR-30)*Math.sqrt(k/N),a=n*2.39996+S.spin;return[Math.cos(a)*r,Math.sin(a)*r]}
+/* each ingredient takes every count-th slot, so both kinds spread over the whole pizza */
+function nextSpot(t){const kinds=plan.filter(s=>s.k==='top').map(s=>s.t),ki=Math.max(0,kinds.indexOf(t)),N=Math.max(4,lv.pieces*kinds.length),n=(counts[t].launched-1)*kinds.length+ki,k=(n%N)+.5,r=(PZR-30)*Math.sqrt(k/N),a=n*2.39996+S.spin;return[Math.cos(a)*r,Math.sin(a)*r]}
 function fly(html,from,to,s0,s1,ms,then){
   const f=document.createElement('div');f.className='pz-float';f.innerHTML=html;const [x,y]=stXY(from[0],from[1]);
   Object.assign(f.style,{width:s0+'px',height:s0+'px',left:(x-s0/2)+'px',top:(y-s0/2)+'px'});fxEl.appendChild(f);

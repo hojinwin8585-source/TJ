@@ -164,6 +164,15 @@ const css=`
 #petsalon .ani-idle .eyes,#petsalon .wave{animation:none}
 @keyframes psbloom{from{opacity:0}to{opacity:1}}
 .ps-pet .bloom{animation:psbloom .6s ease-out both}
+/* the progress meter in the tool tray (its base styles used to live in pizzashop.js) */
+.pzmeter{display:flex;align-items:center;gap:12px;width:100%;padding:0 4px}
+.pzmeter .mi{flex:none;width:72px;height:72px;border-radius:22px;background:radial-gradient(circle at 35% 25%,#fff,#F3F0FA);padding:7px;box-shadow:inset 0 -5px 0 rgba(46,42,79,.1),0 5px 0 rgba(46,42,79,.14)}
+.pzmeter .mi svg{width:100%;height:100%;display:block}
+.pzmeter .mbar{flex:1;min-width:0;height:36px;border-radius:18px;background:#F1ECF8;border:4px solid #5B3A29;overflow:hidden;box-shadow:inset 0 4px 0 rgba(46,42,79,.08)}
+.pzmeter .mbar i{display:block;height:100%;width:0;border-radius:0 12px 12px 0;background:repeating-linear-gradient(45deg,#FF8FB1 0 14px,#FFB3C9 14px 28px);box-shadow:inset 0 5px 0 rgba(255,255,255,.45);transition:width .25s}
+.pzmeter .mstar{flex:none;width:60px;height:60px;filter:grayscale(1) opacity(.4);transition:filter .2s}
+.pzmeter .mstar svg{width:100%;height:100%;display:block}
+.pzmeter .mstar.full{filter:none;animation:bounce .6s}
 .ps-panel{flex:none;height:170px;display:flex;gap:10px;align-items:center;justify-content:center;padding:6px 0;touch-action:none}
 .ps-panel .pzmeter .mi{width:150px;height:150px;padding:10px}
 .ps-panel .pzmeter{background:color-mix(in srgb,var(--paper) 80%,transparent);border-radius:28px;padding:12px 10px;box-shadow:0 3px 10px rgba(91,74,66,.1)}

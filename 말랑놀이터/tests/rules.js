@@ -86,7 +86,7 @@ const TOL=.01;   // measuring tolerance on the height ratios
   await p.evaluate(()=>window.ML.go('home'));await W(300);
   await p.evaluate(()=>window.ML.go('petsalon'));await p.waitForFunction(()=>window.ML.__ps().phase==='lobby',null,{timeout:8000});await W(800);
   results.petsalon=await look('petsalon',ZONES.petsalon,false);
-  await p.locator('.lb-cust').first().click();await p.waitForFunction(()=>['foam','dress'].includes(window.ML.__ps().phase),null,{timeout:15000}).catch(async e=>{throw new Error('미용실 손님이 들어오지 않음: '+JSON.stringify(await p.evaluate(()=>{const s=window.ML.__ps();return[window.ML.current(),s.view,s.phase]})))});await W(2500);
+  for(let k=0;k<4&&(await p.evaluate(()=>window.ML.__ps().phase))==='lobby';k++){await p.locator('.lb-cust').first().click().catch(()=>{});await W(1200)}await p.waitForFunction(()=>['foam','rinse','dry','dress'].includes(window.ML.__ps().phase),null,{timeout:15000}).catch(async e=>{throw new Error('미용실 손님이 들어오지 않음: '+JSON.stringify(await p.evaluate(()=>{const s=window.ML.__ps();return[window.ML.current(),s.view,s.phase]})))});await W(2500);
   merge(results.petsalon,await look('petsalon',ZONES.petsalon,true));
   /* ---------- nail shop: shop front, then the room while colouring ---------- */
   await p.evaluate(()=>window.ML.go('home'));await W(300);

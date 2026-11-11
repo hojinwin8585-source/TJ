@@ -58,9 +58,11 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
   const sb=await p.locator('#pzStage').boundingBox();
   for(let k=0;k<3;k++){await p.mouse.click(sb.x+20,sb.y+30);await W(300)}
   s=await st();ok('엉뚱한 곳 3번 → 진행 없음, 응원 3번',s.step==='sauce'&&!s.sauce&&s.misses===3,'응원 '+s.misses+'번');
-  let waitedOk=null,plateDuring=[],cutSeen=0;
+  let waitedOk=null,plateDuring=[],cutSeen=0;const life={rub:false,wow:false};
   const r1=await playOne({tag:'L1_',onStep:async x=>{
     if(x.step==='prep')cutSeen=Math.max(cutSeen,x.counts.tomato.made);
+    if(x.step==='bake'&&x.rubbing)life.rub=true;
+    if(x.step==='top'&&x.alive&&x.alive.mood==='wow')life.wow=true;
     if(x.step==='top'&&waitedOk===null&&x.plate===1){await p.waitForFunction(()=>!window.ML.__pz().flying,null,{timeout:4000});   // one piece left on the plate: wait, nothing must move on
       plateDuring.push(x.plate);await W(3500);const y=await st();waitedOk=y.step==='top'&&y.plate===1;await shot('L1_top_onePieceLeft');return false}
     if(x.step==='top'&&x.kind==='tap'&&x.plate>0)plateDuring.push(x.plate);
@@ -73,7 +75,7 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
   ok('접시에 1조각이 남아 있으면 3.5초 기다려도 다음으로 넘어가지 않음',waitedOk===true);
   ok('접시의 조각 수가 썬 수에서 하나씩 줄어듦',plateDuring.length>0&&Math.max(...plateDuring)<=4,'올리는 동안 접시: '+[...new Set(plateDuring)].join(','));
   ok('1단계 끝까지: 손님이 먹고 하트를 줌',s.served===1&&s.log.includes('serve'),'걸린 시간 '+r1.sec+'초 · 과정별 '+JSON.stringify(r1.stepT));
-  ok('굽는 동안 손님이 배를 문지르고, 올릴 때마다 눈이 커지고, 끝나면 춤',s.log.filter(x=>x==='play:dance').length>=1,'큰 동작: '+[...new Set(s.log.filter(x=>/^play:/.test(x)))].join(', '));
+  ok('굽는 동안 손님이 배를 문지르고, 올릴 때 눈이 커지고(wow), 끝나면 춤',life.rub&&life.wow&&s.log.filter(x=>x==='play:dance').length>=1,'배 문지르기 '+life.rub+' · 눈 커짐 '+life.wow+' · 큰 동작: '+[...new Set(s.log.filter(x=>/^play:/.test(x)))].join(', '));
   await W(3000);await shot('L1_nextCustomer');
 
   /* ---------- level 3: choose corn → rub the cob ---------- */
