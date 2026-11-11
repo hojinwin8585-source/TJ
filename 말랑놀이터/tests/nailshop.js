@@ -3,7 +3,10 @@
    2) 1단계: 손톱 3개를 색 젤로 칠함(왼쪽 반만 칠하면 오른쪽 칸은 그대로) → 다음 → 램프 → 5초 뒤 윤기 → 파츠 붙이기·끌어서 떼기 → 거울 → 가게 앞, 벽 액자 1개
    3) 단계 4(어른 설정 / 테스트 훅): 갈기 → 베이스 → 색 → 굽기 → 그림 → 도장 → 파츠 → 탑젤 → 굽기 → 오일 순서, 갈기 전후 손톱 끝이 달라짐
    4) 그림 그리기에서 손톱 밖으로 그은 선이 손톱 밖에 남지 않음
-   5) 거울 버튼을 누르기 전에는 끝나지 않음 */
+   5) 거울 버튼을 누르기 전에는 끝나지 않음
+   P11-보완) 다음 버튼은 손 그림과 겹치지 않고(모두 칠하기 전엔 작고 흐리게) · 안 한 손톱이 빛나고 안내 손이 차례로 가리킴 ·
+            손 전체 화면에서 카드 1장 고르고 손톱 3개를 콕(터치) 하면 3개 모두에 파츠가 붙음(확대 없이) · 확대는 그림 그리기만, 옆 화살표로 옆 손톱으로 ·
+            한 손톱이 끝나면 다음 손톱이 들썩이며 토토가 권함 */
 const {chromium}=require('playwright');
 const path=require('path');
 const URL='file://'+path.resolve(__dirname,'..','index.html');
@@ -33,6 +36,12 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
   const doCure=async(label)=>{await waitPhase('cure',6000);await W(600);await p.locator('#nsPanel .ns-card').click();await W(2600);const s1=await st();if(label)await shot(label);
     await p.waitForFunction(()=>window.ML.__ns().phase==='cured',null,{timeout:12000});return s1};
   const tapNail=async i=>{const r=(await nail(i)).rect;await p.mouse.click(r.left+r.width/2,r.top+r.height/2);await W(700)};
+  /* 진짜 터치 이벤트(CDP): 한 번 콕 */
+  const cdp=await p.context().newCDPSession(p);
+  const touchTap=async(x,y)=>{await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});await W(60);await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await W(500)};
+  const touchNail=async i=>{const r=(await nail(i)).rect;await touchTap(r.left+r.width/2,r.top+r.height/2)};
+  const rectOf=sel=>p.evaluate(sel=>{const r=document.querySelector(sel).getBoundingClientRect();return{x:r.left,y:r.top,w:r.width,h:r.height,hidden:document.querySelector(sel).hidden,op:+getComputedStyle(document.querySelector(sel)).opacity}},sel);
+  const overlap=(a,b)=>a.x<b.x+b.w&&b.x<a.x+a.w&&a.y<b.y+b.h&&b.y<a.y+a.h;
   const zoomPt=async(fx,fy)=>{const s=await st(),z=s.zoomRect,v=s.zvb,g=s.zg;return[z.x+(fx-v[0])/v[2]*z.w,z.y+(fy-v[1])/v[3]*z.h]};
 
   /* ---------- 1. pick a customer → her hand ---------- */
@@ -66,6 +75,18 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
   await tapNail(3);const tTap0=Date.now();await p.waitForFunction(()=>window.ML.__ns().done.includes(3),null,{timeout:12000}).catch(()=>{});
   s=await st();ok('손톱을 콕만 해도 붓이 알아서 칠함',s.done.includes(3)&&s.log.includes('autobrush:3'),((Date.now()-tTap0)/1000).toFixed(1)+'초');
   ok('손톱 3개를 칠하면 다음 버튼이 나타남',(await p.waitForFunction(()=>window.ML.__ns().next,null,{timeout:4000}).then(()=>true).catch(()=>false)),'칠한 손톱 '+s.done.length+'개');
+  {const nb=await rectOf('#nsNext'),hb=await rectOf('#nsHand'),stb=await rectOf('#nsStage');await W(900);const nb2=await rectOf('#nsNext');
+   ok('다음 버튼: 손 그림과 겹치지 않고 아래 칸 오른쪽 끝(칠한 손톱 3개)',!overlap(nb2,hb)&&nb2.x+nb2.w>stb.x+stb.w-110&&nb2.y>hb.y+hb.h-1,'버튼 '+Math.round(nb2.w)+'px · 버튼 위 '+Math.round(nb2.y)+' ≥ 손 아래 '+Math.round(hb.y+hb.h));
+   s=await st();ok('모두 칠하기 전에는 다음 버튼이 작고 흐림(80px 안팎, 누를 수 있음)',s.nextSmall&&nb2.w<100&&nb2.w>=76&&nb2.op<.9&&!nb2.hidden,'폭 '+Math.round(nb2.w)+'px · 투명도 '+nb2.op);
+   ok('안 한 손톱(2개) 테두리가 빛남',s.glow.length===2&&s.remaining.length===2&&s.glow.every(i=>!s.done.includes(i)),'빛나는 손톱 '+s.glow.join(','));
+   const seen=new Set();for(let k=0;k<4;k++){const g=await p.evaluate(()=>{const e=document.querySelector('#nailshop .ghand');return e?[Math.round(parseFloat(e.style.left)),Math.round(parseFloat(e.style.top))].join(','):''});if(g)seen.add(g);await W(3300)}
+   ok('안내 손이 안 한 손톱을 차례로 가리킴(한 곳에 머물지 않음)',seen.size>=2,'가리킨 곳 '+[...seen].join(' / '));
+   const t0=await touchNail(0);}
+  s=await st();ok('터치로 콕 한 손톱도 칠해짐(진짜 터치 이벤트)',s.log.includes('autobrush:0'));
+  await p.waitForFunction(()=>window.ML.__ns().done.includes(0),null,{timeout:12000}).catch(()=>{});
+  await paint(4,'color');await W(1000);
+  {s=await st();const nb=await rectOf('#nsNext'),hb=await rectOf('#nsHand');
+   ok('모두 칠하면 다음 버튼이 커짐(110px 이상, 손 그림과 겹치지 않음)',!s.nextSmall&&s.done.length===5&&nb.w>=110&&!overlap(nb,hb)&&nb.op>.9,'폭 '+Math.round(nb.w)+'px');await shot('p11_3b_next_big')}
   ok('칠해진 손톱은 또렷한 색(vivid)',await p.evaluate(()=>{const v=window.MLCFG.calm.choiceColors.map(c=>c.vivid.toLowerCase());return[...document.querySelectorAll('#nsHand .ns-n[data-i="2"] rect')].some(r=>v.includes((r.getAttribute('fill')||'').toLowerCase()))}));
   await clickNext();
   const sl=await doCure('p11_4lamp');
@@ -73,18 +94,22 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
   s=await st();ok('5초 뒤 띵 → 윤기 상태',s.nails.every(n=>n.cured)&&s.log.includes('ding'));
   await W(400);await shot('p11_5glossy');
   await waitPhase('deco',6000);await W(500);s=await st();
-  ok('굽기 뒤 파츠 단계(확대 전 도구 칸)',s.modes.join()==='parts'&&s.zoom===null);
-  await tapNail(2);s=await st();
-  ok('손톱을 콕 → 그 손톱이 무대를 가득 채움',s.zoom===2&&s.zoomRect.w>200,'확대 폭 '+Math.round(s.zoomRect.w)+'px');
-  ok('파츠 카드 3장',(await p.locator('#nsPanel .ns-card').count())===3);
-  await p.locator('#nsPanel .ns-card').nth(0).click();await W(800);
-  {const c=await p.locator('#nsPanel .ns-card').nth(1).boundingBox(),[x,y]=await zoomPt(...await p.evaluate(()=>{const s=window.ML.__ns();return[s.zvb[0]+s.zvb[2]*.5,s.zvb[1]+s.zvb[3]*.55]}));
-   await p.mouse.move(c.x+c.width/2,c.y+c.height/2);await p.mouse.down();await p.mouse.move(x,y,{steps:10});await p.mouse.up();await W(900)}
-  s=await st();ok('파츠 붙이기: 카드 콕, 카드를 끌어다 놓기',s.nails[2].parts.length===2,s.nails[2].parts.join(', '));
-  await shot('p11_7parts');
-  {const [x,y]=s.partPts[0],sb=await p.locator('#nsStage').boundingBox();await p.mouse.move(x,y);await p.mouse.down();await p.mouse.move(x+30,y-20,{steps:4});await p.mouse.move(sb.x+20,sb.y+30,{steps:8});await p.mouse.up();await W(700)}
-  s=await st();ok('붙은 파츠를 끌어서 빼면 떨어짐',s.nails[2].parts.length===1&&s.log.some(l=>/^off:/.test(l)),'남은 것 '+s.nails[2].parts.join(', '));
-  {const [x,y]=s.partPts[0];await p.mouse.click(x,y);await W(400)}
+  ok('굽기 뒤 파츠 단계: 손 전체 화면, 확대 없음, 도구 바꾸기 버튼 없음(도구 하나)',s.modes.join()==='parts'&&s.zoom===null&&!s.modeBtn,'확대 '+s.zoom);
+  ok('파츠 카드 3장',(await p.locator('#nsPanel .ns-card').count())===3&&s.cards==='part');
+  ok('안 한 손톱 5개 모두 테두리가 빛남',s.glow.length===5,'빛나는 손톱 '+s.glow.join(','));
+  await p.locator('#nsPanel .ns-card').nth(1).click();await W(300);s=await st();
+  ok('카드 1장 고르기(선택 표시)',s.partSel===1&&(await p.locator('#nsPanel .ns-card.sel').count())===1);
+  await shot('p11_6hand_before_parts');
+  for(const i of [0,2,4]){await touchNail(i);await W(500)}
+  s=await st();
+  ok('손 전체 화면에서 카드 1장 고르고 손톱 3개를 차례로 콕(터치) → 3개 모두에 파츠가 붙음(확대 없이)',[0,2,4].every(i=>s.nails[i].parts.length===1)&&s.zoom===null&&s.log.filter(l=>/^partOn:/.test(l)).join()==='partOn:0,partOn:2,partOn:4','손톱별 파츠 '+s.nails.map(n=>n.parts.length).join(',')+' · 확대 '+s.zoom);
+  ok('손톱마다 다른 것을 붙일 수 있음(카드를 바꿔 한 손톱 더)',await (async()=>{await p.locator('#nsPanel .ns-card').nth(0).click();await W(300);await touchNail(1);s=await st();return s.nails[1].parts.length===1&&s.nails[1].parts[0]!==s.nails[0].parts[0]})(),s.nails.map(n=>n.parts.join('+')||'-').join(' | '));
+  ok('안 한 손톱만 빛남(남은 손톱 1개: 3번)',s.glow.join()==='3'&&s.remaining.join()==='3','빛나는 손톱 '+s.glow.join(','));
+  ok('한 손톱을 하면 다음 손톱이 들썩이며 토토가 권함',s.log.some(l=>/^nudge:/.test(l)),s.log.filter(l=>/^nudge:/.test(l)).join(' '));
+  await shot('p11_7hand_parts_3nails');
+  {const pt=s.partPts.find(q=>q.i===0),sb=await p.locator('#nsStage').boundingBox();await p.mouse.move(pt.x,pt.y);await p.mouse.down();await p.mouse.move(pt.x+30,pt.y-20,{steps:4});await p.mouse.move(sb.x+20,sb.y+30,{steps:8});await p.mouse.up();await W(700)}
+  s=await st();ok('붙은 파츠를 끌어서 빼면 떨어짐(손 전체 화면)',s.nails[0].parts.length===0&&s.log.some(l=>/^off:/.test(l)),'0번 손톱 파츠 '+s.nails[0].parts.length);
+  {const pt=s.partPts.find(q=>q.i===2);await p.mouse.click(pt.x,pt.y);await W(400)}
   s=await st();ok('붙은 파츠를 콕 하면 색이 바뀜',s.log.some(l=>/^recolor:/.test(l)));
   /* 5. never ends by itself */
   const t0=Date.now(),phases=new Set();let mirAt=0;
@@ -111,7 +136,7 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
   ok('베이스: 칠한 곳이 촉촉해짐',s.nails[2].base>0,'칸 '+s.nails[2].base);await clickNext();
   await waitPhase('color',4000);await p.locator('#nsPanel .ns-card').nth(1).click();await W(300);for(const i of [1,2,3])await paint(i,'color');await clickNext();
   await doCure();await waitPhase('deco',6000);await W(400);
-  s=await st();ok('굽기 뒤 붓·도장·보석 버튼 3개',(await p.locator('#nsPanel .ns-card').count())===3&&s.modes.join()==='art,stamp,parts');
+  s=await st();ok('굽기 뒤 붓·도장·보석: 도구 바꾸기 버튼(아래 칸 왼쪽 끝, 110px 이상) + 카드 3장, 확대 없음',(await p.locator('#nsPanel .ns-card').count())===3&&s.modes.join()==='art,stamp,parts'&&s.modeBtn&&s.zoom===null&&(await rectOf('#nsMode')).w>=110,'도구 '+s.mode);
   /* 4. draw a line from inside the nail to outside */
   await tapNail(2);s=await st();
   const g=await p.evaluate(()=>{const s=window.ML.__ns();return s.zvb});
@@ -125,15 +150,28 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
   ok('그림: 손톱 밖으로 그은 선이 손톱 밖에 남지 않음',s.nails[2].strokes.length===1&&Buffer.compare(before,after)===0&&inside,'선 점 '+s.nails[2].strokes[0]+'개, 손톱 밖 화면 '+(Buffer.compare(before,after)===0?'그대로':'바뀜'));
   {const [x1,y1]=await zoomPt(n2.w*.3,n2.h*.25),[x2,y2]=await zoomPt(n2.w*.7,n2.h*.75);await p.mouse.move(x1,y1);await p.mouse.down();await p.mouse.move(x2,y2,{steps:8});await p.mouse.up();await W(300)}
   await shot('p11_6zoom_drawing');
-  await p.locator('#nsHandBack').click();await W(500);
-  await p.locator('#nsPanel .ns-card[data-m="stamp"]').click();await W(400);await tapNail(1);
-  {const [x,y]=await zoomPt(n2.w*.5,n2.h*.5);await p.mouse.click(x,y);await W(400)}
-  s=await st();ok('도장: 확대한 손톱을 콕 하면 그 자리에 쿡',s.nails[1].art>=1&&s.log.some(l=>/^stamp:/.test(l)));
-  await p.locator('#nsHandBack').click();await W(500);
-  await p.locator('#nsPanel .ns-card[data-m="parts"]').click();await W(400);await tapNail(3);
-  await p.locator('#nsPanel .ns-card').nth(0).click();await W(900);s=await st();
-  ok('파츠: 붙음',s.nails[3].parts.length===1);
-  await p.locator('#nsHandBack').click();await W(400);
+  /* 확대 화면: 양옆 큰 화살표로 옆 손톱으로 바로 */
+  s=await st();const abL=await rectOf('#nsArL'),abR=await rectOf('#nsArR');
+  ok('확대 화면 양옆에 큰 화살표(110px 이상)',s.zoom===2&&s.arrows.join()==='true,true'&&abL.w>=110&&abR.w>=110&&abL.x<abR.x,'왼쪽 '+Math.round(abL.w)+'px · 오른쪽 '+Math.round(abR.w)+'px');
+  await shot('p11_6b_zoom_arrows');
+  {const r=await rectOf('#nsArR');await touchTap(r.x+r.w/2,r.y+r.h/2);await W(600)}
+  s=await st();ok('확대 화면의 오른쪽 화살표(터치)로 옆 손톱(3번)으로 넘어감',s.zoom===3&&s.zoomRect.w>150,'확대 손톱 '+s.zoom);
+  {const r=await rectOf('#nsArL');await touchTap(r.x+r.w/2,r.y+r.h/2);await touchTap(r.x+r.w/2,r.y+r.h/2);await W(600)}
+  s=await st();ok('왼쪽 화살표로 두 칸 되돌아가 1번 손톱, 거기서는 왼쪽 화살표가 더 있음(0번)',s.zoom===1&&s.arrows[0],'확대 손톱 '+s.zoom);
+  {const r=await rectOf('#nsArL');await touchTap(r.x+r.w/2,r.y+r.h/2);await W(600)}
+  s=await st();ok('맨 왼쪽(0번)에서는 왼쪽 화살표가 없음',s.zoom===0&&!s.arrows[0]&&s.arrows[1]);
+  await p.locator('#nsHandBack').click();await W(500);s=await st();
+  ok('손 전체로 돌아오면 화살표가 사라지고 도구 바꾸기 버튼이 나타남',s.zoom===null&&s.arrows.join()==='false,false'&&s.modeBtn);
+  /* 도장: 손 전체 화면에서 바로 */
+  await p.locator('#nsMode').click();await W(500);s=await st();
+  ok('도구 바꾸기 버튼 → 도장 (카드 3장이 모양 카드)',s.mode==='stamp'&&s.cards==='shape'&&(await p.locator('#nsPanel .ns-card').count())===3);
+  await touchNail(1);s=await st();
+  ok('도장: 손 전체 화면에서 손톱을 콕 하면 바로 쿡(확대 없음)',s.nails[1].art>=1&&s.log.some(l=>/^stamp:/.test(l))&&s.zoom===null);
+  await p.locator('#nsMode').click();await W(500);s=await st();
+  ok('도구 바꾸기 버튼 → 파츠',s.mode==='parts'&&s.cards==='part');
+  await p.locator('#nsPanel .ns-card').nth(0).click();await W(300);await touchNail(3);await W(500);s=await st();
+  ok('파츠: 손 전체 화면에서 붙음',s.nails[3].parts.length===1&&s.zoom===null);
+  await shot('p11_7b_level4_hand_deco');
   await clickNext();await waitPhase('top',4000);for(const i of [1,2,3])await paint(i,'top');await clickNext();
   await doCure();s=await st();ok('탑젤 뒤 다시 굽기 → 아주 반짝',s.nails[2].topCured);
   await waitPhase('oil',6000);for(const i of [1,2,3])await paint(i,'oil');s=await st();
