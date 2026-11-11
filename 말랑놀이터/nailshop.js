@@ -90,7 +90,8 @@ const svgInner=s=>s.replace(/^<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'');
 const css=`
 #nailshop{gap:8px}
 .nsstars{display:flex;gap:2px;flex:none}.nsstars svg{width:20px;height:20px}
-#nsBack svg{display:block}
+#nailshop .bar .round{width:64px;height:64px;padding:10px}
+#nailshop .bar .round svg{display:block;width:100%;height:100%}
 .ns-lobby{flex:1;min-height:0;position:relative;border-radius:30px;overflow:hidden;box-shadow:0 6px 14px rgba(91,74,66,.12);background:#F1E8EE;touch-action:manipulation}
 .ns-lobby>div{position:absolute;pointer-events:none}
 .ns-lobby svg{display:block;width:100%;height:100%}
@@ -177,7 +178,7 @@ const css=`
 const stEl=document.createElement('style');stEl.textContent=css;document.head.appendChild(stEl);
 
 const sec=document.createElement('section');sec.id=id;sec.className='screen';sec.hidden=true;
-sec.innerHTML=`${PAPER_DEFS}<div class="bar"><button class="round" data-go="home" id="nsHome" aria-label="처음으로">🏠</button><button class="round" id="nsBack" aria-label="가게 앞으로" hidden>${ICON.back}</button><h2>네일숍</h2><div class="nsstars" id="nsStars"></div></div>
+sec.innerHTML=`${PAPER_DEFS}<div class="bar"><button class="round" data-go="home" id="nsHome" aria-label="뒤로">${ICON.back}</button><button class="round" id="nsBack" aria-label="가게 앞으로" hidden>${ICON.back}</button><h2>네일숍</h2><div class="nsstars" id="nsStars"></div></div>
 <div class="ns-lobby" id="nsLobby"><div class="nl-bg">${LB_WALL}</div><div class="nl-awn">${LB_AWN}</div><div class="nl-frames" id="nsFrames"></div><div class="nl-win">${LB_WIN}</div><div class="nl-door" id="nsDoor">${LB_DOOR}</div><div class="nl-seats" id="nsSeats"></div></div>
 <div class="ns-room" id="nsRoom" hidden><div class="ns-stage" id="nsStage"><div class="ns-table"></div><div class="ns-cust" id="nsCust"></div>
 <div class="lp lp-back" id="nsLpBack">${H.LAMP.back}</div><div class="ns-hand" id="nsHand"></div><div class="ns-glow" id="nsGlow"></div><div class="ns-dock"></div><div class="lp lp-glow" id="nsLpGlow">${H.LAMP.glow}</div><div class="lp lp-front" id="nsLpFront">${H.LAMP.front}</div><div class="lp ns-dots" id="nsDots"></div>
