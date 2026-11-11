@@ -72,7 +72,8 @@ const ICON={
   shower:`<svg viewBox="0 0 100 100"><path d="M86 6Q88 28 62 36" fill="none" stroke="${OL}" stroke-width="13" stroke-linecap="round"/><path d="M86 6Q88 28 62 36" fill="none" stroke="#C8CDD6" stroke-width="6.5" stroke-linecap="round"/><path d="M22 60Q22 34 52 34Q82 34 82 60Z" fill="${PAL.sky}" ${S}/><g class="tf"><circle class="tf-eye" cx="44" cy="47" r="3.6" fill="${OL}"/><circle class="tf-eye" cx="60" cy="47" r="3.6" fill="${OL}"/><path class="tf-smile" d="M47 53Q52 57 57 53" fill="none" stroke="${OL}" stroke-width="3" stroke-linecap="round"/><path class="tf-grin" opacity="0" d="M46 52Q52 60 58 52Z" fill="#B8474B" stroke="${OL}" stroke-width="2" stroke-linejoin="round"/></g><rect x="18" y="58" width="68" height="11" rx="5.5" fill="#CFE5F4" ${S}/>${[28,40,52,64,76].map(x=>`<circle cx="${x}" cy="63.5" r="2.2" fill="#8FC3E6"/>`).join('')}</svg>`,
   dryer:`<svg viewBox="0 0 100 100"><path d="M52 52L60 90H44L40 54Z" fill="${PAL.lilac}" ${S}/><path d="M16 24H62Q84 24 84 40Q84 56 62 56H16Z" fill="${PAL.rose}" ${S}/><rect x="8" y="26" width="12" height="28" rx="4" fill="#8F7F9C" ${S}/><g class="tf"><g class="tf-eye"><circle cx="40" cy="36" r="4.5" fill="${OL}"/><circle cx="41.5" cy="34.5" r="1.5" fill="#fff"/></g><g class="tf-eye"><circle cx="58" cy="36" r="4.5" fill="${OL}"/><circle cx="59.5" cy="34.5" r="1.5" fill="#fff"/></g><path class="tf-smile" d="M42 44Q49 52 56 44" fill="none" stroke="${OL}" stroke-width="3.5" stroke-linecap="round"/><path class="tf-grin" opacity="0" d="M41 43Q49 55 57 43Z" fill="#B8474B" stroke="${OL}" stroke-width="2.2" stroke-linejoin="round"/></g></svg>`,
   mirror:`<svg viewBox="0 0 100 100"><ellipse cx="50" cy="44" rx="30" ry="36" fill="${PAL.butter}" ${S}/><ellipse cx="50" cy="44" rx="21" ry="27" fill="#EAF3F6" ${S}/><path d="M38 30Q43 22 53 21" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M50 81V92M36 94H64" stroke="${OL}" stroke-width="9" stroke-linecap="round"/><path d="M50 81V92M36 94H64" stroke="${PAL.butter}" stroke-width="3.5" stroke-linecap="round"/>${A.twinkle(82,16,7,'#F0D58A')}</svg>`,
-  back:`<svg viewBox="0 0 40 40" width="30" height="30"><path d="M25 8L12 20L25 32" fill="none" stroke="${OL}" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  /* rules.sameLayoutEverywhere / shell.header.left: back is always the same round arrow (64px), one level up (salon → shop front → town) */
+  back:`<svg viewBox="0 0 48 48"><path d="M17 13H29Q40 13 40 25Q40 37 29 37H16" fill="none" stroke="${OL}" stroke-width="6" stroke-linecap="round"/><path d="M19 4L8 13L19 22" fill="none" stroke="${OL}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   star:'<svg viewBox="0 0 20 20"><path d="M10 1l2.6 5.6 6 .7-4.5 4.1 1.2 6L10 14.5 4.7 17.4l1.2-6L1.4 7.3l6-.7z" fill="#F0D58A" stroke="#5B3A29" stroke-width="1.2"/></svg>'
 };
 /* P12 touch.tool.intro: the name the tool says when it jumps out of the tray */
@@ -127,7 +128,8 @@ const css=`
 #petsalon{gap:8px}
 .psstars{display:flex;gap:2px;flex:none}
 .psstars svg{width:20px;height:20px}
-#psBack svg{display:block}
+#petsalon .bar .round{width:64px;height:64px;padding:10px}
+#petsalon .bar .round svg{display:block;width:100%;height:100%}
 .ps-salon{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px}
 .ps-stage{flex:1;min-height:0;position:relative;border-radius:30px;overflow:hidden;touch-action:none;box-shadow:0 6px 14px rgba(91,74,66,.12);
   background:linear-gradient(180deg,color-mix(in srgb,var(--bg) 88%,var(--berry)),color-mix(in srgb,var(--bg) 72%,var(--peach)))}
@@ -211,7 +213,7 @@ const css=`
 const stEl=document.createElement('style');stEl.textContent=css;document.head.appendChild(stEl);
 
 const sec=document.createElement('section');sec.id=id;sec.className='screen';sec.hidden=true;
-sec.innerHTML=`${PAPER_DEFS}<div class="bar"><button class="round" data-go="home" id="psHome" aria-label="처음으로">🏠</button><button class="round" id="psBack" aria-label="가게 앞으로" hidden>${ICON.back}</button><h2>동물 미용실</h2><div class="psstars" id="psStars"></div></div>
+sec.innerHTML=`${PAPER_DEFS}<div class="bar"><button class="round" data-go="home" id="psHome" aria-label="뒤로">${ICON.back}</button><button class="round" id="psBack" aria-label="가게 앞으로" hidden>${ICON.back}</button><h2>동물 미용실</h2><div class="psstars" id="psStars"></div></div>
 <div class="ps-lobby" id="psLobby"><div class="lb-bg">${LB_WALL}</div><div class="lb-awn">${LB_AWN}</div><div class="lb-frames" id="psFrames"></div><div class="lb-win">${LB_WIN}</div><div class="lb-door" id="psDoor">${LB_DOOR}</div><div class="lb-seats" id="psSeats"></div></div>
 <div class="ps-salon" id="psSalon" hidden><div class="ps-stage" id="psStage">${BG}<div class="ps-pet" id="psPet"><div class="psbase"></div><svg class="over" viewBox="0 0 200 230">${A.animalOverlay()}</svg></div>
 <div class="ps-tub" id="psTub">${TUB}</div><div class="ps-pfx" id="psPfx"></div><button class="ps-mirbtn" id="psMirBtn" aria-label="거울" hidden>${ICON.mirror}</button></div>
