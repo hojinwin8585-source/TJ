@@ -531,7 +531,7 @@ body{background:linear-gradient(180deg,var(--bg),color-mix(in srgb,var(--bg) 82%
     <h3>부모 설정</h3>
     <p class="hint">아이가 실수로 열지 못하도록 톱니바퀴를 2초 동안 꾹 눌러야 열립니다.</p>
     <div class="row"><span>말하는 언어</span><div class="seg" id="setLang"><button data-v="both">한국어+영어</button><button data-v="ko">한국어</button><button data-v="en">English</button></div></div>
-    <div class="row"><span>하루 놀이 시간</span><div class="seg" id="setTimer"><button data-v="10">10분</button><button data-v="15">15분</button><button data-v="20">20분</button><button data-v="0">끄기</button></div></div>
+    <div id="gateRows" style="display:contents"></div>
     <div class="row"><span>소리</span><div class="seg" id="setSound"><button data-v="1">켜기</button><button data-v="0">끄기</button></div></div>
     <div class="row"><span>배경음</span><div class="seg" id="setBgm"><button data-v="1">동요</button><button data-v="0">끔</button></div></div>
     <div class="row"><span>드라이기 소리</span><div class="seg" id="setDryer"><button data-v="0">끔</button><button data-v="0.5">작게</button><button data-v="1">보통</button></div></div>
@@ -549,12 +549,7 @@ body{background:linear-gradient(180deg,var(--bg),color-mix(in srgb,var(--bg) 82%
 
 <!-- REST SCREEN -->
 <div class="modal rest" id="rest" hidden>
-  <div class="sheet center">
-    <div class="big">🐻💤</div>
-    <h3>오늘 놀이 끝!</h3>
-    <p>눈도 쉬고, 이제 어른이랑 진짜 칫솔로 치카치카 해요.</p>
-    <button class="pillhold holdbtn" id="restHold">어른이 3초 꾹 누르면 계속</button>
-  </div>
+  <div class="sheet center"><div id="gateMount"></div></div>
 </div>
 
 <div class="toast" id="toast" hidden></div>
@@ -808,13 +803,7 @@ document.addEventListener('pointerdown',e=>{
   const now=performance.now();if(now-lastFx<70||e.target.closest('canvas,.cutsvg,.mkface,.keys,.bkeys'))return;lastFx=now;
   const f=document.createElement('span');f.className='tapfx';f.style.left=e.clientX+'px';f.style.top=e.clientY+'px';document.body.appendChild(f);setTimeout(()=>f.remove(),480);
 },true);
-setInterval(()=>{
-  if(S.timer>0&&sessionStart&&$('#rest').hidden&&Date.now()-sessionStart>S.timer*60000){
-    $('#rest').hidden=false;bgmSync();
-    say('오늘 놀이는 여기까지! 눈도 쉬어요. 안녕!','Time to rest your eyes. Bye bye!');
-  }
-},5000);
-hold($('#restHold'),3000,()=>{$('#rest').hidden=true;sessionStart=Date.now();go('home')});
+/* 시간 약속(쉬는 화면·미션·어른 확인)은 gate.js */
 
 (()=>{const cols=['--berry','--banana','--soda','--lime','--grape','--peach'];
   $('.logo').innerHTML=[...'말랑 놀이터'].map((ch,i)=>ch===' '?' ':`<span style="--c:var(${cols[i%cols.length]});--d:${i*.15}s">${ch}</span>`).join('')})();
@@ -830,7 +819,6 @@ function bindSeg(sel,key,parse){
   sync();
 }
 bindSeg('#setLang','lang',v=>v);
-bindSeg('#setTimer','timer',Number);
 bindSeg('#setSound','sound',v=>v==='1');
 bindSeg('#setBgm','bgm',v=>v==='1');
 bindSeg('#setDryer','dryer',Number);
@@ -1710,5 +1698,6 @@ if('serviceWorker' in navigator&&location.protocol==='https:'){
 <script src="nailshop.js"></script>
 <script src="maze.js"></script>
 <script src="hub.js"></script>
+<script src="gate.js"></script>
 </body>
 </html>
