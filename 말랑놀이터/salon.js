@@ -1,6 +1,7 @@
 /* 동물 미용실 v2 — 가게 앞에서 손님을 골라 데려오고, 손가락을 따라오는 도구로 씻기고, 마음대로 꾸며 줘요 (만 2세 기준)
    동작은 콕, 쓱쓱, 카드 고르기(동물에게 끌어다 놓아도 됨, 자리는 대충이어도 붙음). 꾸미기는 아이가 거울을 눌러야 끝나요.
-   숫자는 MLCFG.games.petsalon (lobby, needs, tools, reactions, dressing, progressBar), touch, calm, sound 에서 읽습니다. */
+   숫자는 MLCFG.games.petsalon (lobby, needs, tools, reactions, dressing, progressBar, levels, petStates, itemUnlock, photoItems), touch, calm, sound, progress 에서 읽습니다.
+   2-나: 칸마다 변하는 모습(ART.petLayer), 단계표(levels)와 단계 엔진(ML.Progress, 별 3칸), 손님이 늘수록 장식이 늘어남(itemUnlock), 사진 장식 자리(photoItems). */
 (()=>{
 'use strict';
 const M=window.ML,P=M&&M.P2,A=window.ART;if(!P||!A||!M.Guide||!P.makeTool)return;
@@ -14,10 +15,20 @@ const WAITING=LOB.waiting||3,IDLE_HINT=DRS.idleHintMs||30000,MIRROR_AFTER=8000;
 const LOG=[];
 const praise=(ko,en)=>{const p=M.nextPraise();return[ko?ko+' '+p[0]:p[0],en?en+' '+p[1]:p[1]]};
 const word=k=>{const w=VO.actionWords[k];if(w)say(w.ko,w.en)};
-/* 2-가: 만든 도구는 거품·헹굼·말림. 단계표(levels)는 2-나에서 붙이므로, 지금은 from 2 까지의 요구(muddy, leaves, party)가 나옴 */
-const STEPS_READY=['foam','rinse','dry'],NEED_FROM_MAX=2;
-const NEED_POOL=NEEDS.filter(n=>(n.from||1)<=NEED_FROM_MAX&&(n.steps||[]).every(s=>STEPS_READY.includes(s)));
 const KINDS=VO.animalNames;   // [{id,ko,en,name}]
+/* ---------- levels (games.petsalon.levels) through ML.Progress ----------
+   This salon plays the levels whose customers are animals it can draw (1~3). 4 (family faces) and 5 (things from home) come with P4 and P6. */
+const PROG=M.Progress||null,LEVELS=(PS.levels||[]).filter(l=>l&&l.level);
+const PLAY_MAX=Math.max(1,(i=>i<0?LEVELS.length:i)(LEVELS.findIndex(l=>!(l.customers||[]).length||!(l.customers||[]).every(k=>A.KINDS[k]))));
+const BRUSH_FROM=(TOOLS.brush||{}).from||3;
+const lvNo=()=>{const n=PROG?PROG.get(id).level:1;return Math.max(1,Math.min(PLAY_MAX,n|0||1))};
+const LV=()=>LEVELS[lvNo()-1]||{customers:KINDS.map(k=>k.id),steps:['foam','rinse','dry'],choose:['head','neck','face'],optionsPerChoice:3,colors:99};
+/* a washing step is ready at this level: in the level's steps, or the brush from tools.brush.from */
+const stepOk=(s,n=lvNo())=>s==='brush'?n>=BRUSH_FROM:((LEVELS[n-1]||LV()).steps||[]).includes(s);
+const stepsOf=(need,n)=>((need&&need.steps)||[]).filter(s=>stepOk(s,n));
+/* needs that can come at this level (needs[].from), with at least one step this level has (party has none and needs none) */
+const needPool=(n=lvNo())=>NEEDS.filter(x=>(x.from||1)<=n&&(!(x.steps||[]).length||stepsOf(x,n).length));
+const openSlots=()=>(LV().choose||['head']).filter(k=>['head','neck','face'].includes(k));
 const kindOf=k=>KINDS.find(a=>a.id===k)||{id:k,ko:'친구',en:'friend',name:'친구'};
 const ya=w=>w+(batchim(w)?'아':'야'),iya=w=>w+(batchim(w)?'이야':'야');
 const LINE={
@@ -25,6 +36,9 @@ const LINE={
   comeIn:a=>[`${ya(a.ko)}, 들어와!`,`Come in, ${a.en}!`],
   muddy:n=>[`안녕! 나는 ${iya(n)}. 진흙에서 놀았어. 깨끗하게 씻겨 줄래?`,`Hi! I'm ${n}. I played in the mud. Can you wash me?`],
   leaves:n=>[`안녕! 나는 ${iya(n)}. 나뭇잎이 잔뜩 붙었어. 씻고 말려 줄래?`,`Hi! I'm ${n}. Leaves all over me! Can you wash and dry me?`],
+  tangled:n=>[`안녕! 나는 ${iya(n)}. 털이 엉켰어. 빗어 줄래?`,`Hi! I'm ${n}. My fur is all tangled. Can you comb me?`],
+  brush:['손가락을 대면 빗이 따라가요. 쓱쓱 빗어 줘!','The comb follows your finger. Comb comb!'],
+  smooth:['매끈매끈!','So smooth!'],
   foam:['손가락으로 쓱쓱! 거품을 내 줘!','Rub rub to make bubbles!'],
   rinse:['손가락을 대면 샤워기가 따라가요. 거품을 씻어 줘!','The shower follows your finger. Wash the bubbles away!'],
   dry:['손가락을 대면 드라이기가 따라가요. 보송보송 말려 줘!','The dryer follows your finger. Blow dry!'],
@@ -46,21 +60,48 @@ const WEAR={
     {ko:'꽃',en:'flower',d:(c,l)=>`${[0,1,2,3,4].map(i=>{const a=-Math.PI/2+i*Math.PI*2/5;return `<circle cx="${(22*Math.cos(a)).toFixed(1)}" cy="${(22*Math.sin(a)).toFixed(1)}" r="16" fill="${c}" ${S}/>`}).join('')}<circle r="13" fill="#FFE066" ${S}/><circle cx="-4" cy="-4" r="3.5" fill="#fff" opacity=".8"/>`},
     {ko:'고깔모자',en:'party hat',d:(c,l)=>`<path d="M0 -44L30 24H-30Z" fill="${c}" ${S}/><path d="M-13 -14L17 -6M-21 4L25 14" stroke="${l}" stroke-width="7" stroke-linecap="round"/><circle cy="-46" r="10" fill="${l}" ${S}/><path d="M-34 24Q0 36 34 24" stroke="${OL}" stroke-width="10" stroke-linecap="round" fill="none"/><path d="M-34 24Q0 36 34 24" stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none"/>`},
     {ko:'별 머리핀',en:'star clip',d:(c,l)=>A.star(0,0,36,c,S)+`<circle cx="-10" cy="-8" r="4" fill="#fff" opacity=".8"/>`},
-    {ko:'하트 머리핀',en:'heart clip',d:(c,l)=>`<path d="M0 30C-44 0 -38 -34 -18 -34C-8 -34 -2 -28 0 -20C2 -28 8 -34 18 -34C38 -34 44 0 0 30Z" fill="${c}" ${S}/><ellipse cx="-16" cy="-18" rx="7" ry="4.5" fill="#fff" opacity=".7" transform="rotate(-30 -16 -18)"/>`}
+    {ko:'하트 머리핀',en:'heart clip',d:(c,l)=>`<path d="M0 30C-44 0 -38 -34 -18 -34C-8 -34 -2 -28 0 -20C2 -28 8 -34 18 -34C38 -34 44 0 0 30Z" fill="${c}" ${S}/><ellipse cx="-16" cy="-18" rx="7" ry="4.5" fill="#fff" opacity=".7" transform="rotate(-30 -16 -18)"/>`},
+    /* 2-나 itemUnlock.toDraw */
+    {ko:'머리띠',en:'headband',d:(c,l)=>`<path d="M-50 30Q-52 -26 0 -28Q52 -26 50 30" fill="none" stroke="${OL}" stroke-width="17" stroke-linecap="round"/><path d="M-50 30Q-52 -26 0 -28Q52 -26 50 30" fill="none" stroke="${c}" stroke-width="10" stroke-linecap="round"/><path d="M-36 -8Q-30 -20 -18 -24" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" opacity=".7"/>${[-26,0,26].map((x,i)=>`<circle cx="${x}" cy="${(-28+Math.abs(x)*.28).toFixed(1)}" r="6.5" fill="${l}" ${S}/>`).join('')}`},
+    {ko:'밀짚모자',en:'sun hat',d:(c,l)=>`<ellipse cy="16" rx="54" ry="15" fill="${l}" ${S}/><path d="M-28 16Q-30 -28 0 -30Q30 -28 28 16Z" fill="${l}" ${S}/><path d="M-28 6Q0 16 28 6L28 14Q0 24 -28 14Z" fill="${c}" ${S}/><g transform="translate(20 4)">${[0,1,2,3,4].map(i=>{const a=-Math.PI/2+i*Math.PI*2/5;return `<circle cx="${(7*Math.cos(a)).toFixed(1)}" cy="${(7*Math.sin(a)).toFixed(1)}" r="5.5" fill="${c}" ${S}/>`}).join('')}<circle r="4.5" fill="#FFE066" stroke="${OL}" stroke-width="2"/></g><path d="M-18 -16Q-12 -24 -2 -25" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" opacity=".7"/>`}
   ],
   neck:[
     {ko:'나비넥타이',en:'bow tie',d:(c,l)=>`<path d="M0 0L-34 -18Q-40 0 -34 18Z" fill="${c}" ${S}/><path d="M0 0L34 -18Q40 0 34 18Z" fill="${c}" ${S}/><rect x="-8" y="-9" width="16" height="18" rx="6" fill="${l}" ${S}/>`},
     {ko:'목도리',en:'scarf',d:(c,l)=>`<path d="M12 6L26 44L8 46L2 12Z" fill="${c}" ${S}/><path d="M-48 -10Q0 14 48 -10L46 8Q0 32 -46 8Z" fill="${c}" ${S}/><path d="M-30 2l4 12M-8 8l2 12M14 8l-2 12M34 0l-4 12" stroke="${l}" stroke-width="5" stroke-linecap="round"/>`},
     {ko:'목걸이',en:'necklace',d:(c,l)=>`${[-40,-28,-15,0,15,28,40].map((x,i)=>`<circle cx="${x}" cy="${(-6+14*(1-Math.pow(x/40,2))).toFixed(1)}" r="7" fill="${i%2?l:c}" ${S}/>`).join('')}<path d="M0 34C-18 22 -16 8 -8 8C-4 8 -1 11 0 14C1 11 4 8 8 8C16 8 18 22 0 34Z" fill="${c}" ${S}/>`},
-    {ko:'방울 목걸이',en:'bell collar',d:(c,l)=>`<path d="M-46 -8Q0 14 46 -8L45 4Q0 26 -45 4Z" fill="${c}" ${S}/><circle cy="20" r="13" fill="#FFD23F" ${S}/><path d="M-8 22h16M0 22v8" stroke="${OL}" stroke-width="3" stroke-linecap="round"/><circle cx="-4" cy="14" r="3" fill="#fff" opacity=".8"/>`}
+    {ko:'방울 목걸이',en:'bell collar',d:(c,l)=>`<path d="M-46 -8Q0 14 46 -8L45 4Q0 26 -45 4Z" fill="${c}" ${S}/><circle cy="20" r="13" fill="#FFD23F" ${S}/><path d="M-8 22h16M0 22v8" stroke="${OL}" stroke-width="3" stroke-linecap="round"/><circle cx="-4" cy="14" r="3" fill="#fff" opacity=".8"/>`},
+    /* 2-나 itemUnlock.toDraw */
+    {ko:'꽃목걸이',en:'flower lei',d:(c,l)=>[-42,-28,-14,0,14,28,42].map((x,i)=>{const y=-8+18*(1-Math.pow(x/42,2));return `<g transform="translate(${x} ${y.toFixed(1)})">${[0,1,2,3,4].map(j=>{const a=-Math.PI/2+j*Math.PI*2/5;return `<circle cx="${(6*Math.cos(a)).toFixed(1)}" cy="${(6*Math.sin(a)).toFixed(1)}" r="5.5" fill="${i%2?l:c}" stroke="${OL}" stroke-width="2.4"/>`}).join('')}<circle r="3.6" fill="#FFE066"/></g>`}).join('')},
+    {ko:'진주 목걸이',en:'pearl necklace',d:(c,l)=>`${[-44,-36,-27,-18,-9,0,9,18,27,36,44].map(x=>{const y=-8+16*(1-Math.pow(x/44,2));return `<circle cx="${x}" cy="${y.toFixed(1)}" r="5.6" fill="${l}" stroke="${OL}" stroke-width="2.4"/><circle cx="${x-1.8}" cy="${(y-1.8).toFixed(1)}" r="1.7" fill="#fff"/>`}).join('')}<path d="M0 14Q10 26 0 36Q-10 26 0 14Z" fill="${c}" ${S}/><circle cx="-2" cy="24" r="2.2" fill="#fff" opacity=".8"/>`}
   ],
   face:[
     {ko:'동그란 안경',en:'round glasses',d:(c,l)=>`<circle cx="-26" r="20" fill="rgba(255,255,255,.35)" stroke="${OL}" stroke-width="9"/><circle cx="26" r="20" fill="rgba(255,255,255,.35)" stroke="${OL}" stroke-width="9"/><path d="M-7 -2Q0 -8 7 -2" stroke="${OL}" stroke-width="9" fill="none"/><circle cx="-26" r="20" fill="none" stroke="${c}" stroke-width="4.5"/><circle cx="26" r="20" fill="none" stroke="${c}" stroke-width="4.5"/><path d="M-7 -2Q0 -8 7 -2" stroke="${c}" stroke-width="4.5" fill="none"/>`},
     {ko:'선글라스',en:'sunglasses',d:(c,l)=>`<path d="M-46 -12H-8Q-6 16 -27 16Q-46 16 -46 -12Z" fill="#4A3F6B" stroke="${c}" stroke-width="5" stroke-linejoin="round"/><path d="M46 -12H8Q6 16 27 16Q46 16 46 -12Z" fill="#4A3F6B" stroke="${c}" stroke-width="5" stroke-linejoin="round"/><path d="M-8 -8H8" stroke="${c}" stroke-width="5"/><path d="M-40 -6l8 10M14 -6l8 10" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".6"/>`},
-    {ko:'볼 스티커',en:'cheek stickers',card:'translate(0 -44) scale(1.7)',d:(c,l)=>`<g transform="translate(-48 26) scale(.36)"><path d="M0 30C-44 0 -38 -34 -18 -34C-8 -34 -2 -28 0 -20C2 -28 8 -34 18 -34C38 -34 44 0 0 30Z" fill="${c}" ${S}/></g><g transform="translate(48 26)">${A.star(0,0,13,c,S)}</g>`}
+    {ko:'볼 스티커',en:'cheek stickers',card:'translate(0 -44) scale(1.7)',d:(c,l)=>`<g transform="translate(-48 26) scale(.36)"><path d="M0 30C-44 0 -38 -34 -18 -34C-8 -34 -2 -28 0 -20C2 -28 8 -34 18 -34C38 -34 44 0 0 30Z" fill="${c}" ${S}/></g><g transform="translate(48 26)">${A.star(0,0,13,c,S)}</g>`},
+    /* 2-나 itemUnlock.toDraw */
+    {ko:'하트 안경',en:'heart glasses',d:(c,l)=>{const H=x=>`M${x} 18C${x-30} 0 ${x-26} -22 ${x-12} -22C${x-6} -22 ${x-1} -18 ${x} -12C${x+1} -18 ${x+6} -22 ${x+12} -22C${x+26} -22 ${x+30} 0 ${x} 18Z`;
+      return `<path d="${H(-26)}" fill="rgba(255,255,255,.35)" stroke="${OL}" stroke-width="9" stroke-linejoin="round"/><path d="${H(26)}" fill="rgba(255,255,255,.35)" stroke="${OL}" stroke-width="9" stroke-linejoin="round"/><path d="M-8 -6Q0 -12 8 -6" stroke="${OL}" stroke-width="9" fill="none"/><path d="${H(-26)}" fill="none" stroke="${c}" stroke-width="4.5" stroke-linejoin="round"/><path d="${H(26)}" fill="none" stroke="${c}" stroke-width="4.5" stroke-linejoin="round"/><path d="M-8 -6Q0 -12 8 -6" stroke="${c}" stroke-width="4.5" fill="none"/><path d="M-36 -10l6 -4M16 -10l6 -4" stroke="${l}" stroke-width="3" stroke-linecap="round"/>`}},
+    {ko:'별 스티커',en:'star stickers',card:'translate(0 -44) scale(1.7)',d:(c,l)=>`<g transform="translate(-48 26)">${A.star(0,0,13,c,S)}</g><g transform="translate(-34 40)">${A.star(0,0,7,l,`stroke="${OL}" stroke-width="2.4" stroke-linejoin="round"`)}</g><g transform="translate(48 26)">${A.star(0,0,13,c,S)}</g><g transform="translate(34 40)">${A.star(0,0,7,l,`stroke="${OL}" stroke-width="2.4" stroke-linejoin="round"`)}</g>`}
   ]
 };
 const SLOTS=['head','neck','face'];
+/* every drawn decoration by its English name (itemUnlock uses these names) */
+const ITEM={};SLOTS.forEach(k=>WEAR[k].forEach((it,i)=>{ITEM[it.en]=Object.assign({slot:k,legacy:i},it)}));
+/* ---------- itemUnlock: start items, then one more every everyCustomers customers in 'order' ---------- */
+const UNL=PS.itemUnlock||{},UNL_EVERY=Math.max(1,UNL.everyCustomers||3),UNL_ORDER=(UNL.order||[]).filter(n=>ITEM[n]),UNL_SLOT=UNL.slotOf||{};
+const slotOfItem=n=>UNL_SLOT[n]||(ITEM[n]||{}).slot;
+/* ---------- photoItems (P6 puts them in the closet with a category): same rules as drawn ones, a photo instead of a drawing ---------- */
+const PHO=PS.photoItems||{},PHO_SLOT=PHO.fromWardrobe||{},WCATS=((CF.wardrobe||{}).categories)||[];
+function photoItems(){
+  const list=store.get('mallang_closet',[]);if(!Array.isArray(list))return[];
+  return list.map((c,k)=>{if(!c||!c.img)return null;const cat=WCATS.find(w=>w.id===c.cat||w.ko===c.cat||w.id===c.category||w.ko===c.category);const slot=cat&&PHO_SLOT[cat.ko];if(!slot)return null;
+    return{id:'photo:'+(c.id||k),slot,photo:c.img,ko:c.name||cat.ko,en:c.en||cat.en}}).filter(Boolean);
+}
+const itemOf=n=>ITEM[n]||(String(n).startsWith('photo:')?photoItems().find(p=>p.id===n)||null:null);
+/* one decoration drawn around (0,0): drawn ones in their colour, photos as they are */
+const itemSVG=(it,c,l)=>!it?'':it.photo?`<image href="${it.photo}" x="-54" y="-50" width="108" height="100" preserveAspectRatio="xMidYMid meet"/>`:it.d(c,l);
+/* saved frames from before 2-나 keep {idx}: the position in the old lists */
+const wornId=(slot,w)=>w?(w.id||(WEAR[slot]&&WEAR[slot][w.idx]&&WEAR[slot][w.idx].en)||null):null;
 const SLOT={head:'translate(100 24) scale(.8)',neck:'translate(100 168) scale(.86)',face:'translate(100 100)'};
 const SLOT_PT={head:[100,24],neck:[100,168],face:[100,100]},SLOT_SCALE={head:.8,neck:.86,face:1};
 const HINT_PT={head:[100,20],neck:[100,164],face:[146,86]};
@@ -71,18 +112,21 @@ const ICON={
   sponge:`<svg viewBox="0 0 100 100"><rect x="14" y="26" width="72" height="50" rx="16" fill="${PAL.butter}" ${S}/><circle cx="26" cy="40" r="4" fill="#DDBB60"/><circle cx="74" cy="38" r="4" fill="#DDBB60"/><circle cx="72" cy="62" r="5" fill="#DDBB60"/><circle cx="28" cy="64" r="4.5" fill="#DDBB60"/><g class="tf"><circle class="tf-eye" cx="42" cy="47" r="3.8" fill="${OL}"/><circle class="tf-eye" cx="58" cy="47" r="3.8" fill="${OL}"/><path class="tf-smile" d="M44 55Q50 61 56 55" fill="none" stroke="${OL}" stroke-width="3" stroke-linecap="round"/><path class="tf-grin" opacity="0" d="M43 54Q50 65 57 54Z" fill="#B8474B" stroke="${OL}" stroke-width="2" stroke-linejoin="round"/></g><circle cx="22" cy="24" r="9" fill="#fff" ${S}/><circle cx="80" cy="76" r="7" fill="#fff" ${S}/></svg>`,
   shower:`<svg viewBox="0 0 100 100"><path d="M86 6Q88 28 62 36" fill="none" stroke="${OL}" stroke-width="13" stroke-linecap="round"/><path d="M86 6Q88 28 62 36" fill="none" stroke="#C8CDD6" stroke-width="6.5" stroke-linecap="round"/><path d="M22 60Q22 34 52 34Q82 34 82 60Z" fill="${PAL.sky}" ${S}/><g class="tf"><circle class="tf-eye" cx="44" cy="47" r="3.6" fill="${OL}"/><circle class="tf-eye" cx="60" cy="47" r="3.6" fill="${OL}"/><path class="tf-smile" d="M47 53Q52 57 57 53" fill="none" stroke="${OL}" stroke-width="3" stroke-linecap="round"/><path class="tf-grin" opacity="0" d="M46 52Q52 60 58 52Z" fill="#B8474B" stroke="${OL}" stroke-width="2" stroke-linejoin="round"/></g><rect x="18" y="58" width="68" height="11" rx="5.5" fill="#CFE5F4" ${S}/>${[28,40,52,64,76].map(x=>`<circle cx="${x}" cy="63.5" r="2.2" fill="#8FC3E6"/>`).join('')}</svg>`,
   dryer:`<svg viewBox="0 0 100 100"><path d="M52 52L60 90H44L40 54Z" fill="${PAL.lilac}" ${S}/><path d="M16 24H62Q84 24 84 40Q84 56 62 56H16Z" fill="${PAL.rose}" ${S}/><rect x="8" y="26" width="12" height="28" rx="4" fill="#8F7F9C" ${S}/><g class="tf"><g class="tf-eye"><circle cx="40" cy="36" r="4.5" fill="${OL}"/><circle cx="41.5" cy="34.5" r="1.5" fill="#fff"/></g><g class="tf-eye"><circle cx="58" cy="36" r="4.5" fill="${OL}"/><circle cx="59.5" cy="34.5" r="1.5" fill="#fff"/></g><path class="tf-smile" d="M42 44Q49 52 56 44" fill="none" stroke="${OL}" stroke-width="3.5" stroke-linecap="round"/><path class="tf-grin" opacity="0" d="M41 43Q49 55 57 43Z" fill="#B8474B" stroke="${OL}" stroke-width="2.2" stroke-linejoin="round"/></g></svg>`,
+  /* 2-나 tools.brush: a round comb with a little face */
+  brush:`<svg viewBox="0 0 100 100"><rect x="40" y="52" width="20" height="40" rx="10" fill="${PAL.lilac}" ${S}/><path d="M14 54Q14 18 50 18Q86 18 86 54Z" fill="${PAL.peach}" ${S}/>${[22,32,42,52,62,72].map(x=>`<path d="M${x+3} 54V70" stroke="${OL}" stroke-width="6" stroke-linecap="round"/><path d="M${x+3} 54V69" stroke="${PAL.peach}" stroke-width="2.5" stroke-linecap="round"/>`).join('')}<g class="tf"><circle class="tf-eye" cx="41" cy="36" r="3.8" fill="${OL}"/><circle class="tf-eye" cx="59" cy="36" r="3.8" fill="${OL}"/><path class="tf-smile" d="M44 44Q50 50 56 44" fill="none" stroke="${OL}" stroke-width="3" stroke-linecap="round"/><path class="tf-grin" opacity="0" d="M43 43Q50 54 57 43Z" fill="#B8474B" stroke="${OL}" stroke-width="2" stroke-linejoin="round"/></g><path d="M24 40Q28 28 40 24" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" opacity=".7"/></svg>`,
   mirror:`<svg viewBox="0 0 100 100"><ellipse cx="50" cy="44" rx="30" ry="36" fill="${PAL.butter}" ${S}/><ellipse cx="50" cy="44" rx="21" ry="27" fill="#EAF3F6" ${S}/><path d="M38 30Q43 22 53 21" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M50 81V92M36 94H64" stroke="${OL}" stroke-width="9" stroke-linecap="round"/><path d="M50 81V92M36 94H64" stroke="${PAL.butter}" stroke-width="3.5" stroke-linecap="round"/>${A.twinkle(82,16,7,'#F0D58A')}</svg>`,
   /* rules.sameLayoutEverywhere / shell.header.left: back is always the same round arrow (64px), one level up (salon → shop front → town) */
   back:`<svg viewBox="0 0 48 48"><path d="M17 13H29Q40 13 40 25Q40 37 29 37H16" fill="none" stroke="${OL}" stroke-width="6" stroke-linecap="round"/><path d="M19 4L8 13L19 22" fill="none" stroke="${OL}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   star:'<svg viewBox="0 0 20 20"><path d="M10 1l2.6 5.6 6 .7-4.5 4.1 1.2 6L10 14.5 4.7 17.4l1.2-6L1.4 7.3l6-.7z" fill="#F0D58A" stroke="#5B3A29" stroke-width="1.2"/></svg>'
 };
 /* P12 touch.tool.intro: the name the tool says when it jumps out of the tray */
-const TOOL_NAME={foam:['수세미!','Sponge!'],rinse:['샤워기!','Shower!'],dry:['드라이기!','Dryer!']};
+const TOOL_NAME={foam:['수세미!','Sponge!'],rinse:['샤워기!','Shower!'],dry:['드라이기!','Dryer!'],brush:['빗!','Comb!']};
 /* tool pictures and their working point (sponge bottom, shower head, dryer mouth) */
 const TOOL_OF={
   foam:{icon:ICON.sponge,effect:'foam',anchor:[.5,.86],gapScale:.35,log:'rub',alive:'sponge'}   /* 수세미는 문지르는 도구라 손가락에 더 가깝게 */,
   rinse:{icon:ICON.shower,effect:'water',anchor:[.52,.69],log:'water',alive:'shower'},
-  dry:{icon:ICON.dryer,effect:'wind',anchor:[.08,.4],log:'dry',alive:'dryer'}
+  dry:{icon:ICON.dryer,effect:'wind',anchor:[.08,.4],log:'dry',alive:'dryer'},
+  brush:{icon:ICON.brush,effect:'brush',anchor:[.5,.7],gapScale:.35,log:'brush',alive:'brush'}
 };
 /* need bubbles: what the customer wants, as a picture (no letters) */
 const NEED_ICON={
@@ -93,11 +137,7 @@ const NEED_ICON={
 };
 const bubble=need=>`<svg viewBox="0 0 60 56"><path d="M10 4H50Q58 4 58 12V34Q58 42 50 42H26L15 52L17 42H10Q2 42 2 34V12Q2 4 10 4Z" fill="#FFFDF9" stroke="${OL}" stroke-width="2.5" stroke-linejoin="round"/>${NEED_ICON[need]||''}</svg>`;
 const LEAF=(x,y,r,s)=>`<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${r}) scale(${s.toFixed(2)})"><path d="M0 -13Q12 -3 0 13Q-12 -3 0 -13Z" fill="#9CC48F" stroke="${OL}" stroke-width="2.2" stroke-linejoin="round"/><path d="M0 -9V10" stroke="#6E9E66" stroke-width="1.6"/></g>`;
-/* fluffed fur: a soft tuft on the outline, a little curl inside */
-const TUFT=(x,y,s,rot,body)=>`<path transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${rot.toFixed(0)}) scale(${s.toFixed(2)})" d="M-14 8Q-18 -2 -9 -5Q-7 -14 0 -11Q7 -14 9 -5Q18 -2 14 8Z" fill="${body}" stroke="${OL}" stroke-width="2.6" stroke-linejoin="round"/>`;
-const CURL=(x,y,s,col)=>`<path transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${s.toFixed(2)})" d="M-8 3q4 -7 8 0q4 -7 8 0" stroke="${col}" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".75"/>`;
 const DROP=(x,y,s)=>`<path transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${s.toFixed(2)})" d="M0 -9Q8 3 0 7Q-8 3 0 -9Z" fill="#9FD0F0" stroke="#6FB2DC" stroke-width="1.5"/>`;
-const FOAM=(x,y,s)=>`<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${s.toFixed(2)})"><g fill="#fff" stroke="#CDE9FA" stroke-width="2"><circle r="14"/><circle cx="12" cy="8" r="9.5"/><circle cx="-10" cy="9" r="8"/></g><circle cx="-5" cy="-5" r="3.5" fill="#E8F6FF"/></g>`;
 
 /* ---------- backgrounds ---------- */
 const TUB=`<svg viewBox="0 0 300 150"><ellipse cx="150" cy="142" rx="130" ry="8" fill="rgba(91,58,41,.16)"/><rect x="52" y="118" width="22" height="24" rx="8" fill="${PAL.butter}" ${S}/><rect x="226" y="118" width="22" height="24" rx="8" fill="${PAL.butter}" ${S}/>
@@ -126,8 +166,7 @@ const FRAME=(inner)=>`<svg viewBox="0 0 100 112"><g ${PF}><rect x="3" y="3" widt
 
 const css=`
 #petsalon{gap:8px}
-.psstars{display:flex;gap:2px;flex:none}
-.psstars svg{width:20px;height:20px}
+.psstars{display:flex;gap:2px;flex:none;margin-left:auto}
 #petsalon .bar .round{width:64px;height:64px;padding:10px}
 #petsalon .bar .round svg{display:block;width:100%;height:100%}
 .ps-salon{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px}
@@ -184,6 +223,11 @@ const css=`
 .ps-card.worn{box-shadow:0 0 0 4px color-mix(in srgb,var(--berry) 70%,#fff),0 4px 12px rgba(91,74,66,.16)}
 .ps-card.lift{opacity:.4}
 .ps-card.in{animation:pscard .3s ease-out both}
+.ps-card{position:relative}
+.ps-card .ps-badge{position:absolute;right:6px;top:4px;width:36px;height:36px;pointer-events:none}
+.ps-card .ps-badge svg{width:100%;height:100%}
+.ps-pet .wiggle{animation:pswig .7s ease-in-out;transform-box:fill-box;transform-origin:50% 50%}
+@keyframes pswig{0%,100%{transform:rotate(0)}25%{transform:rotate(-9deg)}75%{transform:rotate(9deg)}}
 @keyframes pscard{from{transform:translateY(24px);opacity:0}}
 .ps-mirbtn{position:absolute;right:10px;bottom:10px;width:116px;height:116px;border-radius:50%;border:0;padding:12px;background:var(--paper);z-index:9;opacity:0;transition:opacity .8s ease-out;
   box-shadow:0 5px 0 rgba(46,42,79,.14),0 8px 14px rgba(91,74,66,.14);display:grid;place-items:center}
@@ -233,7 +277,17 @@ const stage=$('#psStage'),petEl=$('#psPet'),baseEl=petEl.querySelector('.psbase'
 const lobbyEl=$('#psLobby'),salonEl=$('#psSalon'),seatsEl=$('#psSeats'),framesEl=$('#psFrames'),doorEl=$('#psDoor'),homeBtn=$('#psHome'),backBtn=$('#psBack');
 const G=M.Guide.make(sec,{say});
 const DATA=Object.assign({served:0,wall:[]},store.get('mallang_salon',{}));if(!Array.isArray(DATA.wall))DATA.wall=[];
+/* itemUnlock.storage = mallang_salon.items: unlocked (in order), fresh (not shown on a card yet), photoSeen (photo decorations already shown once) */
+DATA.items=Object.assign({unlocked:[],fresh:[],photoSeen:[]},DATA.items||{});['unlocked','fresh','photoSeen'].forEach(k=>{if(!Array.isArray(DATA.items[k]))DATA.items[k]=[]});
 const save=()=>store.set('mallang_salon',DATA);
+/* one more decoration every UNL_EVERY customers (served so far), independent of the level */
+function unlockByServed(){
+  const want=Math.min(UNL_ORDER.length,Math.floor(DATA.served/UNL_EVERY)),U=DATA.items;let added=[];
+  while(U.unlocked.length<want){const n=UNL_ORDER.find(x=>!U.unlocked.includes(x));if(!n)break;U.unlocked.push(n);U.fresh.push(n);added.push(n)}
+  if(added.length)save();return added;
+}
+unlockByServed();
+if(PROG)PROG.register(id,{max:PLAY_MAX,name:'동물 미용실',seg:'setSalonLv'});
 /* P12: living characters (alive.js). al = the customer in the salon, lobbyAl = the three waiting outside */
 const AL=M.Alive||null;let al=null,lobbyAl=[],turns=null,lastTickle=0;
 const alPlay=(n,o)=>{if(al&&al.play(n,o))LOG.push('play:'+n)};   // started now or right after the current one
@@ -248,48 +302,27 @@ let view='lobby',phase='',mood='idle',raf=0,lastMiss=0,misses=0,toolE=null,st=nu
 const killTool=()=>{if(toolE){toolE.destroy();toolE=null}};
 const clearFloats=()=>{sec.querySelectorAll('.ps-float,.ps-photo').forEach(f=>f.remove());pfx.innerHTML=''};
 
-/* ---------- coverage cells over the pet picture (viewBox 0 0 200 230), grid from tools.coverage ---------- */
+/* ---------- coverage cells over the pet picture (viewBox 0 0 200 230), grid from tools.coverage (ART.petCells) ---------- */
 const GR=COV.grid||[6,6];
-const inSil=(x,y)=>y<=192&&   /* 발 쪽은 욕조에 가려서 칸에서 뺌 */(Math.hypot(x-100,y-100)<=72||((x-100)/50)**2+((y-188)/40)**2<=1);
-const EYES=[[74,100],[126,100]];
-const CELLS=[];
-for(let r=0;r<GR[1];r++)for(let c=0;c<GR[0];c++){
-  const w=200/GR[0],h=230/GR[1],x0=c*w,y0=r*h;let n=0,sx=0,sy=0;
-  for(let a=0;a<5;a++)for(let b=0;b<5;b++){const x=x0+(a+.5)*w/5,y=y0+(b+.5)*h/5;if(inSil(x,y)){n++;sx+=x;sy+=y}}
-  if(COV.insidePetOnly===false){if(!n){sx=x0+w/2;sy=y0+h/2;n=1}}else if(n<3)continue;
-  const cx=sx/n,cy=sy/n;let dx=cx,dy=cy;
-  EYES.forEach(([ex,ey])=>{const d=Math.hypot(dx-ex,dy-ey);if(d<24){const k=26/(d||1);dx=ex+(dx-ex)*k;dy=ey+(dy-ey)*k}});
-  const face=((cx-100)/54)**2+((cy-112)/36)**2<=1;let edge=null;
-  if(cy<160){const d=Math.hypot(cx-100,cy-100);if(d>40)edge=[100+(cx-100)/d*70,100+(cy-100)/d*70,Math.atan2(cy-100,cx-100)*180/Math.PI+90]}
-  else if(Math.abs(cx-100)>26){const an=Math.atan2((cy-188)/40,(cx-100)/50);edge=[100+50*Math.cos(an),188+40*Math.sin(an),an*180/Math.PI+90]}
-  CELLS.push({col:c,row:r,cx,cy,dx,dy,fx:cx/200,fy:cy/230,face,edge});
-}
+const CELLS=A.petCells(GR,COV.insidePetOnly!==false);
 
 /* ---------- drawing ---------- */
-/* cells on the head go into the head group of the overlay, so mud, foam and head wear move with the head (P12) */
-const HEAD_Y=158,onHead=P0=>P0.cy<HEAD_Y;
+/* the customer's look, cell by cell (ART.petLayer: muddy → foamy → wet → fluffy); head cells go into the head group so they move with the head (P12) */
 function drawOver(popSlot){
-  if(!st)return;const out={b:'',h:''},K=A.KINDS[st.kind]||A.KINDS.bunny,put=(P0,x)=>{out[onHead(P0)?'h':'b']+=x};
-  st.cells.forEach((c,i)=>{const P0=CELLS[i];
-    const mud=c.mud*(1-.6*c.foam)*(1-c.rinse);if(mud>.02)put(P0,`<path d="${A.blob(P0.dx,P0.dy,c.mr,.5,7,i+11)}" fill="#8A5A36" opacity="${(mud*.85).toFixed(2)}"/>`);
-    const lf=c.leaf*(1-c.rinse);if(lf>.02)put(P0,LEAF(P0.dx,P0.dy,c.lr,.6+.4*lf))});
-  st.cells.forEach((c,i)=>{const P0=CELLS[i],f=c.foam*(1-c.rinse);if(f>.02)put(P0,FOAM(P0.dx,P0.dy,(P0.face?.6:.85)*(.35+.65*f)))});
-  st.cells.forEach((c,i)=>{const P0=CELLS[i],w=c.rinse*(1-c.dry);if(w>.04)put(P0,DROP(P0.dx+6,P0.dy-4,.5+.5*w))});
-  st.cells.forEach((c,i)=>{const P0=CELLS[i],d=c.dry;if(d<=.02)return;
-    if(P0.edge)put(P0,TUFT(P0.edge[0],P0.edge[1],.35+.45*d,P0.edge[2],K.body));
-    if(P0.face)put(P0,A.twinkle(P0.dx,P0.dy-6,2+3*d,'#fff'));else put(P0,CURL(P0.dx,P0.dy,.5+.5*d,K.dark))});
-  ['neck','face','head'].forEach(k=>{const w=st.wear[k];if(!w||st.drag===k)return;const it=WEAR[k][w.idx],col=COLORS[w.col],viv=it.d(col[4],col[3]);
-    const b=st.bloom&&st.bloom.slot===k?performance.now()-st.bloom.t:1e9;
-    out[k==='neck'?'b':'h']+=`<g data-slot="${k}" transform="${SLOT[k]}">`+(b<BLOOM?`<g class="${popSlot===k?'pop':''}"><g>${it.d(col[2],col[3])}</g><g class="bloom" style="animation-duration:${BLOOM}ms;animation-delay:${-Math.round(b)}ms">${viv}</g></g>`:`<g>${viv}</g>`)+`</g>`});
-  if(phase==='dress'&&!st.hintOff)SLOTS.forEach(k=>{if(!st.wear[k])out[k==='neck'?'b':'h']+=A.twinkle(HINT_PT[k][0],HINT_PT[k][1],10,'#F0D58A')});
+  if(!st)return;const L0=A.petLayer(st.kind,CELLS,st.cells),out={b:L0.b,h:L0.h};st.states=L0.states;
+  const look=A.petState(st.cells);if(look!==st.look){st.look=look;LOG.push('look:'+(look||'clean'));drawPet()}
+  ['neck','face','head'].forEach(k=>{const w=st.wear[k];if(!w||st.drag===k)return;const it=itemOf(w.id);if(!it)return;const col=COLORS[w.col]||COLORS[0],viv=itemSVG(it,col[4],col[3]);
+    const b=st.bloom&&st.bloom.slot===k?performance.now()-st.bloom.t:1e9,wig=st.wiggle&&st.wiggle.slot===k&&performance.now()-st.wiggle.t<700?' wiggle':'';
+    out[k==='neck'?'b':'h']+=`<g data-slot="${k}" data-item="${it.id||it.en}" transform="${SLOT[k]}">`+(b<BLOOM&&!it.photo?`<g class="${popSlot===k?'pop':''}"><g>${itemSVG(it,col[2],col[3])}</g><g class="bloom" style="animation-duration:${BLOOM}ms;animation-delay:${-Math.round(b)}ms">${viv}</g></g>`:`<g class="${(popSlot===k?'pop':'')+wig}">${viv}</g>`)+`</g>`});
+  if(phase==='dress'&&!st.hintOff)openSlots().forEach(k=>{if(!st.wear[k])out[k==='neck'?'b':'h']+=A.twinkle(HINT_PT[k][0],HINT_PT[k][1],10,'#F0D58A')});
   ovBody.innerHTML=out.b;ovHead.innerHTML=out.h;
 }
-function drawPet(m,extra){mood=m||mood;if(!st)return;baseEl.innerHTML=A.animal(st.kind,mood,Object.assign({lash:true},extra||{}));if(al)al.refresh()}
+function drawPet(m,extra){mood=m||mood;if(!st)return;baseEl.innerHTML=A.animal(st.kind,mood,Object.assign({lash:true,state:st.look||''},extra||{}));if(al)al.refresh()}
 /* the face area on screen (head circle of the picture), so a big tool turns see-through over it */
 const faceRect=()=>{const r=petEl.getBoundingClientRect(),u=r.width/200,v=r.height/230;return{left:r.left+40*u,right:r.left+160*u,top:r.top+48*v,bottom:r.top+150*v,width:120*u,height:102*v}};
 function rd(){if(!raf)raf=requestAnimationFrame(()=>{raf=0;drawOver()})}
 const svgInner=s=>s.replace(/^<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'');
-function wearSVG(wear){return['neck','face','head'].map(k=>{const w=wear[k];if(!w||!WEAR[k][w.idx])return'';const col=COLORS[w.col]||COLORS[0];return `<g transform="${SLOT[k]}">${WEAR[k][w.idx].d(col[4],col[3])}</g>`}).join('')}
+function wearSVG(wear){return['neck','face','head'].map(k=>{const it=itemOf(wornId(k,wear[k]));if(!it)return'';const col=COLORS[wear[k].col]||COLORS[0];return `<g transform="${SLOT[k]}">${itemSVG(it,col[4],col[3])}</g>`}).join('')}
 function portrait(kind,wear,m){return svgInner(A.animal(kind,m||'happy',{lash:true}))+wearSVG(wear||{})}
 function size(){
   const r=stage.getBoundingClientRect();if(!r.width)return;
@@ -297,7 +330,8 @@ function size(){
   const tw=Math.round(w*1.28),th=tw*150/300,petBottom=r.height*.09,rimY=r.height-petBottom-h*(28/230);
   tub.style.width=tw+'px';tub.style.bottom=Math.round(r.height-(rimY-th*(22/150))-th)+'px';
 }
-function stars(){$('#psStars').innerHTML=Array.from({length:Math.min(8,DATA.served)},()=>ICON.star).join('')}
+/* progress: the 3-star row at the top (ML.Progress). n = how many to show filled (default: the saved clears) */
+function stars(n){$('#psStars').innerHTML=PROG?PROG.stars(id,n):''}
 function meter(icon){panel.innerHTML=`<div class="pzmeter"><span class="mi">${icon}</span><div class="mbar"><i></i></div><span class="mstar">${ICON.star}</span></div>`}
 function prog(p){p=Math.max(0,Math.min(1,p));const b=panel.querySelector('.mbar i');if(b)b.style.width=(p*100)+'%';const s=panel.querySelector('.mstar');if(s)s.classList.toggle('full',p>=1)}
 function anim(cls){petEl.classList.remove('enter','callme','leave');void petEl.offsetWidth;if(cls)petEl.classList.add(cls)}
@@ -317,14 +351,19 @@ const cellXY=i=>{const r=petEl.getBoundingClientRect(),s=stage.getBoundingClient
 const unitPx=()=>petEl.getBoundingClientRect().width/200;
 
 /* ============================== shop front (가게 앞) ============================== */
+/* customers of this level (levels[].customers) with needs of this level (needs[].from) */
+const levelKinds=()=>{const ks=(LV().customers||[]).map(k=>KINDS.find(a=>a.id===k)).filter(Boolean);return ks.length?ks:KINDS};
 function newCustomer(avoidKinds,wantNeed){
-  const kinds=KINDS.filter(k=>!avoidKinds.includes(k.id)),k=pick(kinds.length?kinds:KINDS);
-  const need=NEED_POOL.find(n=>n.id===wantNeed)||pick(NEED_POOL)||{id:'party',steps:[]};
+  const pool=levelKinds(),kinds=pool.filter(k=>!avoidKinds.includes(k.id)),k=pick(kinds.length?kinds:pool),NP=needPool();
+  const need=NP.find(n=>n.id===wantNeed)||pick(NP)||{id:'party',steps:[]};
   return{kind:k.id,need:need.id,name:k.name||k.ko,inside:false};
 }
+/* a waiting customer this level cannot serve (after the parent lowers the level, or a quiet step down) goes home */
+const validCust=c=>!!c&&levelKinds().some(k=>k.id===c.kind)&&needPool().some(n=>n.id===c.need);
 function fillLobby(avoid){
   while(lobby.length<WAITING)lobby.push(null);
-  lobby.forEach((c,i)=>{if(c)return;const others=lobby.filter(Boolean),missing=NEED_POOL.map(n=>n.id).filter(n=>!others.some(o=>o.need===n));lobby[i]=newCustomer(others.map(o=>o.kind).concat(avoid||[]),pick(missing.length?missing:NEED_POOL.map(n=>n.id)))});
+  const NP=needPool().map(n=>n.id);
+  lobby.forEach((c,i)=>{if(c)return;const others=lobby.filter(Boolean),missing=NP.filter(n=>!others.some(o=>o.need===n));lobby[i]=newCustomer(others.map(o=>o.kind).concat(avoid||[]),pick(missing.length?missing:NP))});
 }
 function seatBox(i){const r=lobbyEl.getBoundingClientRect(),W=r.width,H=r.height,bw=Math.round(Math.max(112,Math.min(W*.3,H*.26,210))),gap=(W-3*bw)/4,bh=Math.round(bw*1.32);return{left:gap+i*(bw+gap),bottom:Math.round(H*.03),w:bw,h:bh,W,H}}
 function custHTML(c,i){const a=kindOf(c.kind);return `<button class="lb-cust" data-i="${i}" aria-label="${a.ko}"><span class="lb-ani">${A.animal(c.kind,'idle',{lash:true})}</span><span class="lb-bub">${bubble(c.need)}</span></button>`}
@@ -345,12 +384,33 @@ function showLobby(o={}){
   L.begin();killTool();G.stop();clearFloats();
   view='lobby';phase='lobby';st=null;seatIdx=-1;cards=null;dd=null;cd=null;L.onEnd(lobbyAliveOff);
   lobbyEl.hidden=false;salonEl.hidden=true;homeBtn.hidden=false;backBtn.hidden=true;
-  lobby.forEach(c=>{if(c)c.inside=false});fillLobby();
+  lobby=lobby.map((c,i)=>c&&(validCust(c)||(o.served&&i===o.slot))?c:null);lobby.forEach(c=>{if(c)c.inside=false});fillLobby();
   renderFrames(!!o.served);
+  const R=o.result;stars(R?R.filled-1:undefined);
   if(o.served){
-    phase='arrive';renderSeats(o.slot);walkOut(o.served,()=>arrive(o.slot));
+    phase='arrive';renderSeats(o.slot);
+    /* progress: after the mirror scene one star fills slowly; a full row → the level-up moment, then an empty row for the new level */
+    if(R)L.later(()=>{if(PROG)PROG.fillStars($('#psStars'),R.filled);LOG.push('star:'+R.filled)},350);
+    walkOut(o.served,()=>{
+      if(R&&R.up){levelUpMoment(R.level,()=>{stars(0);arrive(o.slot)});return}
+      if(R&&R.full)L.later(()=>{stars(0);arrive(o.slot)},500);else arrive(o.slot)});
   }else{renderSeats();greet()}
-  stars();
+}
+/* progress.levelUpMoment: the one new thing of the new level, shown big with its name (3 s). What is new comes from the level table */
+function newThing(n){
+  const cur=LEVELS[n-1]||{},prev=LEVELS[n-2]||{steps:[],choose:[],customers:[]};
+  const step=(cur.steps||[]).find(s=>!(prev.steps||[]).includes(s)&&TOOL_OF[s]);
+  if(step)return{art:TOOL_OF[step].icon,ko:TOOL_NAME[step][0],en:TOOL_NAME[step][1],what:'step:'+step};
+  const slot=(cur.choose||[]).find(k=>!(prev.choose||[]).includes(k)&&ITEM[((UNL.start||{})[k]||[])[0]]);
+  if(slot){const it=ITEM[UNL.start[slot][0]],c=COLORS[0];return{art:`<svg viewBox="-58 -56 116 112"><g transform="${it.card||''}">${it.d(c[4],c[3])}</g></svg>`,ko:it.ko+'!',en:cap(it.en)+'!',what:'slot:'+slot}}
+  if(BRUSH_FROM===n)return{art:ICON.brush,ko:TOOL_NAME.brush[0],en:TOOL_NAME.brush[1],what:'step:brush'};
+  const kind=(cur.customers||[]).find(k=>!(prev.customers||[]).includes(k)&&A.KINDS[k]);
+  if(kind){const a=kindOf(kind);return{art:A.animal(kind,'happy',{lash:true}),ko:a.ko+'!',en:cap(a.en)+'!',what:'kind:'+kind}}
+  return null;
+}
+function levelUpMoment(n,then){
+  const t=newThing(n);LOG.push('levelup:'+n+(t?':'+t.what:''));if(!t||!PROG){then();return}
+  phase='levelup';let stop=PROG.moment(lobbyEl,t,()=>{stop=null;if(view==='lobby')then()});L.onEnd(()=>{if(stop)stop()});
 }
 function greet(){phase='lobby';say(LINE.lobby[0],LINE.lobby[1],true);
   G.start({type:'tap',at:()=>{const b=seatsEl.querySelector('.lb-slot:nth-child(2) .lb-cust')||seatsEl.querySelector('.lb-cust');if(!b)return[sec.clientWidth/2,sec.clientHeight/2];const r=b.getBoundingClientRect();return secXY(r.left+r.width/2,r.top+r.height*.55)},ko:LINE.lobby[0],en:LINE.lobby[1]})}
@@ -387,11 +447,12 @@ backBtn.addEventListener('click',()=>{if(view!=='salon')return;actx();sfx.pop();
 /* ============================== in the salon ============================== */
 function freshState(c){
   const R=A.rng((Date.now()&0xffff)+c.kind.length*97);
-  const cells=CELLS.map(()=>({mud:0,mr:10,leaf:0,lr:0,foam:0,rinse:0,dry:0}));
+  const cells=CELLS.map(()=>({mud:0,mr:10,leaf:0,lr:0,foam:0,rinse:0,dry:0,tangle:0,brush:0,shaken:0}));
   if(c.need==='muddy'){cells.forEach(x=>{x.mud=R()<.7?1:0;x.mr=9+R()*6});let k=0;while(cells.filter(x=>x.mud).length<7&&k<99)cells[(R()*cells.length)|0].mud=1,k++}
   if(c.need==='leaves'){cells.forEach(x=>{x.leaf=R()<.4?1:0;x.lr=Math.round(R()*360)});let k=0;while(cells.filter(x=>x.leaf).length<6&&k<99)cells[(R()*cells.length)|0].leaf=1,k++}
-  const need=NEEDS.find(n=>n.id===c.need)||{steps:[]};
-  return{kind:c.kind,need:c.need,name:c.name,steps:(need.steps||[]).filter(s=>STEPS_READY.includes(s)),cells,wear:{},used:{},drag:null,bloom:null,hintOff:false,doneRatio:{}};
+  if(c.need==='tangled'){cells.forEach((x,i)=>{x.tangle=!CELLS[i].face&&R()<.55?1:0});let k=0;while(cells.filter(x=>x.tangle).length<8&&k<99){const i=(R()*cells.length)|0;if(!CELLS[i].face)cells[i].tangle=1;k++}}
+  const need=NEEDS.find(n=>n.id===c.need)||{steps:[]},steps=stepsOf(need);
+  return{kind:c.kind,need:c.need,name:c.name,steps,plan:steps.slice(),level:lvNo(),cells,look:'',states:[],wear:{},used:{},drag:null,bloom:null,wiggle:null,hintOff:false,doneRatio:{},wrong:0,idle:0,lastTouch:0};
 }
 function enterSalon(i){
   L.begin();killTool();G.stop();clearFloats();
@@ -400,7 +461,7 @@ function enterSalon(i){
   lobbyEl.hidden=true;salonEl.hidden=false;homeBtn.hidden=true;backBtn.hidden=false;
   panel.innerHTML='';tub.classList.remove('on');mirBtn.hidden=true;mirBtn.classList.remove('on');petEl.classList.remove('up');stage.classList.remove('up');
   if(AL){al=AL.attach(petEl,{kind:st.kind});const me=al;L.onEnd(()=>{me.detach();if(al===me)al=null})}
-  size();drawPet('idle');drawOver();stars();anim('enter');
+  st.look=A.petState(st.cells);size();drawPet('idle');drawOver();stars();anim('enter');
   /* bigMoments: comes in with two hops and a wave; moods: dirty = sad, party = happy */
   alMood(c.need==='party'?'happy':'sad');L.later(()=>{alPlay('hop',{n:2,wave:true});if(al)al.sound('hehe')},900);
   const need=NEEDS.find(n=>n.id===c.need)||{},hello=c.need==='party'&&need.say?need.say:(LINE[c.need]||LINE.muddy)(c.name);

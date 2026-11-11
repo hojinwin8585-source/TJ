@@ -35,9 +35,16 @@ const AL_FB=(x,y)=>`style="transform-origin:${x}% ${y}%"`;
 const AL_EAR={bunny:[[50,100],[50,100]],bear:[[72,88],[28,88]],cat:[[52,78],[48,78]],dog:[[66,6],[34,6]]};
 /* tail tucked behind the body (hidden when still, peeks out when it wags) */
 const AL_TAIL={bunny:'<circle cx="124" cy="206" r="10"',bear:'<circle cx="124" cy="206" r="9"',cat:'<ellipse cx="126" cy="207" rx="14" ry="6" transform="rotate(-20 126 207)"',dog:'<ellipse cx="126" cy="207" rx="14" ry="7" transform="rotate(-20 126 207)"'};
+/* P2-나 petStates: how far the ears hang down in each look (0 = up, 1 = wet and droopy), and where each ear turns for it (viewBox units) */
+const EAR_DROOP={muddy:.3,foamy:.2,rinse1:.6,wet:1,dry1:.5,fluffy:0};
+const EAR_PIVOT={bunny:[[78,74,-24],[122,74,24]],bear:[[56,64,-14],[144,64,14]],cat:[[62,58,-18],[138,58,18]],dog:[[50,72,-9],[150,72,9]]};
 function animal(kind='bunny',mood='idle',opt={}){
   const k=KINDS[kind]||KINDS.bunny,id=uid('an'),c=`url(#${id}b)`,EYE='#4A2E20';let s='';
-  const ear=(side,inner)=>{const o=(AL_EAR[kind]||AL_EAR.bunny)[side==='l'?0:1];return `<g class="al-ear al-ear-${side}" ${AL_FB(o[0],o[1])}><g class="al-ear-s">${inner}</g></g>`};
+  /* opt.state: one of games.petsalon.petStates (muddy · foamy · rinse1 · wet · dry1 · fluffy). opt.cells: per-cell values (see petLayer) so the look changes where it was touched */
+  const state=opt.state||'',droop=EAR_DROOP[state]||0,vals=opt.cells||(state?stateCells(state):null),layer=vals?petLayer(kind,PET_CELLS(opt.grid),vals):null;
+  const ear=(side,inner)=>{const o=(AL_EAR[kind]||AL_EAR.bunny)[side==='l'?0:1],pv=(EAR_PIVOT[kind]||EAR_PIVOT.bunny)[side==='l'?0:1];
+    if(droop)inner=`<g class="ps-droop" transform="rotate(${(pv[2]*droop).toFixed(1)} ${pv[0]} ${pv[1]})">${inner}</g>`;
+    return `<g class="al-ear al-ear-${side}" ${AL_FB(o[0],o[1])}><g class="al-ear-s">${inner}</g></g>`};
   s+=`<defs><radialGradient id="${id}b" cx=".36" cy=".28" r=".85"><stop offset="0" stop-color="${k.body}"/><stop offset=".62" stop-color="${k.body}"/><stop offset="1" stop-color="${k.edge}"/></radialGradient>
     <radialGradient id="${id}c"><stop offset="0" stop-color="${k.cheek}" stop-opacity=".95"/><stop offset=".6" stop-color="${k.cheek}" stop-opacity=".55"/><stop offset="1" stop-color="${k.cheek}" stop-opacity="0"/></radialGradient></defs>`;
   s+=`<ellipse cx="100" cy="225" rx="58" ry="6" fill="rgba(91,58,41,.16)"/>`;
@@ -50,6 +57,8 @@ function animal(kind='bunny',mood='idle',opt={}){
   if(opt.apron)s+=`<path d="M72 164H128L134 220Q100 228 66 220Z" fill="${opt.apron}" ${S}/><rect x="88" y="184" width="24" height="16" rx="5" fill="#fff" opacity=".75"/><path d="M92 172c-5-6-13 1-6 7l6 5 6-5c7-6-1-13-6-7z" fill="#fff" opacity=".9" transform="translate(8 0)"/>`;
   s+=`<g class="al-arm al-arm-l" ${AL_FB(90,8)}><g class="al-arm-s"><ellipse cx="52" cy="182" rx="13" ry="21" fill="${c}" ${S} transform="rotate(28 52 182)"/></g></g>`;
   s+=`<g class="al-arm al-arm-r" ${AL_FB(10,8)}><g class="al-arm-s"><g${opt.wave?' class="wave"':''}><ellipse cx="148" cy="182" rx="13" ry="21" fill="${c}" ${S} transform="rotate(-28 148 182)"/></g></g></g>`;
+  if(state==='fluffy')s+=`<path class="ps-sheen" d="M66 172Q74 160 90 157" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" opacity=".55"/>`;
+  if(layer)s+=`<g class="ps-cells" data-state="${state}">${layer.b}</g>`;
   /* head: ears are behind the head (they never touch the body, so drawing them after the body looks the same) */
   s+=`<g class="al-head" ${AL_VB(100,166)}><g class="al-head-s" ${AL_VB(100,166)}>`;
   if(kind==='bunny')s+=`<g class="ears">${ear('l',`<ellipse cx="72" cy="36" rx="19" ry="44" fill="${c}" ${S} transform="rotate(-10 72 36)"/><ellipse cx="72" cy="40" rx="9" ry="31" fill="${k.inner}" transform="rotate(-10 72 40)"/>`)}
@@ -91,8 +100,104 @@ function animal(kind='bunny',mood='idle',opt={}){
   /* hats */
   if(opt.chef)s+=`<g><path d="M64 36Q48 8 76 2Q86 -14 100 -6Q114 -16 124 0Q152 6 136 36Z" fill="#fff" ${S}/><rect x="66" y="30" width="68" height="20" rx="7" fill="#fff" ${S}/><path d="M78 40h44" stroke="#E6EAF0" stroke-width="3" stroke-linecap="round"/></g>`;
   if(opt.bow)s+=`<g transform="translate(140 42) rotate(20)"><path d="M0 0L-22 -15Q-27 0 -22 15Z" fill="${opt.bow}" ${S}/><path d="M0 0L22 -15Q27 0 22 15Z" fill="${opt.bow}" ${S}/><circle r="7.5" fill="${opt.bow}" ${S}/><circle cx="-13" cy="-4" r="2.5" fill="#fff" opacity=".7"/></g>`;
+  if(state==='fluffy')s+=`<path class="ps-sheen" d="M52 72Q62 46 92 38" stroke="#fff" stroke-width="7" fill="none" stroke-linecap="round" opacity=".5"/>${twinkle(150,62,6,'#fff')}`;
+  if(layer)s+=`<g class="ps-cells" data-state="${state}">${layer.h}</g>`;
   s+=`</g></g></g></g>`;
-  return `<svg class="ani ani-${mood}" viewBox="0 0 200 230" style="overflow:visible" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
+  return `<svg class="ani ani-${mood}${state?' ps-st-'+state:''}" viewBox="0 0 200 230" style="overflow:visible" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
+}
+
+/* ---------- P2-나: the changing looks of a salon customer, cell by cell ----------
+   PET_CELLS(grid): the cells inside the animal picture (viewBox 0 0 200 230), grid [cols, rows] (games.petsalon.tools.coverage.grid).
+   Each cell: col,row, cx,cy (centre), dx,dy (drawing point, kept off the eyes), fx,fy (fractions), face (on the face), edge ([x,y,deg] on the outline or null), head (moves with the head).
+   petLayer(kind, cells, vals): vals[i] = {mud,mr, foam, leaf,lr, rinse, dry, tangle, brush, shaken} (0..1). Returns {b: body part, h: head part, states: name of each cell}.
+   A cell's look: muddy (진흙) → foamy (거품) → wet (털이 처지고 물방울) → fluffy (털 뭉치와 윤기). leafy and tangled for those customers, clean when nothing is left. */
+const PET_HEAD_Y=158;
+const petInSil=(x,y)=>y<=192&&(Math.hypot(x-100,y-100)<=72||((x-100)/50)**2+((y-188)/40)**2<=1);   // feet are hidden by the tub, so not counted
+const PET_CACHE={};
+function PET_CELLS(grid=[6,6],insideOnly=true){
+  const key=grid.join('x')+(insideOnly?'':'a');if(PET_CACHE[key])return PET_CACHE[key];
+  const EYES=[[74,100],[126,100]],out=[];
+  for(let r=0;r<grid[1];r++)for(let c=0;c<grid[0];c++){
+    const w=200/grid[0],h=230/grid[1],x0=c*w,y0=r*h;let n=0,sx=0,sy=0;
+    for(let a=0;a<5;a++)for(let b=0;b<5;b++){const x=x0+(a+.5)*w/5,y=y0+(b+.5)*h/5;if(petInSil(x,y)){n++;sx+=x;sy+=y}}
+    if(!insideOnly){if(!n){sx=x0+w/2;sy=y0+h/2;n=1}}else if(n<3)continue;
+    const cx=sx/n,cy=sy/n;let dx=cx,dy=cy;
+    EYES.forEach(([ex,ey])=>{const d=Math.hypot(dx-ex,dy-ey);if(d<24){const k=26/(d||1);dx=ex+(dx-ex)*k;dy=ey+(dy-ey)*k}});
+    const face=((cx-100)/54)**2+((cy-112)/36)**2<=1;let edge=null;
+    if(cy<160){const d=Math.hypot(cx-100,cy-100);if(d>40)edge=[100+(cx-100)/d*70,100+(cy-100)/d*70,Math.atan2(cy-100,cx-100)*180/Math.PI+90]}
+    else if(Math.abs(cx-100)>26){const an=Math.atan2((cy-188)/40,(cx-100)/50);edge=[100+50*Math.cos(an),188+40*Math.sin(an),an*180/Math.PI+90]}
+    out.push({col:c,row:r,cx,cy,dx,dy,fx:cx/200,fy:cy/230,face,edge,head:cy<PET_HEAD_Y});
+  }
+  return PET_CACHE[key]=out;
+}
+/* little pictures of the looks */
+const PL={
+  leaf:(x,y,r,s)=>`<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${r}) scale(${s.toFixed(2)})"><path d="M0 -13Q12 -3 0 13Q-12 -3 0 -13Z" fill="#9CC48F" stroke="${OL}" stroke-width="2.2" stroke-linejoin="round"/><path d="M0 -9V10" stroke="#6E9E66" stroke-width="1.6"/></g>`,
+  foam:(x,y,s)=>`<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${s.toFixed(2)})"><g fill="#fff" stroke="#CDE9FA" stroke-width="2"><circle r="14"/><circle cx="12" cy="8" r="9.5"/><circle cx="-10" cy="9" r="8"/></g><circle cx="-5" cy="-5" r="3.5" fill="#E8F6FF"/></g>`,
+  drop:(x,y,s)=>`<path transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${s.toFixed(2)})" d="M0 -9Q8 3 0 7Q-8 3 0 -9Z" fill="#9FD0F0" stroke="#6FB2DC" stroke-width="1.5"/>`,
+  /* wet fur hangs straight down in a thin lock */
+  drip:(x,y,s,body)=>`<path transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${s.toFixed(2)})" d="M-8 -4Q-7 8 -2 16Q0 20 2 16Q7 8 8 -4Z" fill="${body}" stroke="${OL}" stroke-width="2.4" stroke-linejoin="round"/>`,
+  damp:(x,y,r,col,o)=>`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="${col}" opacity="${o.toFixed(2)}"/>`,
+  /* fluffed fur: a soft tuft on the outline, a little curl inside */
+  tuft:(x,y,s,rot,body)=>`<path transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${rot.toFixed(0)}) scale(${s.toFixed(2)})" d="M-14 8Q-18 -2 -9 -5Q-7 -14 0 -11Q7 -14 9 -5Q18 -2 14 8Z" fill="${body}" stroke="${OL}" stroke-width="2.6" stroke-linejoin="round"/>`,
+  curl:(x,y,s,col)=>`<path transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${s.toFixed(2)})" d="M-8 3q4 -7 8 0q4 -7 8 0" stroke="${col}" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".75"/>`,
+  /* tangled fur: a scribbly knot; brushed: two smooth lines */
+  knot:(x,y,s,col,seed)=>`<path transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${(seed*47)%360}) scale(${s.toFixed(2)})" d="M-11 2q3 -9 7 -2t6 -3t6 4q-2 7 -8 4t-7 4t-5 -5" stroke="${col}" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+  smooth:(x,y,s,col)=>`<path transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${s.toFixed(2)})" d="M-9 -4Q0 -7 9 -4M-9 3Q0 0 9 3" stroke="${col}" stroke-width="2.2" fill="none" stroke-linecap="round" opacity=".6"/>`
+};
+function cellState(v){
+  if(!v)return'clean';
+  const rinse=v.rinse||0,dry=v.dry||0,wet=v.shaken?0:rinse*(1-dry),foam=(v.foam||0)*(1-rinse),mud=(v.mud||0)*(1-.6*(v.foam||0))*(1-rinse);
+  if(dry>=.5&&!v.shaken)return'fluffy';
+  if(wet>.3)return'wet';
+  if(foam>.3)return'foamy';
+  if(mud>.3)return'muddy';
+  if((v.leaf||0)*(1-rinse)>.3)return'leafy';
+  if((v.tangle||0)*(1-(v.brush||0))>.3)return'tangled';
+  return'clean';
+}
+function petLayer(kind,cells,vals){
+  const K=KINDS[kind]||KINDS.bunny,out={b:'',h:'',states:[]},put=(P,i,st,x)=>{out[P.head?'h':'b']+=`<g data-c="${i}" class="pc pc-${st}">${x}</g>`};
+  /* drawn in passes so foam sits above mud everywhere, drops above foam, and so on */
+  const pass=[[],[],[],[]];
+  cells.forEach((P,i)=>{const v=vals[i]||{},st=cellState(v);out.states.push(st);
+    const rinse=v.rinse||0,dry=v.shaken?0:(v.dry||0),wet=v.shaken?0:rinse*(1-dry),mud=(v.mud||0)*(1-.6*(v.foam||0))*(1-rinse),lf=(v.leaf||0)*(1-rinse),f=(v.foam||0)*(1-rinse);
+    let a='';
+    if(mud>.02)a+=`<path d="${blob(P.dx,P.dy,v.mr||10,.5,7,i+11)}" fill="#8A5A36" opacity="${(mud*.85).toFixed(2)}"/>`;
+    if(lf>.02)a+=PL.leaf(P.dx,P.dy,v.lr||0,.6+.4*lf);
+    const tg=(v.tangle||0)*(1-(v.brush||0));
+    if(tg>.02)a+=`<g opacity="${Math.min(1,tg*1.2).toFixed(2)}">${PL.knot(P.dx,P.dy,.9+.3*tg,K.dark,i+3)}${PL.knot(P.dx+7,P.dy+5,.6,K.dark,i+9)}</g>`;
+    else if(v.tangle&&(v.brush||0)>=.5)a+=PL.smooth(P.dx,P.dy,1,K.dark);
+    pass[0].push([P,i,a]);
+    pass[1].push([P,i,f>.02?PL.foam(P.dx,P.dy,(P.face?.6:.85)*(.35+.65*f)):'']);
+    let w='';if(wet>.04){w+=PL.damp(P.dx,P.dy,P.face?10:14,K.edge,.32*wet);if(P.edge&&!P.face)w+=PL.drip(P.edge[0],P.edge[1]+2,.55+.4*wet,K.body);w+=PL.drop(P.dx+6,P.dy-4,.5+.5*wet)}
+    pass[2].push([P,i,w]);
+    let d='';if(dry>.02){if(P.edge)d+=PL.tuft(P.edge[0],P.edge[1],.35+.45*dry,P.edge[2],K.body);d+=P.face?twinkle(P.dx,P.dy-6,2+3*dry,'#fff'):PL.curl(P.dx,P.dy,.5+.5*dry,K.dark)}
+    pass[3].push([P,i,d]);
+  });
+  pass.forEach(ps=>ps.forEach(([P,i,x])=>{if(x)put(P,i,out.states[i],x)}));
+  return out;
+}
+/* the look of the whole customer from its cells: muddy → foamy → rinse1 (헹구는 중) → wet → dry1 (말리는 중) → fluffy. '' when clean */
+function petState(vals){
+  if(!vals||!vals.length)return'';const n=vals.length,avg=k=>vals.reduce((s,v)=>s+(+(v&&v[k])||0),0)/n;
+  if(vals.some(v=>v&&v.shaken))return'';
+  const R=avg('rinse'),D=avg('dry'),F=avg('foam');
+  if(R>0){if(D>=.999)return'fluffy';if(D>0)return'dry1';if(R>=.999)return'wet';return'rinse1'}
+  if(F>0)return'foamy';
+  if(vals.some(v=>v&&v.mud>0))return'muddy';
+  return'';
+}
+/* a whole-body example of each look (portraits, captures): the same seeded mud every time */
+function stateCells(state){
+  const cells=PET_CELLS(),R=rng(77);
+  return cells.map((P,i)=>{const mud=R()<.35||i%5===0?1:0,v={mud,mr:9+R()*6,foam:0,rinse:0,dry:0};
+    if(state==='foamy')v.foam=1;
+    if(state==='rinse1'){v.foam=1;v.rinse=P.row<2?1:0}
+    if(state==='wet'){v.foam=1;v.rinse=1}
+    if(state==='dry1'){v.foam=1;v.rinse=1;v.dry=P.row<3?1:0}
+    if(state==='fluffy'){v.foam=1;v.rinse=1;v.dry=1}
+    return v});
 }
 /* the empty skeleton of the same parts, for a picture drawn on top of the animal (mud, foam, wear) that must move with it.
    body/head: inner SVG strings. */
@@ -522,5 +627,5 @@ const HAND=(()=>{
   return{KINDS,geo,path,inside,cells,tipCells,nail,hand,zoom,portrait,TOOLS,LAMP,STAMP,PART,bottle:c=>polish(c),GRID};
 })();
 
-window.ART={paper,OL,animal,animalOverlay,KINDS,F,TOPPING,WHOLE,wholeSVG,pieceSVG,pizza,TOOL,oven,BUILD,blob,rng,ACC,accSVG,face,FACE_ZONES,dress,lipstick,polish,star,twinkle,HAND};
+window.ART={paper,OL,animal,animalOverlay,petCells:PET_CELLS,petLayer,petState,cellState,stateCells,KINDS,F,TOPPING,WHOLE,wholeSVG,pieceSVG,pizza,TOOL,oven,BUILD,blob,rng,ACC,accSVG,face,FACE_ZONES,dress,lipstick,polish,star,twinkle,HAND};
 })();
