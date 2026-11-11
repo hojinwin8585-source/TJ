@@ -341,7 +341,7 @@ const petPt=(sx,sy)=>{const r=petEl.getBoundingClientRect();return[r.left+r.widt
 const toPet=e=>{const r=petEl.getBoundingClientRect();return[(e.clientX-r.left)/r.width*200,(e.clientY-r.top)/r.height*230]};
 const inPet=e=>{const r=petEl.getBoundingClientRect(),px=r.width*.12,py=r.height*.06;return e.clientX>r.left-px&&e.clientX<r.right+px&&e.clientY>r.top-py&&e.clientY<r.bottom+py};
 const MISS=VO.onWrongPlace.map(m=>[m.ko,m.en]);
-function miss(){misses++;G.nudge();if(['foam','rinse','dry'].includes(phase))anim('callme');const n=performance.now();if(n-lastMiss<2400)return;lastMiss=n;const c=pick(MISS);say(c[0],c[1])}
+function miss(){misses++;if(st)st.wrong++;G.nudge();if(['foam','rinse','dry'].includes(phase))anim('callme');const n=performance.now();if(n-lastMiss<2400)return;lastMiss=n;const c=pick(MISS);say(c[0],c[1])}
 function spawn(html,x,y,cls,o={}){
   if(pfx.childElementCount>18)return;const e=document.createElement('i');e.className='pf '+cls;e.innerHTML=`<svg viewBox="-15 -15 30 30">${html}</svg>`;
   e.style.left=x+'px';e.style.top=y+'px';e.style.setProperty('--dx',(o.dx||0)+'px');e.style.setProperty('--dy',(o.dy||0)+'px');e.style.setProperty('--rot',(o.rot||0)+'deg');
@@ -481,13 +481,18 @@ function toolStep(key){
   /* touch.tool.intro: the tool jumps out of the tray and says its name */
   const nm=TOOL_NAME[key];let introStop=P.toolIntro?P.toolIntro(stage,panel.querySelector('.mi'),T.icon,{ko:nm[0],en:nm[1]}):null;L.onEnd(()=>{if(introStop)introStop()});
   if(key==='foam'){const w=VO.actionWords.rub;say(w.ko,w.en,true);say(LINE.foam[0],LINE.foam[1],true)}   // queued after the tool's name
+  else if(key==='brush')say(LINE.brush[0],LINE.brush[1],true);
   else{const w=(key==='rinse'?CF.sound.shower:CF.sound.dryer).warnBefore;LOG.push('warn:'+lk);say(w.ko,w.en,true);say(LINE[key][0],LINE[key][1],true)}
+  st.lastTouch=performance.now();
   let lastS=0,lastPop=0,qk=0,belly=0,nose=0,lastF=null,lastT=0;killTool();
   const side=F=>{const r=petEl.getBoundingClientRect(),s=stage.getBoundingClientRect();return F.x+s.left<r.left+r.width/2?'l':'r'};
-  toolE=P.makeTool(stage,{tool:T.icon,effect:T.effect,anchor:T.anchor,gapScale:T.gapScale,cells:CELLS.map(c=>[c.fx,c.fy]),cfg:()=>TOOLS,target:()=>petEl.getBoundingClientRect(),face:faceRect,
+  /* the comb draws its own effect: a few soft lines where its teeth pass */
+  const brushFx=key!=='brush'?null:({x,y,rad,now})=>{const w=Math.sin(now/140)*rad*.15;let o=`<circle cx="${x}" cy="${y}" r="${(rad*.6).toFixed(1)}" fill="#fff" opacity=".3"/>`;
+    for(let i=-2;i<=2;i++)o+=`<path d="M${(x-rad*.55).toFixed(1)} ${(y+i*rad*.16+w).toFixed(1)}Q${x} ${(y+i*rad*.16-w).toFixed(1)} ${(x+rad*.55).toFixed(1)} ${(y+i*rad*.16+w).toFixed(1)}" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" opacity=".75"/>`;return o};
+  toolE=P.makeTool(stage,{tool:T.icon,effect:T.effect,fx:brushFx||undefined,anchor:T.anchor,gapScale:T.gapScale,cells:CELLS.map(c=>[c.fx,c.fy]),cfg:()=>TOOLS,target:()=>petEl.getBoundingClientRect(),face:faceRect,
     onMiss:miss,
-    onTouch:()=>{G.touch();LOG.push('press:'+lk);if(introStop){introStop();introStop=null}if(al)al.setTool(T.alive)},
-    onRelease:()=>{G.release();lastF=null;if(al)al.setTool(null)},
+    onTouch:()=>{G.touch();LOG.push('press:'+lk);const now=performance.now();st.idle=Math.max(st.idle,now-st.lastTouch);if(introStop){introStop();introStop=null}if(al)al.setTool(T.alive)},
+    onRelease:()=>{G.release();lastF=null;if(al)al.setTool(null);if(st)st.lastTouch=performance.now()},
     sound:n=>{if(key==='foam')return null;const h=P.holdSound(key==='dry'?'dryer':'shower',{count:key==='dry'&&n===1});LOG.push('sound:'+lk);return h},
     onCell:(i,v,pv,why)=>{const c=st.cells[i];c[key]=v;
       const n=performance.now();
@@ -496,9 +501,10 @@ function toolStep(key){
         if(why!=='auto'&&n-lastPop>90){lastPop=n;tone(900+rand(500),.05,'sine',.06)}}
       if(key==='dry'&&v>=.5&&pv<.5&&st.cells[i].rinse>0){const [x,y]=cellXY(i),dir=lastF&&lastF.x>x?-1:1;spawn(DROP(0,0,1),x+6,y-4,'fly',{dx:dir*70,dy:-30,rot:dir*60,ms:650})}
       if(key==='foam'&&v>=1&&pv<1&&why!=='auto'&&n-lastPop>110){lastPop=n;tone(700+rand(600),.05,'sine',.06)}
+      if(key==='brush'&&v>=1&&pv<1&&c.tangle){const [x,y]=cellXY(i);spawn(A.twinkle(0,0,8,'#fff'),x,y,'pop',{ms:500});if(why!=='auto'&&n-lastPop>110){lastPop=n;tone(1000+rand(400),.05,'sine',.06)}}
       rd()},
     onProgress:(p,ratio,why)=>{prog(p);if(key==='foam'&&why==='move'){const n=performance.now();if(n-lastS>130){lastS=n;SFX.scrub()}}
-      const k=Math.floor(ratio*3);if(k>qk&&k<3){qk=k;word(key==='foam'?'bubbles':key==='rinse'?'water':'dry')}},
+      const k=Math.floor(ratio*3);if(k>qk&&k<3&&key!=='brush'){qk=k;word(key==='foam'?'bubbles':key==='rinse'?'water':'dry')}},
     onMove:(pt,d)=>{lastF=pt;const r=petEl.getBoundingClientRect(),s=stage.getBoundingClientRect(),px=(pt.x+s.left-r.left)/r.width*200,py=(pt.y+s.top-r.top)/r.height*230;
       if(Math.hypot(px-100,py-196)<34){belly+=d;if(belly>r.width*.9){belly=0;tickle()}}},
     onFrame:(F,t)=>{lastF=F;const dt=lastT?Math.min(.1,(t-lastT)/1000):0;lastT=t;
@@ -508,7 +514,7 @@ function toolStep(key){
         if(Math.hypot(px-100,py-116)<30){nose+=dt;if(nose>.5)sneeze()}}},
     onAutoFinish:rest=>{rest.slice(0,6).forEach((i,k)=>L.later(()=>{const [x,y]=cellXY(i);spawn(A.twinkle(0,0,10,'#F0D58A'),x,y,'pop',{ms:600})},k*90))},
     onDone:()=>{st.doneRatio[key]=toolE?toolE.doneRatio:0;killTool();if(al)al.setTool(null);G.stop();prog(1);drawPet('happy');drawOver();SFX.sparkle();
-      const w=VO.actionWords[key==='foam'?'bubbles':key==='rinse'?'clean':'fluffy'],t=praise(w.ko,w.en);say(t[0],t[1]);
+      const w=key==='brush'?{ko:LINE.smooth[0],en:LINE.smooth[1]}:VO.actionWords[key==='foam'?'bubbles':key==='rinse'?'clean':'fluffy'],t=praise(w.ko,w.en);say(t[0],t[1]);
       /* bigMoments: each step ends with a hop and a clap; after rinsing it shakes the water off first */
       if(key==='rinse')L.later(shake,700);else alPlay('clap');
       if(key==='dry')alMood('happy');   // 보송 = 활짝
@@ -522,7 +528,7 @@ function tickle(){const n=performance.now();if(n-lastTickle<4000)return;lastTick
 function sneeze(){if(st.used.sneeze)return;st.used.sneeze=1;LOG.push('react:sneeze');drawPet('wow');alPlay('sneeze');say(LINE.sneeze[0],LINE.sneeze[1]);noise(.18,{type:'lowpass',freq:1200,vol:.12});
   const r=petEl.getBoundingClientRect(),s=stage.getBoundingClientRect(),x=r.left-s.left+r.width/2,y=r.top-s.top+r.height*116/230;
   [-1,0,1].forEach(k=>spawn('<circle r="7" fill="#fff" stroke="#CDE9FA" stroke-width="2"/>',x,y,'fly',{dx:k*40,dy:-40-Math.abs(k)*10,ms:700}));L.later(()=>drawPet('idle'),700)}
-function shake(){st.used.shake=1;LOG.push('react:shake');alPlay('shiver');say(LINE.shake[0],LINE.shake[1]);noise(.6,{type:'bandpass',freq:700,q:.8,vol:.08});
+function shake(){st.used.shake=1;LOG.push('react:shake');if(!st.steps.includes('dry')){st.cells.forEach(c=>{if(c.rinse>0)c.shaken=1});drawOver()}alPlay('shiver');say(LINE.shake[0],LINE.shake[1]);noise(.6,{type:'bandpass',freq:700,q:.8,vol:.08});
   const r=petEl.getBoundingClientRect(),s=stage.getBoundingClientRect(),cx=r.left-s.left+r.width/2,cy=r.top-s.top+r.height*.45;
   for(let k=0;k<8;k++){const a=k/8*Math.PI*2;spawn(DROP(0,0,1.1),cx+Math.cos(a)*r.width*.3,cy+Math.sin(a)*r.height*.3,'fly',{dx:Math.cos(a)*70,dy:Math.sin(a)*70,rot:a*57,ms:750})}}
 /* a new decoration: turns to look in the mirror and twirls (bigMoments) */
@@ -536,29 +542,54 @@ function dress(){
   G.start({type:'tap',at:()=>{const [x,y]=petPt(...SLOT_PT.head);return secXY(x,y)},ko:LINE.dress[0],en:LINE.dress[1]});
 }
 const wornCount=()=>Object.keys(st?st.wear:{}).length;
-function slotAt(e){const [,y]=toPet(e);return y<62?'head':y<142?'face':'neck'}
+/* only the slots of this level (levels[].choose) can be dressed: a tap anywhere on the pet opens the nearest open one */
+function slotAt(e){const [,y]=toPet(e),want=y<62?'head':y<142?'face':'neck',open=openSlots();if(open.includes(want))return want;
+  const order={head:['head','face','neck'],face:['face','head','neck'],neck:['neck','face','head']}[want];return order.find(k=>open.includes(k))||open[0]||'head'}
 function itemAt(e){
   for(const k of ['face','head','neck']){if(!st.wear[k]||st.drag===k)continue;const g=overEl.querySelector(`g[data-slot="${k}"]`);if(!g)continue;const r=g.getBoundingClientRect(),m=6;
     if(e.clientX>r.left-m&&e.clientX<r.right+m&&e.clientY>r.top-m&&e.clientY<r.bottom+m)return k}
   return null;
 }
-/* cards: 3 for the tapped slot; tapping the same slot again shows 3 others */
+/* ---------- the decorations a slot can show now: start items + unlocked ones (itemUnlock) + photo decorations (photoItems) ---------- */
+const levelCols=()=>COLORS.map((c,i)=>i).slice(0,Math.max(1,Math.min(COLORS.length,LV().colors||COLORS.length)));
+function drawnPool(slot){const U=DATA.items,start=((UNL.start||{})[slot]||[]).filter(n=>ITEM[n]);return start.concat(U.unlocked.filter(n=>slotOfItem(n)===slot&&ITEM[n]&&!start.includes(n)))}
+const fill=(t,it)=>String(t||'').replace(/\{ko\}이\(가\)/g,it.ko+(batchim(it.ko)?'이':'가')).replace(/\{ko\}/g,it.ko).replace(/\{en\}/g,it.en);
+/* cards: optionsPerChoice for the tapped slot; tapping the same slot again shows others.
+   A new decoration comes first with a little ribbon and its name (itemUnlock.newBadge, newVoice); at most one photo decoration among them (photoItems.mix) */
 function openCards(slot,keep){
   if(!st)return;st.hintOff=true;
   if(!(keep&&cards&&cards.slot===slot)){
-    const list=WEAR[slot],rot=cards&&cards.slot===slot?cards.rot+1:(st['rot_'+slot]||0);st['rot_'+slot]=rot;
-    const start=(rot*3)%list.length,idx=[0,1,2].map(k=>(start+k)%list.length),cols=shuffle(COLORS.map((c,i)=>i)).slice(0,3);
-    cards={slot,rot,items:idx.map((ix,k)=>({idx:ix,col:cols[k]}))};
-    panel.innerHTML='';say(ASK[slot][0],ASK[slot][1]);
-    cards.items.forEach((c,k)=>{const it=WEAR[slot][c.idx],col=COLORS[c.col],b=document.createElement('button');b.className='ps-card in';b.style.animationDelay=(k*60)+'ms';
-      b.setAttribute('aria-label',`${col[0]} ${it.ko}`);b.dataset.hex=col[2];b.dataset.k=k;b.innerHTML=`<svg viewBox="-58 -56 116 112"><g transform="${it.card||''}">${it.d(col[2],col[3])}</g></svg>`;panel.appendChild(b)});
+    const n=Math.max(1,LV().optionsPerChoice||3),pool=drawnPool(slot),U=DATA.items,photos=photoItems().filter(x=>x.slot===slot);
+    const rot=cards&&cards.slot===slot?cards.rot+1:(st['rot_'+slot]||0);st['rot_'+slot]=rot;
+    const fresh=pool.filter(x=>U.fresh.includes(x)),rest=pool.filter(x=>!fresh.includes(x));
+    const unseen=photos.filter(x=>!U.photoSeen.includes(x.id)),photo=unseen[0]||(photos.length&&rot%2===0?photos[(rot/2)%photos.length|0]:null);
+    const room=n-(photo?1:0),ids=fresh.slice(0,room);
+    if(rest.length){const start=(rot*Math.max(1,room-ids.length))%rest.length;for(let k=0;ids.length<room&&k<rest.length;k++)ids.push(rest[(start+k)%rest.length])}
+    if(photo)ids.push(photo.id);
+    const cols=shuffle(levelCols().slice());
+    cards={slot,rot,items:ids.map((x,k)=>({id:x,col:cols[k%cols.length],isNew:fresh.includes(x),photo:x===(photo&&photo.id)}))};
+    panel.innerHTML='';
+    const nw=cards.items.find(c=>c.isNew),pn=cards.items.find(c=>c.photo&&!U.photoSeen.includes(c.id));
+    if(nw){const it=ITEM[nw.id],v=UNL.newVoice||[];say(fill(v[0],it),fill(v[1],it));LOG.push('new:'+nw.id);U.fresh=U.fresh.filter(x=>x!==nw.id)}
+    else if(pn){const it=itemOf(pn.id),v=PHO.voice||[];say(fill(v[0],it),fill(v[1],it))}
+    else say(ASK[slot][0],ASK[slot][1]);
+    cards.items.forEach(c=>{if(c.photo&&!U.photoSeen.includes(c.id))U.photoSeen.push(c.id)});
+    cards.items.filter(c=>c.isNew).forEach(c=>{U.fresh=U.fresh.filter(x=>x!==c.id)});save();
+    cards.items.forEach((c,k)=>{const it=itemOf(c.id),col=COLORS[c.col],b=document.createElement('button');b.className='ps-card in'+(c.isNew?' new':'')+(c.photo?' photo':'');b.style.animationDelay=(k*60)+'ms';
+      b.setAttribute('aria-label',c.photo?it.ko:`${col[0]} ${it.ko}`);b.dataset.hex=col[2];b.dataset.k=k;b.dataset.item=c.id;
+      b.innerHTML=`<svg viewBox="-58 -56 116 112"><g transform="${it.card||''}">${itemSVG(it,col[2],col[3])}</g></svg>`+(c.isNew?`<span class="ps-badge">${BADGE.ribbon}</span>`:c.photo?`<span class="ps-badge">${BADGE.heart}</span>`:'');panel.appendChild(b)});
   }
   markWorn();drawOver();
 }
-function markWorn(){if(!cards)return;const w=st.wear[cards.slot];panel.querySelectorAll('.ps-card').forEach((b,k)=>{const c=cards.items[k];b.classList.toggle('worn',!!(w&&c&&w.idx===c.idx&&w.col===c.col))})}
-function floatItem(slot,idx,col,vivid,cx,cy,px){
-  const it=WEAR[slot][idx],c=COLORS[col],f=document.createElement('div');f.className='ps-float';
-  f.innerHTML=`<svg viewBox="-58 -56 116 112">${vivid?it.d(c[4],c[3]):it.d(c[2],c[3])}</svg>`;
+/* small corner marks on a card (no letters): a ribbon for a new decoration, a heart frame for a photo one */
+const BADGE={
+  ribbon:`<svg viewBox="-20 -20 40 40"><path d="M-3 3L-10 16L-1 12Z" fill="#F6D3DB" stroke="${OL}" stroke-width="2" stroke-linejoin="round"/><path d="M3 3L10 16L1 12Z" fill="#F6D3DB" stroke="${OL}" stroke-width="2" stroke-linejoin="round"/><path d="M0 0L-16 -10Q-20 0 -16 10Z" fill="#E89AAE" stroke="${OL}" stroke-width="2" stroke-linejoin="round"/><path d="M0 0L16 -10Q20 0 16 10Z" fill="#E89AAE" stroke="${OL}" stroke-width="2" stroke-linejoin="round"/><circle r="4.5" fill="#F6D3DB" stroke="${OL}" stroke-width="2"/></svg>`,
+  heart:`<svg viewBox="-20 -20 40 40"><path d="M0 15C-22 0 -19 -17 -9 -17C-4 -17 -1 -14 0 -10C1 -14 4 -17 9 -17C19 -17 22 0 0 15Z" fill="#FFFDF9" stroke="#E89AAE" stroke-width="4" stroke-linejoin="round"/><path d="M0 15C-22 0 -19 -17 -9 -17C-4 -17 -1 -14 0 -10C1 -14 4 -17 9 -17C19 -17 22 0 0 15Z" fill="none" stroke="${OL}" stroke-width="1.6" stroke-linejoin="round"/></svg>`
+};
+function markWorn(){if(!cards)return;const w=st.wear[cards.slot];panel.querySelectorAll('.ps-card').forEach((b,k)=>{const c=cards.items[k];b.classList.toggle('worn',!!(w&&c&&w.id===c.id&&(c.photo||w.col===c.col)))})}
+function floatItem(slot,iid,col,vivid,cx,cy,px){
+  const it=itemOf(iid),c=COLORS[col]||COLORS[0],f=document.createElement('div');f.className='ps-float';
+  f.innerHTML=`<svg viewBox="-58 -56 116 112">${it?(vivid?itemSVG(it,c[4],c[3]):itemSVG(it,c[2],c[3])):''}</svg>`;
   const [x,y]=secXY(cx,cy);Object.assign(f.style,{width:px+'px',height:(px*112/116)+'px',left:(x-px/2)+'px',top:(y-px*112/116/2)+'px'});sec.appendChild(f);return f;
 }
 function flyTo(f,cx,cy,px,ms,then,fade){
@@ -569,16 +600,18 @@ function flyTo(f,cx,cy,px,ms,then,fade){
 const slotPx=slot=>unitPx()*116*SLOT_SCALE[slot];
 const panelPt=()=>{const r=panel.getBoundingClientRect();return[r.left+r.width/2,r.top+r.height/2]};
 /* put an item on (from a card tap or a drop), swapping out what was there */
-function putOn(slot,idx,col,fromEl){
+function putOn(slot,iid,col,fromEl){
   if(!st||phase!=='dress')return;const old=st.wear[slot];
-  if(old&&old.idx===idx&&old.col===col){alPlay('hop');sfx.pop();return}
+  if(old&&old.id===iid&&old.col===col){alPlay('hop');sfx.pop();if(fromEl)fromEl.remove();return}
   const [tx,ty]=petPt(...SLOT_PT[slot]);
-  if(old){const f=floatItem(slot,old.idx,old.col,true,tx,ty,slotPx(slot)),[px,py]=panelPt();delete st.wear[slot];drawOver();flyTo(f,px,py,80,450,null,true)}
+  if(old){const f=floatItem(slot,old.id,old.col,true,tx,ty,slotPx(slot)),[px,py]=panelPt();delete st.wear[slot];drawOver();flyTo(f,px,py,80,450,null,true)}
   flying++;
   const done=()=>{flying=Math.max(0,flying-1);if(!st||phase!=='dress')return;
-    st.wear[slot]={idx,col};st.bloom={slot,t:performance.now()};LOG.push('wear:'+slot);
+    st.wear[slot]={id:iid,col};st.bloom={slot,t:performance.now()};LOG.push('wear:'+slot);
     drawPet('happy');drawOver(slot);L.later(()=>{if(st&&st.bloom&&performance.now()-st.bloom.t>=BLOOM){st.bloom=null;drawOver()}},BLOOM+60);
-    sfx.pop();SFX.sparkle();const it=WEAR[slot][idx],c=COLORS[col];say(`${c[0]} ${it.ko}!`,`${cap(c[1])} ${it.en}!`);markWorn();if(al)al.sound('wow');
+    sfx.pop();SFX.sparkle();const it=itemOf(iid),c=COLORS[col];
+    if(it&&it.photo){const v=PHO.voice||[];say(fill(v[0],it),fill(v[1],it))}else if(it)say(`${c[0]} ${it.ko}!`,`${cap(c[1])} ${it.en}!`);
+    markWorn();if(al)al.sound('wow');
     peek();if(mirBtn.hidden)G.stop();armMirror();
   };
   if(fromEl){flyTo(fromEl,tx,ty,slotPx(slot),350,done)}else done();
@@ -589,8 +622,13 @@ function takeOff(slot,f){
   const [px,py]=panelPt();if(f)flyTo(f,px,py,70,420,null,true);
   if(!wornCount())hideMirror();
 }
+/* tap on a worn item: the next colour of this level (photo decorations sparkle and sway instead, photoItems.colorTap) */
 function colorNext(slot){
-  const w=st.wear[slot];if(!w)return;w.col=(w.col+1)%COLORS.length;st.bloom={slot,t:performance.now()};LOG.push('color:'+slot);
+  const w=st.wear[slot];if(!w)return;const it=itemOf(w.id);
+  if(it&&it.photo){st.wiggle={slot,t:performance.now()};LOG.push('sparkle:'+slot);drawOver();L.later(()=>{if(st){st.wiggle=null;drawOver()}},720);
+    const [x,y]=petPt(...SLOT_PT[slot]),s=stage.getBoundingClientRect();[[-30,-20],[28,-14],[0,26]].forEach(([dx,dy],k)=>L.later(()=>spawn(A.twinkle(0,0,9,'#F0D58A'),x-s.left+dx,y-s.top+dy,'pop',{ms:600}),k*90));
+    tone(1175,.1,'sine',.08);tone(1568,.12,'sine',.07,.1);return}
+  const cols=levelCols(),ix=cols.indexOf(w.col);w.col=cols[(ix+1)%cols.length];st.bloom={slot,t:performance.now()};LOG.push('color:'+slot);
   drawOver(slot);L.later(()=>{if(st&&st.bloom&&performance.now()-st.bloom.t>=BLOOM){st.bloom=null;drawOver()}},BLOOM+60);
   const c=COLORS[w.col];say(c[0]+'!',cap(c[1])+'!');tone(880,.1,'sine',.1);openCards(slot,true);
 }
@@ -612,7 +650,7 @@ stage.addEventListener('pointerdown',e=>{
 stage.addEventListener('pointermove',e=>{
   if(!dd||e.pointerId!==dd.id||!st)return;
   if(!dd.moved&&Math.hypot(e.clientX-dd.x0,e.clientY-dd.y0)>12){dd.moved=true;const w=st.wear[dd.slot];if(!w){dd=null;return}st.drag=dd.slot;drawOver();
-    dd.f=floatItem(dd.slot,w.idx,w.col,true,e.clientX,e.clientY,slotPx(dd.slot));tone(520,.06,'triangle',.1)}
+    dd.f=floatItem(dd.slot,w.id,w.col,true,e.clientX,e.clientY,slotPx(dd.slot));tone(520,.06,'triangle',.1)}
   if(dd.moved&&dd.f){const [x,y]=secXY(e.clientX,e.clientY),w=dd.f.offsetWidth,h=dd.f.offsetHeight;dd.f.style.left=(x-w/2)+'px';dd.f.style.top=(y-h/2)+'px'}
 });
 const endItemDrag=e=>{
@@ -631,7 +669,7 @@ panel.addEventListener('pointerdown',e=>{
 panel.addEventListener('pointermove',e=>{
   if(!cd||e.pointerId!==cd.id)return;
   if(!cd.moved&&Math.hypot(e.clientX-cd.x0,e.clientY-cd.y0)>12){cd.moved=true;const c=cards&&cards.items[cd.k];if(!c){cd=null;return}cd.item=c;
-    cd.f=floatItem(cd.slot,c.idx,c.col,false,e.clientX,e.clientY,cd.b.getBoundingClientRect().width*.9);cd.b.classList.add('lift');tone(520,.06,'triangle',.1)}
+    cd.f=floatItem(cd.slot,c.id,c.col,false,e.clientX,e.clientY,cd.b.getBoundingClientRect().width*.9);cd.b.classList.add('lift');tone(520,.06,'triangle',.1)}
   if(cd.moved&&cd.f){const [x,y]=secXY(e.clientX,e.clientY),w=cd.f.offsetWidth,h=cd.f.offsetHeight;cd.f.style.left=(x-w/2)+'px';cd.f.style.top=(y-h/2)+'px'}
 });
 const endCard=e=>{
@@ -639,9 +677,9 @@ const endCard=e=>{
   if(!st||phase!=='dress'||!cards||cards.slot!==d.slot){if(d.f)d.f.remove();return}
   const c=cards.items[d.k];if(!c){if(d.f)d.f.remove();return}
   if(flying){if(d.f)d.f.remove();return}
-  if(!d.moved){const r=d.b.getBoundingClientRect();const f=floatItem(d.slot,c.idx,c.col,false,r.left+r.width/2,r.top+r.height/2,r.width*.85);putOn(d.slot,c.idx,c.col,f);return}
+  if(!d.moved){const r=d.b.getBoundingClientRect();const f=floatItem(d.slot,c.id,c.col,false,r.left+r.width/2,r.top+r.height/2,r.width*.85);putOn(d.slot,c.id,c.col,f);return}
   const pr=petEl.getBoundingClientRect(),over=e.clientX>pr.left&&e.clientX<pr.right&&e.clientY>pr.top&&e.clientY<pr.bottom;
-  if(over&&e.type!=='pointercancel')putOn(d.slot,c.idx,c.col,d.f);
+  if(over&&e.type!=='pointercancel')putOn(d.slot,c.id,c.col,d.f);
   else{const r=d.b.getBoundingClientRect();flyTo(d.f,r.left+r.width/2,r.top+r.height/2,r.width*.85,250)}
 };
 panel.addEventListener('pointerup',endCard);panel.addEventListener('pointercancel',endCard);
@@ -654,10 +692,13 @@ mirBtn.addEventListener('click',()=>{
   L.later(()=>{alPlay('dance');sweep()},450);   // bigMoments: dance (4 beats), then thanks and a wave
   L.later(()=>{noise(.05,{type:'lowpass',freq:2200,vol:.12});noise(.07,{type:'lowpass',freq:1400,vol:.1,when:.07});photo()},2900);   // the photo after the dance
   L.later(()=>{
-    const rec={kind:st.kind,wear:JSON.parse(JSON.stringify(st.wear))};DATA.wall.unshift(rec);DATA.wall=DATA.wall.slice(0,3);DATA.served++;save();stars();
+    const rec={kind:st.kind,wear:JSON.parse(JSON.stringify(st.wear))};DATA.wall.unshift(rec);DATA.wall=DATA.wall.slice(0,3);DATA.served++;save();unlockByServed();
     drawPet('happy');alPlay('wave');say(LINE.thanks[0],LINE.thanks[1]);tone(1318,.4,'sine',.12);tone(1046,.6,'sine',.12,.3)},4300);
   L.later(()=>{anim('leave')},5900);
-  L.later(()=>{const c=lobby[seatIdx]||{kind:st.kind};const served={kind:st.kind,wear:st.wear};const i=seatIdx;lobby[i]=c;showLobby({served,slot:i})},6700);
+  L.later(()=>{const c=lobby[seatIdx]||{kind:st.kind};const served={kind:st.kind,wear:st.wear};const i=seatIdx;lobby[i]=c;
+    /* progress: was this round hard (progress.struggle)? then one star; three stars open the next level */
+    let result=null;if(PROG){PROG.struggle(id,{wrong:st.wrong,idleMs:st.idle});result=PROG.clear(id)}
+    showLobby({served,slot:i,result})},6700);
 });
 function sweep(){[1318,1568,2093].forEach((f,i)=>tone(f,.25,'sine',.06,i*.12))}
 function photo(){
@@ -669,6 +710,8 @@ function photo(){
   L.onEnd(()=>f.remove());
 }
 
+/* debug hook for tests: send the waiting customers home so new ones of this level come */
+M.__psReset=()=>{lobby=[];return true};
 /* debug hook for tests */
 M.__ps=()=>{
   const grid=Array.from({length:GR[1]},()=>Array(GR[0]).fill(null));const v=toolE?toolE.grid:null;
@@ -680,11 +723,18 @@ M.__ps=()=>{
     ratio:toolE?toolE.ratio:null,doneRatio:st?Object.assign({},st.doneRatio):{},rub:toolE?toolE.progress:null,
     tool:tl&&tl.style.display==='block'?(r=>({x:r.left+r.width/2,y:r.top+r.height/2,w:r.width,h:r.height,bottom:r.bottom}))(tl.getBoundingClientRect()):null,
     fx:fxs&&fxs.style.display==='block'?{kind:fxs.getAttribute('class'),parts:fxs.childElementCount}:null,
-    wear:st?Object.keys(st.wear):[],worn:st?Object.fromEntries(Object.entries(st.wear).map(([k,w])=>[k,{item:WEAR[k][w.idx].en,color:COLORS[w.col][1]}])):{},
+    wear:st?Object.keys(st.wear):[],worn:st?Object.fromEntries(Object.entries(st.wear).map(([k,w])=>{const it=itemOf(w.id)||{};return[k,{item:it.photo?it.id:it.en,color:it.photo?null:COLORS[w.col][1],photo:!!it.photo}]})):{},
     wearCol:st?Object.fromEntries(Object.entries(st.wear).map(([k,w])=>[k,{hex:COLORS[w.col][2],vivid:COLORS[w.col][4]}])):{},
     slotPts:st?Object.fromEntries(SLOTS.map(k=>[k,petPt(...SLOT_PT[k])])):{},
     itemPts:st?Object.fromEntries(Object.keys(st.wear).map(k=>{const g=overEl.querySelector(`g[data-slot="${k}"]`);if(!g)return[k,null];const r=g.getBoundingClientRect();return[k,[r.left+r.width/2,r.top+r.height/2]]})):{},
-    cards:cards?{slot:cards.slot,items:cards.items.map(c=>WEAR[cards.slot][c.idx].en)}:null,
+    cards:cards?{slot:cards.slot,items:cards.items.map(c=>c.photo?c.id:ITEM[c.id].en),isNew:cards.items.map(c=>!!c.isNew),photo:cards.items.map(c=>!!c.photo),
+      badges:[...panel.querySelectorAll('.ps-card')].map(b=>b.querySelector('.ps-badge')?(b.classList.contains('new')?'ribbon':'heart'):null)}:null,
+    level:lvNo(),progress:PROG?PROG.get(id):null,starsOn:sec.querySelectorAll('#psStars .mlp-star.on').length,starsN:sec.querySelectorAll('#psStars .mlp-star').length,
+    moment:!!lobbyEl.querySelector('.mlp-moment'),look:st?st.look:null,states:st?st.states.slice():[],
+    stateGrid:st?(()=>{const g=Array.from({length:GR[1]},()=>Array(GR[0]).fill(null));CELLS.forEach((c,i)=>{g[c.row][c.col]=st.states[i]||null});return g})():null,
+    plan:st?st.plan.slice():null,slots:openSlots(),optionsPerChoice:LV().optionsPerChoice,colors:levelCols().length,
+    items:{unlocked:DATA.items.unlocked.slice(),fresh:DATA.items.fresh.slice(),photoSeen:DATA.items.photoSeen.slice()},
+    pools:Object.fromEntries(SLOTS.map(k=>[k,drawnPool(k)])),
     mirror:!mirBtn.hidden,served:DATA.served,wall:DATA.wall.length,frames:framesEl.querySelectorAll('.lb-frame.full').length,
     used:st?Object.keys(st.used):[],guide:G.state(),log:LOG.slice(),alive:al?al.state():null,lobbyAlive:lobbyAl.map(h=>h.state())};
 };

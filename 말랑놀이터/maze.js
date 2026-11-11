@@ -158,7 +158,10 @@ const stage=$('#mzStage'),scene=$('#mzScene'),feetEl=$('#mzFeet'),tray=$('#mzTra
 const G=M.Guide.make(sec,{say});
 const DATA=Object.assign({level:1,stars:0},store.get('mallang_maze',{}));
 const save=()=>store.set('mallang_maze',DATA);
-const level=()=>Math.max(1,Math.min(5,DATA.level|0||1));
+/* level: ML.Progress (P2-나 단계 엔진) if it exists, otherwise the saved one */
+const PRG=()=>M.Progress&&typeof M.Progress.get==='function'?M.Progress:null;
+if(PRG())PRG().register(id,{max:5,name:'길 찾기',seg:'setMazeLv',seed:DATA.level});
+const level=()=>Math.max(1,Math.min(5,(PRG()?PRG().get(id).level:DATA.level)|0||1));
 const LOG=[];
 
 /* ---------- geometry ---------- */
@@ -393,7 +396,7 @@ async function win(){
   if(friendAl){friendAl.setMood('happy');friendAl.play('wave')}
   const l=def.gk==='home'?LINE.homeWin:LINE.friendWin;say(l[0],l[1]);
   celebrate(st.tx,st.ty-chSize().h*.6);
-  DATA.stars++;DATA.done=(DATA.done||0)+1;save();stars();
+  DATA.stars++;DATA.done=(DATA.done||0)+1;save();stars();if(PRG())PRG().clear(id);
   await wait(2000);if(!L.ok(t))return;
   if(totoAl)totoAl.sound('hehe');tPlay('clap');
   if(friendAl)friendAl.play('hop');
@@ -485,7 +488,7 @@ document.querySelectorAll('.tile[data-go="maze"] .ic').forEach(ic=>{
 });
 
 /* test hooks: set the level (1-5) from the parent settings or a test; peek at the state */
-M.__mzLevel=n=>{DATA.level=Math.max(1,Math.min(5,n|0));save();return level()};
+M.__mzLevel=n=>{DATA.level=Math.max(1,Math.min(5,n|0));save();if(PRG())PRG().set(id,DATA.level);return level()};
 M.__mz=()=>{
   if(!st)return{lv:level(),phase:'',log:LOG.slice()};
   const r=stage.getBoundingClientRect(),tt=toto?toto.getBoundingClientRect():null;

@@ -136,7 +136,7 @@ const PL={
   foam:(x,y,s)=>`<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${s.toFixed(2)})"><g fill="#fff" stroke="#CDE9FA" stroke-width="2"><circle r="14"/><circle cx="12" cy="8" r="9.5"/><circle cx="-10" cy="9" r="8"/></g><circle cx="-5" cy="-5" r="3.5" fill="#E8F6FF"/></g>`,
   drop:(x,y,s)=>`<path transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${s.toFixed(2)})" d="M0 -9Q8 3 0 7Q-8 3 0 -9Z" fill="#9FD0F0" stroke="#6FB2DC" stroke-width="1.5"/>`,
   /* wet fur hangs straight down in a thin lock */
-  drip:(x,y,s,body)=>`<path transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${s.toFixed(2)})" d="M-8 -4Q-7 8 -2 16Q0 20 2 16Q7 8 8 -4Z" fill="${body}" stroke="${OL}" stroke-width="2.4" stroke-linejoin="round"/>`,
+  drip:(x,y,s,body)=>`<path transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${s.toFixed(2)})" d="M-8 -5Q-9 7 -3 13Q0 16 3 13Q9 7 8 -5Z" fill="${body}" stroke="${OL}" stroke-width="2.2" stroke-linejoin="round"/>`,
   damp:(x,y,r,col,o)=>`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="${col}" opacity="${o.toFixed(2)}"/>`,
   /* fluffed fur: a soft tuft on the outline, a little curl inside */
   tuft:(x,y,s,rot,body)=>`<path transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${rot.toFixed(0)}) scale(${s.toFixed(2)})" d="M-14 8Q-18 -2 -9 -5Q-7 -14 0 -11Q7 -14 9 -5Q18 -2 14 8Z" fill="${body}" stroke="${OL}" stroke-width="2.6" stroke-linejoin="round"/>`,
@@ -170,7 +170,7 @@ function petLayer(kind,cells,vals){
     else if(v.tangle&&(v.brush||0)>=.5)a+=PL.smooth(P.dx,P.dy,1,K.dark);
     pass[0].push([P,i,a]);
     pass[1].push([P,i,f>.02?PL.foam(P.dx,P.dy,(P.face?.6:.85)*(.35+.65*f)):'']);
-    let w='';if(wet>.04){w+=PL.damp(P.dx,P.dy,P.face?10:14,K.edge,.32*wet);if(P.edge&&!P.face)w+=PL.drip(P.edge[0],P.edge[1]+2,.55+.4*wet,K.body);w+=PL.drop(P.dx+6,P.dy-4,.5+.5*wet)}
+    let w='';if(wet>.04){w+=PL.damp(P.dx,P.dy,P.face?10:14,K.edge,.32*wet);if(P.edge&&!P.face)w+=PL.drip(P.edge[0],P.edge[1]+3,.45+.3*wet,K.body);w+=PL.drop(P.dx+6,P.dy-4,.5+.5*wet)}
     pass[2].push([P,i,w]);
     let d='';if(dry>.02){if(P.edge)d+=PL.tuft(P.edge[0],P.edge[1],.35+.45*dry,P.edge[2],K.body);d+=P.face?twinkle(P.dx,P.dy-6,2+3*dry,'#fff'):PL.curl(P.dx,P.dy,.5+.5*dry,K.dark)}
     pass[3].push([P,i,d]);

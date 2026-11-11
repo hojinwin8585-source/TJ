@@ -30,7 +30,7 @@ const SHOT=process.env.SHOT_DIR||'';
       if(!done[x.phase]){done[x.phase]=1;await shot('2'+x.phase)}await p.mouse.up();await W(80)}
     else if(x.phase==='dress'){
       for(const slot of ['head','neck','face']){if((await st()).worn[slot])continue;const [px,py]=(await st()).slotPts[slot];await p.mouse.click(px,py);await W(500);
-        const c=p.locator('#psPanel .ps-card');if(await c.count()===3){await shot('3'+slot);await c.nth(n%3).click();await W(900)}}
+        const c=p.locator('#psPanel .ps-card'),nc=await c.count();if(nc>=2&&nc<=3){await shot('3'+slot);await c.nth(n%nc).click();await W(900)}}   // 2-나: 1단계는 카드 2장, 2단계부터 3장
       if(!(await st()).mirror){await W(1000);continue}
       await shot('4dressed');await p.locator('#psMirBtn').click();done.mirror=1;await W(2000);await shot('5mirror');await W(1500)}
     else await W(300);

@@ -14,7 +14,9 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
 (async()=>{
   const b=await chromium.launch();const p=await b.newPage({viewport:{width:390,height:780},hasTouch:true,deviceScaleFactor:SHOT?2:1});
   const errs=[];p.on('pageerror',e=>errs.push(e.message));p.on('console',m=>{if(m.type()==='error')errs.push(m.text())});
-  await p.goto(URL);await p.evaluate(()=>{localStorage.clear();localStorage.setItem('mallang_settings',JSON.stringify({timer:0}))});await p.reload();await p.waitForTimeout(500);
+  await p.goto(URL);await p.evaluate(()=>{localStorage.clear();localStorage.setItem('mallang_settings',JSON.stringify({timer:0}));
+    /* 2-나: these checks need the dryer and neck/face cards, so start the salon at level 2 with every decoration unlocked */
+    localStorage.setItem('mallang_progress',JSON.stringify({petsalon:{level:2,clears:0}}));localStorage.setItem('mallang_salon',JSON.stringify({served:0,wall:[],items:{unlocked:window.MLCFG.games.petsalon.itemUnlock.order,fresh:[],photoSeen:[]}}))});await p.reload();await p.waitForTimeout(500);
   const W=ms=>p.waitForTimeout(ms),st=()=>p.evaluate(()=>window.ML.__ps()),ns=()=>p.evaluate(()=>window.ML.__ns());
   const seq=async(name,n=4,gap=600)=>{if(!SHOT)return;for(let k=1;k<=n;k++){await p.screenshot({path:path.join(SHOT,name+'_'+k+'.png')});if(k<n)await W(gap)}};
   /* transforms of the movable parts inside one character element */

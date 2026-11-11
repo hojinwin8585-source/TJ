@@ -167,8 +167,9 @@ const DATA=Object.assign({level:1,served:0},store.get('mallang_pizza',{}));
 const save=()=>store.set('mallang_pizza',DATA);
 
 /* ---------- level: ML.Progress if it exists, otherwise fixed at 1 (parent settings can change it) ---------- */
-const PRG=()=>M.Progress&&typeof M.Progress.level==='function'?M.Progress:null;
-function levelNo(){const pr=PRG();let n=pr?pr.level(id):DATA.level;n=Math.round(+n||1);return Math.max(1,Math.min(LEVELS.length,n))}
+const PRG=()=>M.Progress&&typeof M.Progress.get==='function'?M.Progress:null;
+if(PRG())PRG().register(id,{max:LEVELS.length,name:'피자가게',seg:'setPizzaLv',seed:DATA.level});
+function levelNo(){const pr=PRG();let n=pr?pr.get(id).level:DATA.level;n=Math.round(+n||1);return Math.max(1,Math.min(LEVELS.length,n))}
 /* scenes of a level ('같음' = same as the level before) → which processes it has */
 function levelInfo(n){
   let scenes=[],tops=['tomato'];
@@ -522,7 +523,7 @@ function give(){
 }
 function heart(){
   const cr=custEl.getBoundingClientRect(),sr=shelfEl.getBoundingClientRect(),g=gen,n=Math.min(5,DATA.served+1)-1;
-  fly(ICON.heart,[cr.left+cr.width*.4,cr.top+cr.height*.6],[sr.left+11+n*24,sr.top+11],60,22,900,()=>{if(g!==gen)return;DATA.served++;save();shelf();SFX.sparkle()});
+  fly(ICON.heart,[cr.left+cr.width*.4,cr.top+cr.height*.6],[sr.left+11+n*24,sr.top+11],60,22,900,()=>{if(g!==gen)return;DATA.served++;save();shelf();SFX.sparkle();const pr=PRG();if(pr)pr.clear(id)});
   L.later(()=>{if(g!==gen)return;alPlay('wave');say('안녕! 또 올게!','Bye! See you again!');
     L.later(()=>{if(g!==gen)return;custEl.classList.remove('enter');void custEl.offsetWidth;custEl.classList.add('leave');bubEl.hidden=true;mainEl.classList.add('out');
       L.later(()=>{if(g===gen)newCustomer()},1400)},1500)},1000);
@@ -551,8 +552,9 @@ function newCustomer(){
   L.later(()=>{if(g!==gen)return;run()},3600);
 }
 
-/* ---------- parent settings: pizza level (ML.Progress가 없을 때만 바꿀 수 있음) ---------- */
-(()=>{const sh=document.querySelector('#settings .sheet'),h4=sh&&sh.querySelector('h4');if(!h4)return;
+/* ---------- parent settings: pizza level (ML.Progress가 있으면 그 '놀이별 단계' 줄, 없을 때만 이 줄) ---------- */
+M.__pzLevel=n=>{if(PRG())PRG().set(id,n);else{DATA.level=n;save()}if(cur()===id)newCustomer();return levelNo()};
+(()=>{const sh=document.querySelector('#settings .sheet'),h4=sh&&sh.querySelector('h4');if(!h4||PRG())return;
   const row=document.createElement('div');row.className='row';row.innerHTML=`<span>피자가게 단계</span><div class="seg" id="setPizzaLv">${LEVELS.map(l=>`<button data-v="${l.level}">${l.level}</button>`).join('')}</div>`;sh.insertBefore(row,h4);
   const seg=row.querySelector('.seg'),sync=()=>seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on',+b.dataset.v===levelNo()));
   seg.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;DATA.level=+b.dataset.v;save();sync()});sync();

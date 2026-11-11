@@ -47,8 +47,9 @@ const STEP_LINE=k=>NV[k]||LINE[k]||[(STEPS[k]||{}).ko||'',(STEPS[k]||{}).en||'']
 const DATA=Object.assign({level:1,served:0,wall:[],seen:[]},store.get('mallang_nailshop',{}));
 if(!Array.isArray(DATA.wall))DATA.wall=[];if(!Array.isArray(DATA.seen))DATA.seen=[];
 const save=()=>store.set('mallang_nailshop',DATA);
-const PR=()=>M.Progress&&typeof M.Progress.level==='function'?M.Progress:null;
-function levelNo(){const pr=PR();let n=pr?pr.level(id):DATA.level;n=Math.round(+n||1);return Math.max(1,Math.min(LEVELS.length,n))}
+const PR=()=>M.Progress&&typeof M.Progress.get==='function'?M.Progress:null;
+if(PR())PR().register(id,{max:LEVELS.length,name:'네일숍',seg:'setNailLv',seed:DATA.level});
+function levelNo(){const pr=PR();let n=pr?pr.get(id).level:DATA.level;n=Math.round(+n||1);return Math.max(1,Math.min(LEVELS.length,n))}
 /* a level row, with missing numbers taken from the rows before it */
 function LV(){
   const n=levelNo(),o={};LEVELS.slice(0,n).forEach(r=>Object.keys(r).forEach(k=>{if(k!=='new')o[k]=r[k]}));
@@ -660,8 +661,9 @@ function photo(){
   L.onEnd(()=>f.remove());
 }
 
-/* ---------- parent settings: nail shop level (ML.Progress가 없을 때만 바꿀 수 있음) ---------- */
-(()=>{const sh=document.querySelector('#settings .sheet'),h4=sh&&sh.querySelector('h4');if(!h4)return;
+/* ---------- parent settings: nail shop level (ML.Progress가 있으면 그 '놀이별 단계' 줄, 없을 때만 이 줄) ---------- */
+M.__nsLevel=n=>{if(PR())PR().set(id,n);else{DATA.level=n;save()}lobby=[];return levelNo()};
+(()=>{const sh=document.querySelector('#settings .sheet'),h4=sh&&sh.querySelector('h4');if(!h4||PR())return;
   const row=document.createElement('div');row.className='row';row.innerHTML=`<span>네일숍 단계</span><div class="seg" id="setNailLv">${LEVELS.map(l=>`<button data-v="${l.level}">${l.level}</button>`).join('')}</div>`;sh.insertBefore(row,h4);
   const seg=row.querySelector('.seg'),sync=()=>seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on',+b.dataset.v===levelNo()));
   seg.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;DATA.level=+b.dataset.v;save();sync()});sync();
