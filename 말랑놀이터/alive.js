@@ -293,7 +293,7 @@ function wake(me){if(me.dead)return;if(!me.sim){me.sim=true;me.el.classList.add(
 const spring=(o,ia,iv,target,w,dt)=>{const a=o[ia],v=o[iv],acc=w*w*(target-a)-2*SP.z*w*v;o[iv]=v+acc*dt;o[ia]=a+o[iv]*dt;return Math.abs(target-o[ia])>.15||Math.abs(o[iv])>.6};
 function simStep(me,t,dt){
   const W=me.air;if(W&&W.until&&t>W.until)me.air=null;const w=me.air,red=REDUCED?.3:1;let busy=!!w;
-  const near=(x,y)=>w?Math.max(.3,Math.min(1,1.25-Math.hypot(x-w.x,y-w.y)/110)):0;
+  const near=(x,y)=>w?Math.max(.5,Math.min(1,1.35-Math.hypot(x-w.x,y-w.y)/120)):0;
   (me.strands||[]).forEach(s=>{
     const rest=restOf(s);
     let tq=0,amp=0;if(w){const r=rest[0]*Math.PI/180,ux=-Math.sin(r),uy=Math.cos(r);tq=ux*w.dy-uy*w.dx;amp=WROT*w.p*near(s.x,s.y)*red}

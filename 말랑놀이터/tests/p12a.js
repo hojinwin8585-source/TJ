@@ -4,7 +4,8 @@
    3) 샤워 중과 드라이 중의 표정·자세가 서로 다르고, 손을 떼면 기본으로 돌아옴
    4) 과정이 끝날 때 큰 동작(hop 또는 clap)이 기록됨, 큰 동작이 동시에 두 개 돌지 않음
    5) 390px 화면에서 도구 폭 175px 이상, 도구 칸 그림 150px 이상
-   6) 반복하는 움직임은 주기 0.6초 이상(선언된 animation-duration), 화면을 떠나면 타이머 0개 */
+   6) 반복하는 움직임은 주기 0.6초 이상(선언된 animation-duration), 화면을 떠나면 타이머 0개
+      P18: 손가락이 닿아 있는 동안(도구를 쓰는 중 .al-t-*)의 움직임은 motion.whileActing.minCycleMs(0.25초) 이상. 늘 도는 움직임의 한도(0.6초)는 그대로 */
 const {chromium}=require('playwright');
 const path=require('path');
 const URL='file://'+path.resolve(__dirname,'..','index.html');
@@ -30,8 +31,9 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
   /* watch big moments: never two al-p-* classes on one character at the same time */
   await p.evaluate(()=>{window.__maxPlays=0;new MutationObserver(ms=>ms.forEach(m=>{const n=[...m.target.classList].filter(c=>/^al-p-/.test(c)).length;if(n>window.__maxPlays)window.__maxPlays=n})).observe(document.body,{attributes:true,attributeFilter:['class'],subtree:true})});
   /* runtime check: repeating animations shorter than the limit */
-  await p.evaluate(()=>{window.__fast=new Set();setInterval(()=>{document.getAnimations().forEach(a=>{const t=a.effect&&a.effect.getTiming&&a.effect.getTiming();if(!t)return;const it=t.iterations,d=+t.duration;
-    if((it>1||it===Infinity)&&d>0&&d<600){const tg=a.effect.target;window.__fast.add((a.animationName||'?')+'@'+(tg&&(tg.id||tg.getAttribute&&tg.getAttribute('class'))||'')+' '+d+'ms×'+it)}})},700)});
+  await p.evaluate(()=>{const WA=window.MLCFG.motion.whileActing.minCycleMs;window.__fast=new Set();setInterval(()=>{document.getAnimations().forEach(a=>{const t=a.effect&&a.effect.getTiming&&a.effect.getTiming();if(!t)return;const it=t.iterations,d=+t.duration;
+    const acting=a.effect.target&&a.effect.target.closest&&a.effect.target.closest('[class*="al-t-"]');
+    if((it>1||it===Infinity)&&d>0&&d<(acting?WA:600)){const tg=a.effect.target;window.__fast.add((a.animationName||'?')+'@'+(tg&&(tg.id||tg.getAttribute&&tg.getAttribute('class'))||'')+' '+d+'ms×'+it)}})},700)});
 
   /* ---------- salon: waiting customers ---------- */
   await p.evaluate(()=>window.ML.go('petsalon'));await p.waitForFunction(()=>window.ML.__ps().phase==='lobby',null,{timeout:6000});await W(700);
@@ -144,17 +146,17 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
 
   /* 6: declared animation durations (repeating ones, and every character motion) on the screens of 12-가:
      salon, nail shop, alive.js, the tools. Other screens are listed for information only. */
-  const decl=await p.evaluate(()=>{const bad=[],seen=[],other=[];const mine=/#petsalon|\.ps-|\.lb-|#nailshop|\.ns-|\.nl-|#ns|\.alive|\.al-|\.tl-|\.tf/;const toMs=v=>v.split(',').map(x=>x.trim()).map(x=>x.endsWith('ms')?parseFloat(x):parseFloat(x)*1000);
+  const decl=await p.evaluate(()=>{const WA=window.MLCFG.motion.whileActing.minCycleMs,bad=[],seen=[],other=[];const mine=/#petsalon|\.ps-|\.lb-|#nailshop|\.ns-|\.nl-|#ns|\.alive|\.al-|\.tl-|\.tf/;const toMs=v=>v.split(',').map(x=>x.trim()).map(x=>x.endsWith('ms')?parseFloat(x):parseFloat(x)*1000);
     const scan=rules=>{for(const r of rules){if(r.cssRules&&!r.style){scan(r.cssRules);continue}if(!r.style)continue;const nm=r.style.animationName;if(!nm||nm==='none')continue;
       const it=r.style.animationIterationCount||'1',dur=r.style.animationDuration||'0s',sel=r.selectorText||'';
       const rep=it.split(',').some(x=>x.trim()==='infinite'||parseFloat(x)>1),ch=/alive|al-|\.tf|lb-cust|nl-cust|nsHand|ns-bean|tl-tool/.test(sel);
       if(!(rep||ch))continue;if(/var\(/.test(dur)){seen.push(sel+' '+dur);continue}
-      const ms=toMs(dur);if(!mine.test(sel)){if(ms.some(m=>m>0&&m<600))other.push(sel+' '+dur);continue}seen.push(sel+' '+dur+' ×'+it);if(ms.some(m=>m>0&&m<600))bad.push(sel+' '+dur+' ×'+it)}};
+      const ms=toMs(dur);if(!mine.test(sel)){if(ms.some(m=>m>0&&m<600))other.push(sel+' '+dur);continue}const lim=/\.al-t-/.test(sel)?WA:600;seen.push(sel+' '+dur+' ×'+it);if(ms.some(m=>m>0&&m<lim))bad.push(sel+' '+dur+' ×'+it+' (한도 '+lim+'ms)')}};
     for(const sh of document.styleSheets){try{scan(sh.cssRules)}catch(e){}}return{bad,n:seen.length,other}});
   const fast=await p.evaluate(()=>[...window.__fast]);
-  ok('6. 선언된 animation-duration: 미용실·네일숍·캐릭터·도구의 반복 움직임 모두 0.6초 이상',decl.bad.length===0,decl.bad.length?decl.bad.join(' ; '):'검사한 규칙 '+decl.n+'개');
+  ok('6. 선언된 animation-duration: 미용실·네일숍·캐릭터·도구의 반복 움직임 모두 0.6초 이상 (도구를 쓰는 동안은 whileActing 0.25초 이상)',decl.bad.length===0,decl.bad.length?decl.bad.join(' ; '):'검사한 규칙 '+decl.n+'개');
   if(decl.other.length)console.log('   (참고: 12-가 밖 다른 화면의 0.6초 미만 반복 움직임 '+decl.other.length+'개: '+decl.other.join(' ; ')+')');
-  ok('6. 실제로 돈 반복 애니메이션도 0.6초 미만 없음',fast.length===0,fast.join(' ; ')||'없음');
+  ok('6. 실제로 돈 반복 애니메이션도 한도 미만 없음 (늘 0.6초 · 도구를 쓰는 동안 0.25초)',fast.length===0,fast.join(' ; ')||'없음');
   ok('오류 없음',errs.length===0,JSON.stringify(errs.slice(0,5)));
   console.log(fails?'\n실패 '+fails+'개':'\n12-가 검사 모두 통과');
   await b.close();process.exit(fails?1:0);

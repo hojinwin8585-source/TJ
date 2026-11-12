@@ -604,7 +604,7 @@ function styleStep(){
 function showStyleCards(){
   const n=Math.min(3,STYLES.length),list=Array.from({length:n},(_,k)=>STYLES[(st.styleRot*n+k)%STYLES.length]);panel.innerHTML='';
   list.forEach((s,k)=>{const b=document.createElement('button');b.className='ps-card style in';b.style.animationDelay=(k*60)+'ms';b.dataset.style=s.id;b.setAttribute('aria-label',s.ko);
-    b.innerHTML=A.animal(st.kind,'happy',{lash:true,hairStyle:s.id,knots:s.knots,brushed:true}).replace('viewBox="0 0 200 230"','viewBox="-14 -16 228 196"');
+    b.innerHTML=A.animal(st.kind,'happy',{lash:true,hairStyle:s.id,knots:s.knots,brushed:true}).replace('viewBox="0 0 200 230" style="overflow:visible"','viewBox="4 -22 192 188" style="overflow:hidden"');
     if(st.style===s.id)b.classList.add('worn');panel.appendChild(b)});
   LOG.push('styles:'+list.map(s=>s.id).join(','));
 }

@@ -82,22 +82,22 @@ function hairFront(d){
 function eyes(d,px){
   return ['l','r'].map(s=>{const ex=s==='l'?98:142,ey=106,k=s==='l'?-1:1;
     return `<g class="al-eye al-eye-${s} al-open"><g class="al-pupil"><ellipse cx="${ex}" cy="${ey}" rx="10" ry="12.5" fill="url(#${px}gi)" stroke="${OL}" stroke-width="2"/><circle cx="${ex-3.5}" cy="${ey-4.5}" r="4" fill="#fff"/><circle cx="${ex+3.6}" cy="${ey+5}" r="1.9" fill="#fff"/></g>
-      <path d="M${ex-13} ${ey-5}Q${ex} ${ey-17} ${ex+13} ${ey-6}" stroke="${OL}" stroke-width="3.2" fill="none" stroke-linecap="round"/>${d.hair!=='short'?`<path d="M${ex+k*12} ${ey-8}l${k*5} -4" stroke="${OL}" stroke-width="2.4" stroke-linecap="round"/>`:''}</g>
+      <path d="M${ex-11} ${ey-7}Q${ex} ${ey-17} ${ex+11} ${ey-7}" stroke="${OL}" stroke-width="3" fill="none" stroke-linecap="round"/>${d.hair!=='short'?`<path d="M${ex+k*10} ${ey-9}l${k*4} -3" stroke="${OL}" stroke-width="2.2" stroke-linecap="round"/>`:''}</g>
       <path class="al-lid al-lid-${s}" opacity="0" d="M${ex-12} ${ey}Q${ex} ${ey+7} ${ex+12} ${ey}" stroke="${OL}" stroke-width="3" fill="none" stroke-linecap="round"/>`}).join('');
 }
 function head(d,px,wear){
   const ears=[58,182].map(x=>`<ellipse cx="${x}" cy="${112}" rx="8" ry="11" fill="${d.skin}" ${S3}/>`).join('');
   return `${hairBack(d)}${ears}<path d="${FACE}" fill="${d.skin}" ${S3}/>
     ${[88,152].map(x=>`<ellipse cx="${x}" cy="128" rx="11" ry="7" fill="#FF9AAE" opacity=".45"/>`).join('')}
-    ${['l','r'].map(s=>{const ex=s==='l'?98:142;return `<path d="M${ex-10} 86Q${ex} 80 ${ex+10} 85" stroke="${d.hc}" stroke-width="3" fill="none" stroke-linecap="round" opacity=".85"/>`}).join('')}
+    ${['l','r'].map(s=>{const ex=s==='l'?98:142;return `<path d="M${ex-8} 84Q${ex} 77 ${ex+8} 84" stroke="${d.hc}" stroke-width="2.6" fill="none" stroke-linecap="round" opacity=".8"/>`}).join('')}
     ${eyes(d,px)}<path d="M118 121Q120 123 122 121" stroke="${d.shade}" stroke-width="2.4" fill="none" stroke-linecap="round"/>
-    <g class="al-mouth"><path d="M112 132Q120 140 128 132" stroke="${OL}" stroke-width="2.8" fill="#F08A96" stroke-linejoin="round" stroke-linecap="round"/></g>
+    <g class="al-mouth"><path d="M111 131Q120 142 129 131Z" stroke="${OL}" stroke-width="2.6" fill="#F08A96" stroke-linejoin="round" stroke-linecap="round"/><path d="M115 136Q120 139 125 136" stroke="#FFB3BF" stroke-width="2" fill="none" stroke-linecap="round"/></g>
     ${hairFront(d)}`;
 }
 
 /* ============================== clothes (clothesArt): each item returns pieces for the body parts, drawn to fit this body ============================== */
 const sleeve=(s,t,c,w=21)=>{const a=ARM[s];return line(a.s,lerp(a.s,a.h,t),w,c,5)};
-const cuff=(s,t,c)=>{const a=ARM[s],p=lerp(a.s,a.h,t),q=lerp(a.s,a.h,t-.08);return line(q,p,22,c,5)};
+const cuff=(s,t,c)=>{const a=ARM[s],p=lerp(a.s,a.h,t),q=lerp(a.s,a.h,t-.06);return line(q,p,20,c,5)};
 const puff=(s,c,l)=>{const [x,y]=ARM[s].s,k=s==='l'?-1:1;return `<ellipse cx="${x+k*3}" cy="${y+6}" rx="15" ry="13" fill="${c}" ${S3}/><path d="M${x+k*-6} ${y+2}q${k*6} 6 ${k*14} 6" ${FOLD}/><path d="M${x-6} ${y+16}q6 3 ${12} 0" stroke="${l}" stroke-width="3" fill="none" stroke-linecap="round"/>`};
 const legPiece=(s,t0,t1,c,w=28)=>{const g=LEG[s];return line(lerp(g.s,g.a,t0),lerp(g.s,g.a,t1),w,c,5)};
 const HIP='M84 226Q120 234 156 226L159 260Q140 268 122 263L120 256L118 263Q100 268 81 260Z';
@@ -127,7 +127,7 @@ const ITEMS={
     {id:'raincoat',ko:'비옷',en:'raincoat',th:['rain'],cols:['yellow','red','mint'],
       d:(c,l)=>({back:`<path d="M66 108Q60 52 120 46Q180 52 174 108Q166 142 120 150Q74 142 66 108Z" fill="${c}" ${S3}/>`,
         torso:`<path d="M88 158Q120 150 152 158Q166 164 164 184L170 272Q120 282 70 272L76 184Q74 164 88 158Z" fill="${c}" ${S3}/><path d="M120 162V276" stroke="${OL}" stroke-width="2.4" stroke-opacity=".6"/>${[190,214,238].map(y=>`<rect x="112" y="${y}" width="16" height="6" rx="3" fill="${l}" stroke="${OL}" stroke-width="1.8"/>`).join('')}<path d="M96 200Q92 240 86 266M146 200Q150 240 156 266" ${FOLD}/><path d="M82 190Q80 230 78 260" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" opacity=".5"/>`,
-        armL:sleeve('l',.92,c,24),armR:sleeve('r',.92,c,24)}),vb:'40 40 160 250'},
+        armL:sleeve('l',.92,c,24),armR:sleeve('r',.92,c,24)}),vb:'48 140 144 146'},
     {id:'sweater',ko:'털 스웨터',en:'sweater',th:['snow'],cols:['red','mint','purple'],
       d:(c,l)=>({torso:`<path d="M90 160Q120 152 150 160Q164 165 162 184L158 246Q120 254 82 246L78 184Q76 165 90 160Z" fill="${c}" ${S3}/><path d="M104 156Q120 166 136 156V168Q120 176 104 168Z" fill="${c}" ${S3}/>
         <path d="M80 200L90 192L100 200L110 192L120 200L130 192L140 200L150 192L160 200" stroke="${l}" stroke-width="5" fill="none" stroke-linejoin="round"/>${[92,104,116,128,140,152].map(x=>`<path d="M${x} 238V250" stroke="${OL}" stroke-opacity=".35" stroke-width="2"/>`).join('')}`,
@@ -230,7 +230,7 @@ function doll(d,wear={},o={}){
 }
 let UID=0;
 /* a card picture: just the item (calm colours), cropped to its own box */
-function cardSVG(slot,it,col){const c=colorOf(col),pc=it.d(c.hex,c.light);const order=['back','legL','legR','footL','footR','hip','skirt','torso','neck','front','armL','armR','handR','hat','photo'];
+function cardSVG(slot,it,col){const c=colorOf(col),pc=it.d(c.hex,c.light);const order=['legL','legR','footL','footR','hip','skirt','torso','neck','front','armL','armR','handR','hat','photo'];
   return `<svg viewBox="${it.vb||'0 0 240 400'}" preserveAspectRatio="xMidYMid meet" style="overflow:visible">${order.map(k=>pc[k]||'').join('')}</svg>`}
 
 /* ============================== backgrounds (종이 공예 겹, calm) ============================== */
@@ -302,13 +302,13 @@ const css=`
 #${id} .cl-headbar{flex:none;height:${HEAD_PX}px;gap:8px}
 #${id} .cl-back{width:${BACK_PX}px;height:${BACK_PX}px;padding:10px;flex:none}
 #${id} .cl-back svg{width:100%;height:100%;display:block}
-.cl-strip{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;pointer-events:none}
-.cl-strip span{flex:none;width:44px;height:44px;border-radius:50%;background:var(--paper);display:grid;place-items:center;position:relative;opacity:.55;transition:all .3s;box-shadow:0 2px 6px rgba(91,74,66,.12);padding:4px}
+.cl-strip{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:4px;pointer-events:none;overflow:hidden}
+.cl-strip span{flex:none;width:28px;height:28px;border-radius:50%;background:var(--paper);display:grid;place-items:center;position:relative;opacity:.55;transition:all .3s;box-shadow:0 2px 6px rgba(91,74,66,.12);padding:4px}
 .cl-strip span svg{width:100%;height:100%;display:block}
-.cl-strip span.on{width:58px;height:58px;opacity:1;box-shadow:0 0 0 4px color-mix(in srgb,var(--berry) 55%,#fff),0 2px 6px rgba(91,74,66,.14)}
+.cl-strip span.on{width:42px;height:42px;opacity:1;box-shadow:0 0 0 4px color-mix(in srgb,var(--berry) 55%,#fff),0 2px 6px rgba(91,74,66,.14)}
 .cl-strip span.done{opacity:1}
 .cl-stars{flex:none;display:flex}
-.cl-stars .mlp-star{width:24px;height:24px}
+.cl-stars .mlp-star{width:20px;height:20px}
 .cl-stage{flex:1;min-height:0;position:relative;border-radius:30px;overflow:hidden;touch-action:none;box-shadow:0 6px 14px rgba(91,74,66,.12);background:#F4E9DE}
 .cl-stage svg{display:block}
 .cl-bg,.cl-scene{position:absolute;inset:0;pointer-events:none}
@@ -328,10 +328,10 @@ const css=`
 .cl-doll.tada .al-arm-r{animation:cltadar 1.4s ease-in-out}
 @keyframes cltadal{0%,100%{transform:rotate(0)}25%,75%{transform:rotate(130deg)}}
 @keyframes cltadar{0%,100%{transform:rotate(0)}25%,75%{transform:rotate(-130deg)}}
-.cl-doll.walk>svg{animation:clwalk .5s ease-in-out infinite}
+.cl-doll.walk>svg{animation:clwalk .6s ease-in-out infinite}
 @keyframes clwalk{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-.cl-doll.walk .cl-leg-l{animation:clstep .5s ease-in-out infinite;transform-box:view-box;transform-origin:106px 238px}
-.cl-doll.walk .cl-leg-r{animation:clstep .5s ease-in-out -.25s infinite;transform-box:view-box;transform-origin:134px 238px}
+.cl-doll.walk .cl-leg-l{animation:clstep .6s ease-in-out infinite;transform-box:view-box;transform-origin:106px 238px}
+.cl-doll.walk .cl-leg-r{animation:clstep .6s ease-in-out -.3s infinite;transform-box:view-box;transform-origin:134px 238px}
 @keyframes clstep{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
 .cl-curt{position:absolute;top:0;bottom:0;width:52%;z-index:5;pointer-events:none;transition:transform .35s ease-in-out}
 .cl-curt svg{width:100%;height:100%}
@@ -364,7 +364,8 @@ const css=`
 .cl-rod::before,.cl-rod::after{content:"";position:absolute;top:-3px;width:15px;height:15px;border-radius:50%;background:#B9946F}
 .cl-rod::before{left:-6px}.cl-rod::after{right:-6px}
 .cl-card{position:relative;flex:1;min-width:110px;max-width:170px;height:calc(100% - 24px);min-height:110px;border-radius:24px;border:0;padding:10px;background:var(--paper);display:grid;place-items:center;touch-action:none;box-shadow:0 4px 12px rgba(91,74,66,.16);transition:transform .45s cubic-bezier(.3,1.1,.5,1),opacity .3s,box-shadow .2s}
-.cl-card svg{width:100%;height:100%;display:block;pointer-events:none}
+.cl-card>svg{width:100%;height:100%;display:block;pointer-events:none;overflow:hidden!important}
+.cl-card .cl-hook svg{pointer-events:none}
 .cl-card .cl-hook{position:absolute;left:50%;top:-20px;width:30px;height:24px;transform:translateX(-50%);pointer-events:none}
 .cl-card .cl-hook svg{width:100%;height:100%}
 .cl-card.slide{transform:translateX(120vw)}
@@ -569,12 +570,12 @@ mirBtn.addEventListener('click',()=>{
   L.later(()=>{dollEl.classList.remove('walk');dollEl.style.transition='';LOG.push('pose:1');if(al)al.play('wave');say('짜잔!','Ta-da!')},1800);
   L.later(()=>{LOG.push('pose:2');if(al)al.play('twirl');dollEl.classList.add('sway');setTimeout(()=>dollEl.classList.remove('sway'),1200)},3700);
   L.later(()=>{LOG.push('pose:3');dollEl.classList.add('tada');setTimeout(()=>dollEl.classList.remove('tada'),1450);tone(1046,.2,'sine',.08)},5100);
-  L.later(()=>{flashEl.classList.add('on');SFX.shutter&&SFX.shutter();setTimeout(()=>flashEl.classList.remove('on'),260);photo()},6100);
-  L.later(()=>{DATA.album.unshift({d:S.d.id,th:S.th,wear:JSON.parse(JSON.stringify(S.wear)),t:Date.now()});DATA.album=DATA.album.slice(0,12);DATA.served++;save();say('고마워! 예쁜 옷이야!','Thank you! I love my clothes!')},7300);
-  L.later(()=>{if(g!==gen)return;const i=S.seat;const others=lobby.filter((x,k)=>k!==i);const ds=DOLLS.map(d=>d.id).filter(x=>x!==S.d.id&&!others.some(o=>o.d===x)),ths=THEMES.map(t=>t.id).filter(x=>x!==S.th);
-    lobby[i]={d:pick(ds.length?ds:[S.d.id]),th:pick(ths)};
+  L.later(()=>{flashEl.classList.add('on');SFX.shutter&&SFX.shutter();setTimeout(()=>flashEl.classList.remove('on'),260);photo()},6700);
+  L.later(()=>{DATA.album.unshift({d:S.d.id,th:S.th,wear:JSON.parse(JSON.stringify(S.wear)),t:Date.now()});DATA.album=DATA.album.slice(0,12);DATA.served++;save();say('고마워! 예쁜 옷이야!','Thank you! I love my clothes!')},7900);
+  L.later(()=>{if(g!==gen)return;const i=S.seat;const others=lobby.filter((x,k)=>k!==i);const ds=DOLLS.map(d=>d.id).filter(x=>x!==S.d.id&&!others.some(o=>o.d===x)),ths=THEMES.map(t=>t.id).filter(x=>x!==S.th&&!others.some(o=>o.th===x));
+    lobby[i]={d:pick(ds.length?ds:[S.d.id]),th:pick(ths.length?ths:THEMES.map(t=>t.id))};
     let result=null;const pr=PRG();if(pr){pr.struggle(GID,{wrong:S.wrong,idleMs:S.idle});result=pr.clear(GID)}else{DATA.level=Math.min(LEVELS.length,DATA.level+1);save()}
-    dollEl.style.transform='';showLobby({result})},9200);
+    dollEl.style.transform='';showLobby({result})},9800);
 });
 function photo(){const r=dR(),s=stR(),w=s.width*.5,h=w*1.2,f=document.createElement('div');f.className='cl-photo';
   f.innerHTML=`<div>${sceneSVG(S.th)}<div style="position:absolute;left:10%;right:10%;top:6%;bottom:0">${doll(S.d,S.wear,{})}</div></div>`;

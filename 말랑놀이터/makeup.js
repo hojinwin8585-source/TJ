@@ -280,15 +280,15 @@ const css=`
 #${id} .mk-head{flex:none;height:${HEAD_PX}px;gap:8px}
 #${id} .mk-back{width:${BACK_PX}px;height:${BACK_PX}px;padding:10px;flex:none}
 #${id} .mk-back svg{width:100%;height:100%;display:block}
-.mk-strip{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;pointer-events:none}
-.mk-strip span{flex:none;width:40px;height:40px;border-radius:50%;background:var(--paper);display:grid;place-items:center;position:relative;opacity:.55;transition:width .3s,height .3s,opacity .3s;box-shadow:0 2px 6px rgba(91,74,66,.12)}
+.mk-strip{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:4px;pointer-events:none;overflow:hidden}
+.mk-strip span{flex:none;width:32px;height:32px;border-radius:50%;background:var(--paper);display:grid;place-items:center;position:relative;opacity:.55;transition:width .3s,height .3s,opacity .3s;box-shadow:0 2px 6px rgba(91,74,66,.12)}
 .mk-strip span svg{width:74%;height:74%;display:block}
-.mk-strip span.on{width:58px;height:58px;opacity:1;box-shadow:0 0 0 4px color-mix(in srgb,var(--berry) 55%,#fff),0 2px 6px rgba(91,74,66,.14)}
+.mk-strip span.on{width:46px;height:46px;opacity:1;box-shadow:0 0 0 4px color-mix(in srgb,var(--berry) 55%,#fff),0 2px 6px rgba(91,74,66,.14)}
 .mk-strip span.done{opacity:.9}
 .mk-strip span .st{position:absolute;right:-5px;top:-5px;width:22px;height:22px}
 .mk-strip span .st svg{width:100%;height:100%}
 .mk-stars{flex:none;display:flex;align-items:center}
-.mk-stars .mlp-star{width:24px;height:24px}
+.mk-stars .mlp-star{width:20px;height:20px}
 .mk-stage{flex:1;min-height:0;position:relative;border-radius:30px;overflow:hidden;touch-action:none;box-shadow:0 6px 14px rgba(91,74,66,.12);background:#F5E6EA}
 .mk-stage svg{display:block}
 .mk-bg{position:absolute;inset:0;pointer-events:none}

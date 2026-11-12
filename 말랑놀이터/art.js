@@ -297,7 +297,7 @@ function petLayer(kind,cells,vals){
     else if(v.tangle&&(v.brush||0)>=.5)a+=PL.smooth(P.dx,P.dy,1,K.dark);
     pass[0].push([P,i,a]);
     pass[1].push([P,i,f>.02?PL.foam(P.dx,P.dy,(P.face?.6:.85)*(.35+.65*f)):'']);
-    let w='';if(wet>.04){w+=PL.damp(P.dx,P.dy,P.face?10:14,K.edge,.32*wet);if(P.edge&&!P.face)w+=PL.drip(P.edge[0],P.edge[1]+3,.45+.3*wet,K.body);w+=PL.drop(P.dx+6,P.dy-4,.5+.5*wet)}
+    let w='';if(wet>.04){w+=PL.damp(P.dx,P.dy,P.face?10:14,K.edge,.32*wet);if(P.edge&&!P.face)w+=PL.drip(P.edge[0],P.edge[1]+3,.45+.3*wet,K.edge);w+=PL.drop(P.dx+6,P.dy-4,.5+.5*wet)}
     pass[2].push([P,i,w]);
     /* P18 fluffyFix: a dried cell draws nothing here any more (no white tufts, no curls): the outline itself turns soft (fluffRing in animal) */
     pass[3].push([P,i,'']);
