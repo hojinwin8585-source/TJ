@@ -286,20 +286,20 @@ function attach(el,o={}){
 /* ---------------- finger following: one shared requestAnimationFrame while a finger is down ---------------- */
 const P={down:false,x:0,y:0};let raf=0,lastF=0;
 /* ---------------- P18: wind, hair strands, ears, tail and fur ring (springs: the tip follows later and swings twice before it stops) ---------------- */
-const SP={w:[22,17,13],z:.34,g:[1,.75,.6],fl:[.1,.22,.32],per:[Math.max(WCYC,420),Math.max(WCYC,330),WCYC+20]};
+const SP={w:[24,19,15],z:.32,g:[1,1,1],fl:[.15,.3,.45],per:[Math.max(WCYC,420),Math.max(WCYC,330),WCYC+20]};
 const restOf=s=>{const mix=.15+.85*s.d,ns=s.neat?.4:1;return[s.ang*mix,s.bend*mix*ns,s.bend*mix*ns*1.2]};
 const clampR=v=>Math.max(-WROT,Math.min(WROT,v));
 function wake(me){if(me.dead)return;if(!me.sim){me.sim=true;me.el.classList.add('al-sim')}kick()}
 const spring=(o,ia,iv,target,w,dt)=>{const a=o[ia],v=o[iv],acc=w*w*(target-a)-2*SP.z*w*v;o[iv]=v+acc*dt;o[ia]=a+o[iv]*dt;return Math.abs(target-o[ia])>.15||Math.abs(o[iv])>.6};
 function simStep(me,t,dt){
   const W=me.air;if(W&&W.until&&t>W.until)me.air=null;const w=me.air,red=REDUCED?.3:1;let busy=!!w;
-  const near=(x,y)=>w?Math.max(.5,Math.min(1,1.35-Math.hypot(x-w.x,y-w.y)/120)):0;
+  const near=(x,y)=>w?Math.max(.75,Math.min(1,1.45-Math.hypot(x-w.x,y-w.y)/140)):0;
   (me.strands||[]).forEach(s=>{
     const rest=restOf(s);
     let tq=0,amp=0;if(w){const r=rest[0]*Math.PI/180,ux=-Math.sin(r),uy=Math.cos(r);tq=ux*w.dy-uy*w.dx;amp=WROT*w.p*near(s.x,s.y)*red}
     for(let k=0;k<3;k++){const fl=w?Math.sin(t/SP.per[k]*6.283+s.ph+k*1.3)*amp*SP.fl[k]:0,target=rest[k]+clampR(tq*amp*SP.g[k]+fl);
       const o={a:s.a[k],v:s.v[k]};const b=spring(o,'a','v',target,SP.w[k],dt);
-      if(!b&&!w){o.a=target;o.v=0}s.a[k]=o.a;s.v[k]=o.v;busy=busy||b}
+      if(!b&&!w){o.a=target;o.v=0}if(Math.abs(o.a-rest[k])>WROT){o.a=rest[k]+Math.sign(o.a-rest[k])*WROT;o.v*=-.3}s.a[k]=o.a;s.v[k]=o.v;busy=busy||b}
     s.els.forEach(h=>{h.style.setProperty('--h0',s.a[0].toFixed(1)+'deg');h.style.setProperty('--h1',s.a[1].toFixed(1)+'deg');h.style.setProperty('--h2',s.a[2].toFixed(1)+'deg')})});
   (me.ears||[]).forEach((e,i)=>{let tg=0;if(w){const ux=0,uy=e.up?-1:1,tq=ux*w.dy-uy*w.dx,amp=(WROT-5)*w.p*near(i?140:60,e.up?40:100)*red;tg=clampR(tq*amp+Math.sin(t/WCYC*6.283+i)*6*w.p*red)}
     const b=spring(e,'a','v',tg,18,dt);if(!b&&!w){e.a=0;e.v=0;e.el.style.removeProperty('--al-ew')}else e.el.style.setProperty('--al-ew',e.a.toFixed(1)+'deg');busy=busy||b});

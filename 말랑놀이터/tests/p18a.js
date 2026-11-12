@@ -27,6 +27,8 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
   const dry=await p.evaluate(()=>{const A=window.ART,out={};['bunny','dog','cat','bear'].forEach(k=>{const d=document.createElement('div');d.innerHTML=A.animal(k,'happy',{lash:true,state:'fluffy'});
     out[k]={lumps:d.querySelectorAll('[class*="tuft"],.pc-fluffy *').length,bumps:d.querySelectorAll('.ps-fb').length,out:[...d.querySelectorAll('.ps-fb')].filter(e=>e.style.getPropertyValue('--f')==='1.00').length,shine:d.querySelectorAll('.ps-sheen').length}});return out});
   ok('1. 말린 모습(네 동물)에 흰 덩어리 요소 없음 · 윤곽이 보송한 물결로',Object.values(dry).every(v=>v.lumps===0&&v.bumps>=24&&v.out>=24&&v.shine===2),JSON.stringify(dry));
+  const doll=await p.evaluate(()=>{const d=document.createElement('div');d.innerHTML=window.ART.animal('dolly','happy',{lash:true,state:'fluffy'});return{fur:d.querySelectorAll('.ps-fb,.ps-fur,.ps-sheen').length,hair:d.querySelectorAll('.hs').length}});
+  ok('인형(사람) 얼굴에는 털 물결·윤기 호 없음 (보송한 것은 머리카락만)',doll.fur===0&&doll.hair>0,JSON.stringify(doll));
   if(SHOT){await p.evaluate(()=>{const A=window.ART,d=document.createElement('div');d.id='gal';d.style.cssText='position:fixed;inset:0;z-index:999;background:#F6EEE6;display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:10px;align-content:start';
     ['bunny','dog','cat','bear'].forEach(k=>{const c=document.createElement('div');c.style.cssText='aspect-ratio:200/230;padding:8px';c.innerHTML=A.animal(k,'happy',{lash:true,state:'fluffy'});c.firstElementChild.style.cssText='width:100%;height:100%;overflow:visible';d.appendChild(c)});document.body.appendChild(d)});
     await W(200);await shot('p18a_dried_4');await p.evaluate(()=>document.getElementById('gal').remove())}
@@ -66,7 +68,7 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
   s=await st();const tapLog=s.log.filter(x=>x==='tap:dry').length;
   ok('5. 콕만으로 드라이 단계 완료 (콕마다 바람 한 번)',s.phase!=='dry'&&tapLog>=1,'콕 '+taps+'번 · 기록된 바람 '+tapLog+'번');
   await W(600);s=await st();await shot('p18a_hair_3_fluffy','#psStage');
-  ok('말린 뒤 가닥이 풍성 (마른 정도 1) · 윤곽 물결이 나옴',s.hair.strands.every(x=>x.d>.99)&&s.fluff.filter(f=>f>=1).length>=20,'가닥 '+s.hair.strands.map(x=>x.d.toFixed(1)).join(',')+' · 물결 '+s.fluff.filter(f=>f>=1).length);
+  ok('말린 뒤 가닥이 풍성 (마른 정도 1) · 말 얼굴에는 털 물결 없음 (보송한 것은 갈기·꼬리)',s.hair.strands.every(x=>x.d>.99)&&s.fluff.length===0,'가닥 '+s.hair.strands.map(x=>x.d.toFixed(1)).join(',')+' · 물결 '+s.fluff.filter(f=>f>=1).length);
   await waitPhase('brush',10000);await W(1500);await scrub('brush');await W(300);s=await st();
   ok('빗질 뒤 가지런 (윤기)',s.hair.brushed===true);
   /* ---------- hairstyle: cards 3 at a time, tap tap = one knot each ---------- */

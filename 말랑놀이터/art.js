@@ -24,7 +24,7 @@ const KINDS={
   cat:{ko:'모모',body:'#FFC878',edge:'#F59A38',dark:'#EE8F32',inner:'#FFEFD8',cheek:'#FF8585'},
   dog:{ko:'콩이',body:'#FFFFFF',edge:'#EADFD5',dark:'#B98154',inner:'#FCF1E6',cheek:'#FF94AC'},
   /* P18 games.petsalon.hairCustomers: long-haired customers (drawn here, hair from HAIR below) */
-  pony:{ko:'구름이',body:'#F6EFFA',edge:'#DCCBEA',dark:'#B79BD0',inner:'#FFF8FC',cheek:'#FF9FC0',hair:1},
+  pony:{ko:'구름이',nofur:1,body:'#F6EFFA',edge:'#DCCBEA',dark:'#B79BD0',inner:'#FFF8FC',cheek:'#FF9FC0',hair:1},
   fluffdog:{ko:'솜이',body:'#FFF8F0',edge:'#EEDCC8',dark:'#8A5A40',inner:'#FFFDF8',cheek:'#FF9DB0',hair:1},
   dolly:{ko:'별이',nofur:1,body:'#FFE6D8',edge:'#F3C8B2',dark:'#E59A80',inner:'#FFF1EA',cheek:'#FF9AA8',hair:1,dress:'#F4B9CB',dressEdge:'#DE93AC',dressIn:'#FBDCE5',shoe:'#D98AA6'}
 };
@@ -70,10 +70,13 @@ const lum=h=>{const v=[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255);return .3*
    groups: back (behind the head), front (bangs, over the face), tail (in the tail group). cap: the hair on top of the head. */
 const HAIR={
   pony:{col:'#F2A9C6',dark:'#CF7FA3',light:'#FBD9E6',
-    back:[[116,34,-22,92,28,-8],[136,40,-30,100,28,-8],[152,54,-36,96,27,-9],[163,72,-40,86,26,-9],[168,94,-40,70,24,-10],[80,36,24,58,24,8],[62,48,30,50,22,9]],
-    front:[[90,36,14,42,20,6],[104,33,-4,48,22,-6],[116,36,-18,40,18,-8]],
-    tail:[[126,204,-62,66,22,-14],[130,208,-46,70,22,-12],[128,212,-78,58,20,-12]],
-    cap:K=>`<path d="M78 42Q86 22 104 24Q122 24 128 42Q114 32 100 36Q88 34 78 42Z" fill="${HAIR.pony.col}" ${S}/>`},
+    /* a long mane down the right side of the neck (the ones rooted on top fill it out behind the head) */
+    back:[[120,34,-10,136,28,-5],[136,42,-14,150,28,-5],[150,56,-14,150,27,-6],[160,74,-16,136,25,-6],[166,96,-18,112,23,-6],[78,32,12,70,24,6],[60,48,20,64,20,8]],
+    /* forelock between the ears, over the forehead */
+    front:[[92,26,18,58,22,8],[104,24,-4,64,24,-6],[115,28,-22,54,20,-8]],
+    /* a long tail beside the body */
+    tail:[[132,198,-38,98,25,-9],[136,204,-56,92,23,-10],[134,208,-22,96,22,-8]],
+    cap:K=>`<path d="M80 40Q86 18 104 20Q124 20 128 40Q114 30 100 34Q88 32 80 40Z" fill="${HAIR.pony.col}" ${S}/>`},
   fluffdog:{col:'#F3D8BB',dark:'#D3A97F',light:'#FCEEDD',
     back:[[38,70,8,86,26,4],[30,90,16,70,20,6],[48,90,2,78,20,3],[162,70,-8,86,26,-4],[170,90,-16,70,20,-6],[152,90,-2,78,20,-3]],
     front:[[70,46,10,46,17,6],[86,40,4,50,17,3],[102,40,-2,50,17,-2],[118,42,-6,48,17,-4],[133,48,-12,44,16,-6]],
@@ -118,7 +121,7 @@ function hairStrand(s,i,H,o,outl){
     const hw=ww/2,tip=`M${-hw} 0Q${-hw} ${(l*.7).toFixed(1)} 0 ${l.toFixed(1)}Q${hw} ${(l*.7).toFixed(1)} ${hw} 0Z`;
     return `<g class="w">${outl?`<path d="${tip}" fill="${OL}" stroke="${OL}" stroke-width="3.5" stroke-linejoin="round"/>`:`<path d="${tip}" fill="${H.col}"/><path class="hw" d="M0 0V${(l*.8).toFixed(1)}" stroke="${H.dark}" stroke-width="${(ww*.5).toFixed(1)}" stroke-linecap="round"/><path class="hw-drop" transform="translate(0 ${(l+6).toFixed(1)}) scale(.6)" d="M0 -9Q8 3 0 7Q-8 3 0 -9Z" fill="#9FD0F0" stroke="#6FB2DC" stroke-width="1.5"/>`}</g>`};
   const chain=outl=>`<g class="j0">${seg(0,outl)}<g transform="translate(0 ${L[0].toFixed(1)})"><g class="j1">${seg(1,outl)}<g transform="translate(0 ${L[1].toFixed(1)})"><g class="j2">${seg(2,outl)}</g></g></g></g></g>`;
-  return `<g class="hs" data-i="${o.grp}${i}" data-x="${x}" data-y="${y}" data-a="${ang}" data-b="${bend}" data-l="${len}" transform="translate(${x} ${y})" style="--h0:${a0.toFixed(1)}deg;--h1:${a1.toFixed(1)}deg;--h2:${a2.toFixed(1)}deg;--d:${d.toFixed(2)};--g:${o.neat?.75:0}">${chain(outl)}</g>`;
+  return `<g class="hs" data-i="${o.grp}${i}" data-x="${x}" data-y="${y}" data-a="${ang}" data-b="${bend}" data-l="${len}" transform="translate(${x} ${y})" style="--h0:${a0.toFixed(1)}deg;--h1:${a1.toFixed(1)}deg;--h2:${a2.toFixed(1)}deg;--d:${d.toFixed(2)};--g:${o.neat?.75:o.shine?.5:0}">${chain(outl)}</g>`;
 }
 /* all outlines first, then all fills: the hair reads as one soft mass with locks, not a row of stripes (each strand has two hosts turned together) */
 const hairGroup=(list,H,o,grp)=>list?`<g class="al-hair al-hair-${grp}">${[1,0].map(ol=>list.map((s,i)=>hairStrand(s,i,H,Object.assign({grp},o),ol)).join('')).join('')}</g>`:'';
@@ -145,7 +148,7 @@ function animal(kind='bunny',mood='idle',opt={}){
   const state=opt.state||'',droop=EAR_DROOP[state]||0,vals=opt.cells||(state?stateCells(state):null),layer=vals&&opt.layer!==false?petLayer(kind,PET_CELLS(opt.grid),vals):null;
   /* P18: soft outline rings (only for the salon looks: other screens draw exactly as before) */
   const FB=vals&&!k.nofur?fluffBumps(opt.grid):null,fluffy=state==='fluffy';
-  const hp=k.hair?hairPlan(kind,opt.hairStyle,opt.knots):null,hd=opt.hairD!=null?opt.hairD:(HAIR_D[state]!=null?HAIR_D[state]:1),ho={d:hd,neat:!!opt.brushed};
+  const hp=k.hair?hairPlan(kind,opt.hairStyle,opt.knots):null,hd=opt.hairD!=null?opt.hairD:(HAIR_D[state]!=null?HAIR_D[state]:1),ho={d:hd,neat:!!opt.brushed,shine:state==='fluffy'};
   const dress=!!k.dress,bodyF=dress?`url(#${id}d)`:c,skin=c,feetF=dress?k.shoe:c;
   const ear=(side,inner)=>{const o=(AL_EAR[kind]||AL_EAR.bunny)[side==='l'?0:1],pv=(EAR_PIVOT[kind]||EAR_PIVOT.bunny)[side==='l'?0:1];
     if(droop)inner=`<g class="ps-droop" transform="rotate(${(pv[2]*droop).toFixed(1)} ${pv[0]} ${pv[1]})">${inner}</g>`;
@@ -179,10 +182,11 @@ function animal(kind='bunny',mood='idle',opt={}){
     ${ear('r',`<ellipse cx="128" cy="36" rx="19" ry="44" fill="${c}" ${S} transform="rotate(12 128 36)"/><ellipse cx="128" cy="40" rx="9" ry="31" fill="${k.inner}" transform="rotate(12 128 40)"/>`)}</g>`;
   if(kind==='bear')s+=`<g class="ears">${ear('l',`<circle cx="42" cy="50" r="25" fill="${c}" ${S}/><circle cx="42" cy="52" r="13" fill="${k.inner}"/>`)}${ear('r',`<circle cx="158" cy="50" r="25" fill="${c}" ${S}/><circle cx="158" cy="52" r="13" fill="${k.inner}"/>`)}</g>`;
   if(kind==='cat')s+=`<g class="ears">${ear('l',`<path d="M36 74L44 12L90 44Z" fill="${c}" ${S}/><path d="M49 58L52 30L74 46Z" fill="${k.inner}"/>`)}${ear('r',`<path d="M164 74L156 12L110 44Z" fill="${c}" ${S}/><path d="M151 58L148 30L126 46Z" fill="${k.inner}"/>`)}</g>`;
-  if(kind==='pony')s+=`<g class="ears">${ear('l',`<path d="M50 62Q44 26 60 10Q76 30 74 56Z" fill="${c}" ${S}/><path d="M56 52Q54 32 61 22Q68 36 67 50Z" fill="#F8CFE0"/>`)}${ear('r',`<path d="M150 62Q156 26 140 10Q124 30 126 56Z" fill="${c}" ${S}/><path d="M144 52Q146 32 139 22Q132 36 133 50Z" fill="#F8CFE0"/>`)}</g>`;
+  if(kind==='pony')s+=`<g class="ears">${ear('l',`<path d="M48 64Q40 20 60 0Q80 24 76 58Z" fill="${c}" ${S}/><path d="M56 52Q52 26 60 14Q70 32 68 52Z" fill="#F8CFE0"/>`)}${ear('r',`<path d="M152 64Q160 20 140 0Q120 24 124 58Z" fill="${c}" ${S}/><path d="M144 52Q148 26 140 14Q130 32 132 52Z" fill="#F8CFE0"/>`)}</g>`;
   /* long hair behind the head (and a bun or braid behind it) */
   if(hp)s+=hp.pre+hairGroup(hp.back,hp.H,ho,'b');
   if(FB)s+=fluffRing(FB.head,vals,`url(#${id}h)`,`<circle cx="100" cy="100" r="70" fill="${c}" ${S}/>`,`<circle cx="100" cy="100" r="68.25" fill="url(#${id}h)"/>`);
+  else if(kind==='pony')s+=`<path d="M38 98Q36 30 100 28Q164 30 162 98Q161 124 144 140Q142 186 100 188Q58 186 56 140Q39 124 38 98Z" fill="${c}" ${S}/>`;
   else s+=`<circle cx="100" cy="100" r="70" fill="${c}" ${S}/>`;
   s+=`<ellipse cx="68" cy="56" rx="25" ry="13" fill="#fff" opacity=".38" transform="rotate(-28 68 56)"/>`;
   if(kind==='cat')s+=`<path d="M100 32v15M84 35l3 13M116 35l-3 13" stroke="${k.dark}" stroke-width="5.5" stroke-linecap="round"/>`;
@@ -190,11 +194,12 @@ function animal(kind='bunny',mood='idle',opt={}){
   if(kind==='bunny')s+=`<path d="M90 36q10-12 20 0" stroke="${k.inner}" stroke-width="5" fill="none" stroke-linecap="round"/>`;
   if(furOn)s+=`<g class="ps-fur" stroke="${furLine}" stroke-width="3.2" fill="none" stroke-linecap="round"><path d="M44 116q-4 9 0 17"/><path d="M156 116q4 9 0 17"/></g>`;
   if(hp)s+=hp.H.cap(k);
-  if(kind==='pony')s+=`<ellipse cx="100" cy="130" rx="36" ry="25" fill="${k.inner}" ${S}/><ellipse cx="88" cy="121" rx="3.8" ry="2.8" fill="#B07A98"/><ellipse cx="112" cy="121" rx="3.8" ry="2.8" fill="#B07A98"/>`;
+  if(kind==='pony')s+=`<path d="M60 150Q62 126 100 124Q138 126 140 150Q140 186 100 188Q60 186 60 150Z" fill="#FBE3EE"/><path d="M84 146q4 -6 9 -1M116 146q-4 -6 -9 -1" stroke="#B07A98" stroke-width="4" fill="none" stroke-linecap="round"/>`;
   else if(kind==='bear'||kind==='dog'||kind==='fluffdog')s+=`<ellipse cx="100" cy="127" rx="31" ry="23" fill="${k.inner}"/>`;else if(kind!=='dolly')s+=`<ellipse cx="100" cy="127" rx="25" ry="17" fill="#fff" opacity=".5"/>`;
-  s+=`<circle cx="52" cy="124" r="18" fill="url(#${id}c)"/><circle cx="148" cy="124" r="18" fill="url(#${id}c)"/>`;
+  const chx=kind==='pony'?[60,140]:[52,148];
+  s+=`<circle cx="${chx[0]}" cy="124" r="18" fill="url(#${id}c)"/><circle cx="${chx[1]}" cy="124" r="18" fill="url(#${id}c)"/>`;
   /* fluffyFix.instead: rosier cheeks */
-  if(fluffy)s+=`<circle cx="52" cy="124" r="21" fill="url(#${id}c)" opacity=".7"/><circle cx="148" cy="124" r="21" fill="url(#${id}c)" opacity=".7"/>`;
+  if(fluffy)s+=`<circle cx="${chx[0]}" cy="124" r="21" fill="url(#${id}c)" opacity=".7"/><circle cx="${chx[1]}" cy="124" r="21" fill="url(#${id}c)" opacity=".7"/>`;
   /* worried brows (shown only by alive.js for the 'sad' mood) */
   s+=`<g class="al-brows" opacity="0"><path d="M60 84L84 75M140 84L116 75" stroke="${EYE}" stroke-width="4" stroke-linecap="round"/></g>`;
   /* eyes */
@@ -219,18 +224,21 @@ function animal(kind='bunny',mood='idle',opt={}){
   const big=kind==='bear'||kind==='dog'||kind==='fluffdog';
   if(kind==='dolly')s+=`<ellipse cx="100" cy="117" rx="4.5" ry="3.2" fill="${k.dark}"/>`;
   else if(kind!=='pony')s+=`<ellipse cx="100" cy="116" rx="${big?9:6}" ry="${big?6.5:4.5}" fill="${big?EYE:'#FF7FA2'}"/>${big?'<ellipse cx="97" cy="114" rx="3" ry="1.6" fill="#fff" opacity=".6"/>':''}`;
+  if(kind==='pony')s+=`<g transform="translate(22 58) scale(.78)">`;
   s+=`<g class="al-mouth" ${AL_FB(50,30)}>`;
   if(mood==='yum')s+=`<g class="chew"><path d="M84 124Q100 150 116 124Z" fill="#B8474B" ${S}/><path d="M91 134Q100 146 109 134Q100 129 91 134Z" fill="#FF8FA3"/></g>`;
   else if(mood==='wow')s+=`<ellipse cx="100" cy="135" rx="8.5" ry="10.5" fill="#B8474B" ${S}/>`;
   else if(mood==='happy')s+=`<path d="M82 123Q100 150 118 123Z" fill="#B8474B" ${S}/><path d="M90 134Q100 146 110 134Q100 129 90 134Z" fill="#FF8FA3"/>`;
   else s+=`<path d="M88 123q6 9 12 0q6 9 12 0" stroke="${OL}" stroke-width="3.8" fill="none" stroke-linecap="round"/>`;
   s+=`</g><g class="al-mouth-o" opacity="0"><ellipse cx="100" cy="133" rx="7.5" ry="9.5" fill="#B8474B" ${S}/></g>`;
+  if(kind==='pony')s+=`</g>`;
   if(kind==='cat')s+=`<path d="M46 114h-20M46 122l-18 5M154 114h20M154 122l18 5" stroke="${OL}" stroke-width="2.5" stroke-linecap="round"/>`;
   /* hats */
   if(opt.chef)s+=`<g><path d="M64 36Q48 8 76 2Q86 -14 100 -6Q114 -16 124 0Q152 6 136 36Z" fill="#fff" ${S}/><rect x="66" y="30" width="68" height="20" rx="7" fill="#fff" ${S}/><path d="M78 40h44" stroke="#E6EAF0" stroke-width="3" stroke-linecap="round"/></g>`;
   if(opt.bow)s+=`<g transform="translate(140 42) rotate(20)"><path d="M0 0L-22 -15Q-27 0 -22 15Z" fill="${opt.bow}" ${S}/><path d="M0 0L22 -15Q27 0 22 15Z" fill="${opt.bow}" ${S}/><circle r="7.5" fill="${opt.bow}" ${S}/><circle cx="-13" cy="-4" r="2.5" fill="#fff" opacity=".7"/></g>`;
   /* fluffyFix.instead: two shine arcs (top of the head, beside the cheek) and three still sparkles */
-  if(fluffy)s+=`<g class="ps-shine"><path class="ps-sheen" d="M50 76Q58 48 90 38" stroke="#fff" stroke-width="7" fill="none" stroke-linecap="round" opacity=".6"/><path class="ps-sheen" d="M160 104Q164 120 156 136" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" opacity=".55"/>${twinkle(174,58,8,'#F6DE9A')}${twinkle(22,96,6,'#F6DE9A')}${twinkle(170,158,5,'#F6DE9A')}</g>`;
+  if(fluffy&&k.nofur)s+=`<g class="ps-shine">${twinkle(174,58,8,'#F6DE9A')}${twinkle(22,96,6,'#F6DE9A')}${twinkle(170,158,5,'#F6DE9A')}</g>`;
+  else if(fluffy)s+=`<g class="ps-shine"><path class="ps-sheen" d="M50 76Q58 48 90 38" stroke="#fff" stroke-width="7" fill="none" stroke-linecap="round" opacity=".6"/><path class="ps-sheen" d="M160 104Q164 120 156 136" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" opacity=".55"/>${twinkle(174,58,8,'#F6DE9A')}${twinkle(22,96,6,'#F6DE9A')}${twinkle(170,158,5,'#F6DE9A')}</g>`;
   if(layer)s+=`<g class="ps-cells" data-state="${state}">${layer.h}</g>`;
   s+=`</g></g></g></g>`;
   return `<svg class="ani ani-${mood}${state?' ps-st-'+state:''}${k.hair?' al-haired':''}" viewBox="0 0 200 230" style="overflow:visible" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
