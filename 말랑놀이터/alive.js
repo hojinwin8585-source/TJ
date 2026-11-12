@@ -22,6 +22,9 @@ const C={
   lookMin:num(IDLE.lookAround,0,6)*1000,lookMax:num(IDLE.lookAround,1,9)*1000,
   followPx:Math.min(LIM.maxMovePx,num(CL.followFinger,0,6)),followDeg:Math.min(LIM.maxRotateDeg,num(CL.followFinger,1,3))
 };
+/* P18 motion.whileActing / motion.hair: bigger moves are allowed while a finger acts and 0.8 s after (rotation cap per joint, fastest flutter) */
+const MO=(M.CFG||{}).motion||{},WA=Object.assign({minCycleMs:250,maxRotateDeg:35,maxMovePx:40},MO.whileActing||{});
+const WROT=WA.maxRotateDeg,WCYC=Math.max(250,WA.minCycleMs);
 const REDUCED=(()=>{try{return matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){return false}})();
 const R=LIM.maxRotateDeg;
 
@@ -82,8 +85,8 @@ const css=`
 .alive.al-t-shower.al-side-l .al-ear-l,.alive.al-t-shower.al-side-r .al-ear-r{--al-te:${R}}
 .alive.al-t-dryer{--al-ew:calc(var(--al-wind,1) * ${R}deg);--al-me:0;--al-thy:-2px}
 .alive.al-t-dryer .al-eye.al-open{--al-esy:.55}
-.alive.al-t-dryer .al-ear{animation:al-flutter .8s ease-in-out infinite alternate}
-@keyframes al-flutter{from{transform:rotate(-3deg)}to{transform:rotate(3deg)}}
+.alive.al-t-dryer .al-ear{animation:al-flutter .32s ease-in-out infinite alternate}   /* motion.whileActing: faster while the dryer blows (≥ minCycleMs 250) */
+@keyframes al-flutter{from{transform:rotate(-5deg)}to{transform:rotate(5deg)}}
 .alive.al-t-dryer .al-root{animation:none}
 .alive.al-t-brush .al-eye.al-open{--al-esy:.1}
 .alive.al-t-brush .al-lid{opacity:1}
@@ -125,6 +128,9 @@ const css=`
 .alive.al-p-oops .al-head{animation:al-tilt 1.4s ease-in-out}
 @keyframes al-tilt{0%,100%{transform:rotate(0)}30%,75%{transform:rotate(${R}deg)}}
 .alive.al-p-oops{--al-esx:1.1;--al-esy:1.1}
+/* P18 motion.whileActing: while the wind (or a bounce) moves hair, ears, tail and fur, one shared requestAnimationFrame writes CSS variables */
+.alive.al-sim .al-ear-s{transition:none}
+.alive.al-sim .al-tail{animation:none;transform:rotate(var(--al-tw,0deg))}
 /* page hidden: everything stops */
 .alive.al-paused *{animation-play-state:paused!important}
 /* reduced motion: only breathing and blinking (overrides the global reduced-motion rule) */
@@ -199,13 +205,39 @@ function attach(el,o={}){
     const g=me.gaze;if(Math.abs(g[0]-px)<.05&&Math.abs(g[1]-py)<.05&&Math.abs(g[2]-hr)<.05&&Math.abs(g[3]-hx)<.05)return;me.gaze=[px,py,hr,hx];
     sv('--al-px',px.toFixed(2)+'px');sv('--al-py',py.toFixed(2)+'px');sv('--al-hr',hr.toFixed(2)+'deg');sv('--al-hx',hx.toFixed(2)+'px');
   }
+  /* P18: hair strands (art.js .hs, two hosts per strand), ears, tail and the soft fur ring move by wind and bounces (sim(), one shared frame) */
+  function scanHair(){
+    const old={};(me.strands||[]).forEach(s=>{old[s.id]=s});const by={};
+    el.querySelectorAll('.hs').forEach(h=>{const id=h.dataset.i;let s=by[id];
+      if(!s){const o=old[id],cs=getComputedStyle(h),num=v=>parseFloat(cs.getPropertyValue(v))||0;
+        s=by[id]={id,els:[],x:+h.dataset.x,y:+h.dataset.y,ang:+h.dataset.a,bend:+h.dataset.b,d:o?o.d:(parseFloat(h.style.getPropertyValue('--d'))||1),neat:o?o.neat:parseFloat(h.style.getPropertyValue('--g'))>0,
+          a:o?o.a.slice():[num('--h0'),num('--h1'),num('--h2')],v:o?o.v.slice():[0,0,0],ph:Math.random()*6.28}}
+      s.els.push(h)});
+    me.strands=Object.values(by);
+    me.ears=[...el.querySelectorAll('.al-ear')].map((e,i)=>{const o=(me.ears||[])[i];return{el:e,up:kind!=='dog',a:o?o.a:0,v:o?o.v:0}});
+    if(me.sim)me.strands.forEach(s=>s.els.forEach(h=>[0,1,2].forEach(k=>h.style.setProperty('--h'+k,s.a[k].toFixed(1)+'deg'))));
+  }
+  me.tail={a:0,v:0};me.fw={x:0,y:0,vx:0,vy:0};me.air=null;me.sim=false;
+  scanHair();
   function schedule(){T('blink',blink,rnd(800,C.blinkMax));if(!REDUCED)T('look',look,rnd(C.lookMin*.5,C.lookMax))}
   function stopTimers(){Object.keys(me.tm).forEach(k=>clear(me.tm[k]));me.tm={}}
   let gigT=0;
   const h={
     get id(){return id},get el(){return el},
     /* call after the picture inside was redrawn (new SVG): keeps the idle motion in step instead of restarting it */
-    refresh(){const off=-(performance.now()-me.t0);el.querySelectorAll('svg').forEach(s=>{if(!s.__al){s.__al=1;s.style.setProperty('--al-off',Math.round(off)+'ms')}})},
+    refresh(){const off=-(performance.now()-me.t0);el.querySelectorAll('svg').forEach(s=>{if(!s.__al){s.__al=1;s.style.setProperty('--al-off',Math.round(off)+'ms')}});scanHair()},
+    /* P18 wind (picture units 200×230): {x,y} where it blows to, {dx,dy} its direction (unit), p strength 0..1. null = off (everything settles within 0.8 s) */
+    wind(o){if(me.dead)return;me.air=o&&o.p>0?{x:o.x,y:o.y,dx:o.dx,dy:o.dy,p:Math.min(1,o.p),until:o.ms?performance.now()+o.ms:0}:null;wake(me)},
+    /* one puff (a tap on the dryer): the same wind for ms, then it settles */
+    gust(o,ms){h.wind(Object.assign({},o,{ms:ms||450}))},
+    /* a bounce: hair, ears and tail get a push and swing twice before they stop (motion.secondary) */
+    kick(k=1){if(me.dead||REDUCED)return;const s=k*120;(me.strands||[]).forEach((st,i)=>{st.v[0]+=s*(i%2?.6:-.6);st.v[2]-=s*(i%2?.9:-.9)});(me.ears||[]).forEach((e,i)=>{e.v+=s*(i?1:-1)});me.tail.v+=s;wake(me)},
+    /* how dry each strand looks (0 wet .. 1 dry, array by strand or one number) and whether it was brushed (neat and shiny) */
+    hair(o={}){if(me.dead)return;let ch=false;(me.strands||[]).forEach((s,i)=>{const d=Array.isArray(o.d)?o.d[i]:o.d;if(d!=null&&Math.abs(d-s.d)>.001){s.d=d;ch=true;s.els.forEach(e=>e.style.setProperty('--d',d.toFixed(2)))}
+      if(o.neat!=null&&!!o.neat!==s.neat){s.neat=!!o.neat;ch=true;s.els.forEach(e=>e.style.setProperty('--g',s.neat?'.75':'0'))}});if(ch)wake(me)},
+    /* each strand: angles now (a), at rest (rest) and how far the wind or a bounce moved it (dev = a - rest), in degrees */
+    strands(){return(me.strands||[]).map(s=>{const r=restOf(s);return{id:s.id,x:s.x,y:s.y,a:s.a.map(v=>+v.toFixed(2)),rest:r.map(v=>+v.toFixed(2)),dev:s.a.map((v,k)=>+(v-r[k]).toFixed(2)),d:s.d}})},
+    get simulating(){return me.sim},
     setMood(name){name=MOODS.includes(name)?name:'';if(name===me.mood)return;if(me.mood)el.classList.remove('al-m-'+me.mood);me.mood=name;if(name)el.classList.add('al-m-'+name)},
     setTool(name,op={}){
       name=TOOLS.includes(name)?name:null;
@@ -227,6 +259,7 @@ function attach(el,o={}){
       const rec={who:id,name,t0:performance.now(),t1:0};LOG.push(rec);if(LOG.length>300)LOG.splice(0,LOG.length-300);me.play=rec;
       el.classList.remove(...Object.keys(PLAYS).map(k=>'al-p-'+k),'al-pw');void el.getBoundingClientRect();el.classList.add(...cls);
       if(op.sound)sound(op.sound);
+      if(/^(hop|clap|dance|twirl|shiver|sneeze)$/.test(name))h.kick(name==='hop'?.5:.7);   // motion.secondary: hair and ears follow the body
       clear(me.tm.play);me.tm.play=later(()=>{delete me.tm.play;el.classList.remove(...cls);rec.t1=performance.now();me.play=null;
         if(me.dead)return;const q=me.queued;me.queued=null;if(q)h.play(q.name,q.op)},dur+40);
       return true;
@@ -236,11 +269,12 @@ function attach(el,o={}){
       if(me.dead)return;me.dead=true;stopTimers();clear(gigT);if(me.play&&!me.play.t1)me.play.t1=performance.now();
       el.classList.remove('alive','al-k-'+kind,'al-wait','al-reduced','al-blink','al-paused','al-side-l','al-side-r','al-pw');
       [...el.classList].filter(c=>/^al-[mtp]-/.test(c)).forEach(c=>el.classList.remove(c));
-      ['--al-br','--al-bs','--al-sw','--al-swa','--al-ef1','--al-ef2','--al-tf','--al-jump','--al-mv','--al-n','--al-px','--al-py','--al-hr','--al-hx','--al-wind'].forEach(k=>el.style.removeProperty(k));
+      ['--al-br','--al-bs','--al-sw','--al-swa','--al-ef1','--al-ef2','--al-tf','--al-jump','--al-mv','--al-n','--al-px','--al-py','--al-hr','--al-hx','--al-wind','--al-tw','--al-fwx','--al-fwy'].forEach(k=>el.style.removeProperty(k));
+      el.classList.remove('al-sim');me.sim=false;me.air=null;(me.ears||[]).forEach(e=>e.el.style.removeProperty('--al-ew'));
       const i=list.indexOf(me);if(i>=0)list.splice(i,1);if(el.__alive===h)delete el.__alive;
     },
     state(){return{id,kind,mood:me.mood,tool:me.tool,play:me.play&&me.play.name,blinks:me.blinks,looks:me.looks,classes:[...el.classList].filter(c=>/^al-/.test(c)),gaze:me.gaze.slice()}},
-    _pause(on){if(on){stopTimers();clear(gigT);el.classList.add('al-paused');me.pausedAt=performance.now();
+    _pause(on){if(on){stopTimers();clear(gigT);me.air=null;snap(me);el.classList.add('al-paused');me.pausedAt=performance.now();
         if(me.play){me.play.t1=performance.now();me.play=null;me.queued=null;[...el.classList].filter(c=>/^al-p-/.test(c)).forEach(c=>el.classList.remove(c));el.classList.remove('al-pw')}}else{el.classList.remove('al-paused');if(me.pausedAt){me.t0+=performance.now()-me.pausedAt;me.pausedAt=0}schedule()}},
     _gaze:setGaze,_me:me
   };
@@ -250,18 +284,50 @@ function attach(el,o={}){
 }
 
 /* ---------------- finger following: one shared requestAnimationFrame while a finger is down ---------------- */
-const P={down:false,x:0,y:0};let raf=0;
-function frame(){
-  raf=0;if(!P.down||hidden)return;let any=false;
-  list.forEach(me=>{if(!me.follow||me.dead||me.play)return;const r=me.el.getBoundingClientRect();if(!r.width||!r.height)return;any=true;
+const P={down:false,x:0,y:0};let raf=0,lastF=0;
+/* ---------------- P18: wind, hair strands, ears, tail and fur ring (springs: the tip follows later and swings twice before it stops) ---------------- */
+const SP={w:[22,17,13],z:.34,g:[1,.75,.6],fl:[.1,.22,.32],per:[Math.max(WCYC,420),Math.max(WCYC,330),WCYC+20]};
+const restOf=s=>{const mix=.15+.85*s.d,ns=s.neat?.4:1;return[s.ang*mix,s.bend*mix*ns,s.bend*mix*ns*1.2]};
+const clampR=v=>Math.max(-WROT,Math.min(WROT,v));
+function wake(me){if(me.dead)return;if(!me.sim){me.sim=true;me.el.classList.add('al-sim')}kick()}
+const spring=(o,ia,iv,target,w,dt)=>{const a=o[ia],v=o[iv],acc=w*w*(target-a)-2*SP.z*w*v;o[iv]=v+acc*dt;o[ia]=a+o[iv]*dt;return Math.abs(target-o[ia])>.15||Math.abs(o[iv])>.6};
+function simStep(me,t,dt){
+  const W=me.air;if(W&&W.until&&t>W.until)me.air=null;const w=me.air,red=REDUCED?.3:1;let busy=!!w;
+  const near=(x,y)=>w?Math.max(.3,Math.min(1,1.25-Math.hypot(x-w.x,y-w.y)/110)):0;
+  (me.strands||[]).forEach(s=>{
+    const rest=restOf(s);
+    let tq=0,amp=0;if(w){const r=rest[0]*Math.PI/180,ux=-Math.sin(r),uy=Math.cos(r);tq=ux*w.dy-uy*w.dx;amp=WROT*w.p*near(s.x,s.y)*red}
+    for(let k=0;k<3;k++){const fl=w?Math.sin(t/SP.per[k]*6.283+s.ph+k*1.3)*amp*SP.fl[k]:0,target=rest[k]+clampR(tq*amp*SP.g[k]+fl);
+      const o={a:s.a[k],v:s.v[k]};const b=spring(o,'a','v',target,SP.w[k],dt);
+      if(!b&&!w){o.a=target;o.v=0}s.a[k]=o.a;s.v[k]=o.v;busy=busy||b}
+    s.els.forEach(h=>{h.style.setProperty('--h0',s.a[0].toFixed(1)+'deg');h.style.setProperty('--h1',s.a[1].toFixed(1)+'deg');h.style.setProperty('--h2',s.a[2].toFixed(1)+'deg')})});
+  (me.ears||[]).forEach((e,i)=>{let tg=0;if(w){const ux=0,uy=e.up?-1:1,tq=ux*w.dy-uy*w.dx,amp=(WROT-5)*w.p*near(i?140:60,e.up?40:100)*red;tg=clampR(tq*amp+Math.sin(t/WCYC*6.283+i)*6*w.p*red)}
+    const b=spring(e,'a','v',tg,18,dt);if(!b&&!w){e.a=0;e.v=0;e.el.style.removeProperty('--al-ew')}else e.el.style.setProperty('--al-ew',e.a.toFixed(1)+'deg');busy=busy||b});
+  {const tl=me.tail,tg=w?clampR((18+10*Math.sin(t/(WCYC+30)*6.283))*w.p*red):0,b=spring(tl,'a','v',tg,16,dt);busy=busy||b;me.el.style.setProperty('--al-tw',(b||w?tl.a:0).toFixed(1)+'deg')}
+  {const f=me.fw,tx=w?w.dx*3.5*w.p*red+Math.sin(t/WCYC*6.283)*.8*w.p:0,ty=w?w.dy*3.5*w.p*red:0,b1=spring(f,'x','vx',tx,20,dt),b2=spring(f,'y','vy',ty,20,dt);busy=busy||b1||b2;
+    me.el.style.setProperty('--al-fwx',f.x.toFixed(2)+'px');me.el.style.setProperty('--al-fwy',f.y.toFixed(2)+'px')}
+  if(!busy)snap(me);
+}
+/* stop now: everything at rest */
+function snap(me){
+  if(!me.sim)return;me.sim=false;me.air=null;me.el.classList.remove('al-sim');
+  (me.strands||[]).forEach(s=>{const rest=restOf(s);s.a=rest;s.v=[0,0,0];s.els.forEach(h=>[0,1,2].forEach(k=>h.style.setProperty('--h'+k,rest[k].toFixed(1)+'deg')))});
+  (me.ears||[]).forEach(e=>{e.a=0;e.v=0;e.el.style.removeProperty('--al-ew')});me.tail.a=me.tail.v=0;Object.assign(me.fw,{x:0,y:0,vx:0,vy:0});
+  ['--al-tw','--al-fwx','--al-fwy'].forEach(k=>me.el.style.removeProperty(k));
+}
+/* the one shared frame: finger following (while a finger is down) and the springs (while something moves) */
+function frame(t){
+  raf=0;if(hidden)return;let any=false;const dt=Math.min(.033,lastF?(t-lastF)/1000:.016);lastF=t;
+  if(P.down)list.forEach(me=>{if(!me.follow||me.dead||me.play)return;const r=me.el.getBoundingClientRect();if(!r.width||!r.height)return;any=true;
     const u=200/r.width,cx=r.left+r.width/2,cy=r.top+r.height*.43,nx=Math.max(-1,Math.min(1,(P.x-cx)/(r.width*.7))),ny=Math.max(-1,Math.min(1,(P.y-cy)/(r.height*.7)));
     const mp=Math.min(4.5,C.followPx*u);me.h._gaze(nx*mp,ny*mp*.8,nx*C.followDeg,nx*Math.min(2,C.followPx*u*.3))});
-  if(any)raf=requestAnimationFrame(frame);
+  list.forEach(me=>{if(me.sim&&!me.dead){if(!me.el.isConnected){snap(me);return}simStep(me,t,dt);if(me.sim)any=true}});
+  if(any)raf=requestAnimationFrame(frame);else lastF=0;
 }
-const kick=()=>{if(!raf&&P.down&&!hidden&&list.some(m=>m.follow))raf=requestAnimationFrame(frame)};
+const kick=()=>{if(!raf&&!hidden&&((P.down&&list.some(m=>m.follow))||list.some(m=>m.sim)))raf=requestAnimationFrame(frame)};
 document.addEventListener('pointerdown',e=>{P.down=true;P.x=e.clientX;P.y=e.clientY;kick()},{capture:true,passive:true});
 document.addEventListener('pointermove',e=>{if(!P.down)return;P.x=e.clientX;P.y=e.clientY;kick()},{capture:true,passive:true});
-const up=()=>{if(!P.down)return;P.down=false;if(raf){cancelAnimationFrame(raf);raf=0}list.forEach(me=>{if(me.follow&&!me.dead)me.h._gaze(0,0,0,0)})};
+const up=()=>{if(!P.down)return;P.down=false;if(raf){cancelAnimationFrame(raf);raf=0}list.forEach(me=>{if(me.follow&&!me.dead)me.h._gaze(0,0,0,0)});kick()};
 ['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,up,{capture:true,passive:true}));
 document.addEventListener('visibilitychange',()=>{hidden=document.hidden;if(hidden){if(raf){cancelAnimationFrame(raf);raf=0}P.down=false}list.slice().forEach(me=>me.h._pause(hidden));TURNS.forEach(x=>x._pause(hidden))});
 
@@ -277,6 +343,6 @@ function takeTurns(hs,o={}){
 }
 
 M.Alive={attach,takeTurns,sound,LIMITS:LIM,CFG:C,log:LOG,
-  stats(){return{instances:list.length,timers:TIMERS.size,raf:raf?1:0,following:P.down}},
+  stats(){return{instances:list.length,timers:TIMERS.size,raf:raf?1:0,following:P.down,simulating:list.filter(m=>m.sim).length}},
   all(){return list.map(m=>m.h.state())}};
 })();

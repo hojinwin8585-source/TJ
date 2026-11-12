@@ -12,6 +12,15 @@ const cur=()=>M.current();
 const CF=M.CFG,CALM=CF.calm,PAL=CALM.palette,VO=CF.voice,BLOOM=(CALM.colorPolicy||{}).bloomMs||600;
 const PS=(CF.games||{}).petsalon||{},NEEDS=PS.needs||[],TOOLS=PS.tools||{},COV=TOOLS.coverage||{},DRS=PS.dressing||{},LOB=PS.lobby||{};
 const WAITING=LOB.waiting||3,IDLE_HINT=DRS.idleHintMs||30000,MIRROR_AFTER=8000;
+/* P18-가: motion (threeBeats, secondary, squash, particles, toolFeel, tapAlso, hair), fluffyFix and the long-haired customers (hairCustomers) */
+const MOT=CF.motion||{},PART=Object.assign({max:40,fadeMs:800},MOT.particles||{}),HC=PS.hairCustomers||{},HC_FROM=HC.from||2;
+const HAIRK=(HC.new||[]).filter(k=>A.KINDS[k.id]);
+/* hairCustomers.flow: 씻기 → 헹굼 → 수건으로 꾹꾹 → 드라이 → 빗질 → 머리 모양 고르기 → (장식 → 거울: the free dressing as for everyone) */
+const HAIR_FLOW=['foam','rinse','towel','dry','brush','style'];
+const STYLES=(HC.styles||[]).map(ko=>A.HAIR_STYLES.find(s=>s.ko===ko)).filter(Boolean);
+const isHair=k=>HAIRK.some(h=>h.id===k);
+const TAP_MS=450;        // motion.tapAlso has no number: one tap plays one stroke of about half a second
+const BEAT={ready:150,after:400};   // motion.threeBeats: 준비 0.15초 → 동작 → 여운 0.4초
 const LOG=[];
 const praise=(ko,en)=>{const p=M.nextPraise();return[ko?ko+' '+p[0]:p[0],en?en+' '+p[1]:p[1]]};
 const word=k=>{const w=VO.actionWords[k];if(w)say(w.ko,w.en)};
@@ -29,7 +38,8 @@ const stepsOf=(need,n)=>((need&&need.steps)||[]).filter(s=>stepOk(s,n));
 /* needs that can come at this level (needs[].from), with at least one step this level has (party has none and needs none) */
 const needPool=(n=lvNo())=>NEEDS.filter(x=>(x.from||1)<=n&&(!(x.steps||[]).length||stepsOf(x,n).length));
 const openSlots=()=>(LV().choose||['head']).filter(k=>['head','neck','face'].includes(k));
-const kindOf=k=>KINDS.find(a=>a.id===k)||{id:k,ko:'친구',en:'friend',name:'친구'};
+const kindOf=k=>KINDS.find(a=>a.id===k)||HAIRK.find(a=>a.id===k)||{id:k,ko:'친구',en:'friend',name:'친구'};
+const hairOn=()=>HAIRK.length>0&&lvNo()>=HC_FROM;
 const ya=w=>w+(batchim(w)?'아':'야'),iya=w=>w+(batchim(w)?'이야':'야');
 const LINE={
   lobby:['누구를 데려올까? 친구를 콕 눌러 봐!','Who comes in next? Tap a friend!'],
@@ -47,6 +57,12 @@ const LINE={
   sneeze:['에취!','Achoo!'],
   shake:['부르르!','Shake shake!'],
   mirror:['다 꾸몄으면 거울을 콕!','All done? Tap the mirror!'],
+  /* P18 long-haired customers (config has the flow, not these sentences) */
+  hair:n=>[`안녕! 나는 ${iya(n)}. 머리를 감고 예쁘게 해 줄래?`,`Hi! I'm ${n}. Can you wash my hair and make it pretty?`],
+  towel:['수건으로 꾹꾹 닦아 줘!','Pat pat with the towel!'],
+  style:['어떤 머리를 해 줄까? 하나 골라 봐!','Which hairstyle? Pick one!'],
+  knot:['머리를 콕콕 눌러 봐!','Tap tap the hair!'],
+  styled:['예쁜 머리 완성!','Pretty hair!'],
   thanks:['고마워!','Thank you!']
 };
 
@@ -55,7 +71,7 @@ const COLORS=CALM.choiceColors.map(c=>[c.ko,c.en,c.hex,c.light,c.vivid]);
 /* ---------- things to wear. Each is drawn around (0,0) and takes (colour, light colour) ---------- */
 const WEAR={
   head:[
-    {ko:'리본',en:'ribbon',d:(c,l)=>`<path d="M-6 6L-20 34L-2 26Z" fill="${l}" ${S}/><path d="M6 6L20 34L2 26Z" fill="${l}" ${S}/><path d="M0 0L-40 -24Q-50 0 -40 24Z" fill="${c}" ${S}/><path d="M0 0L40 -24Q50 0 40 24Z" fill="${c}" ${S}/><circle r="11" fill="${l}" ${S}/><path d="M-32 -12q6 -2 10 2" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".8" fill="none"/>`},
+    {ko:'리본',en:'ribbon',d:(c,l)=>`<path class="rb-tail" d="M-6 6L-20 34L-2 26Z" fill="${l}" ${S}/><path class="rb-tail" d="M6 6L20 34L2 26Z" fill="${l}" ${S}/><path d="M0 0L-40 -24Q-50 0 -40 24Z" fill="${c}" ${S}/><path d="M0 0L40 -24Q50 0 40 24Z" fill="${c}" ${S}/><circle r="11" fill="${l}" ${S}/><path d="M-32 -12q6 -2 10 2" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".8" fill="none"/>`},
     {ko:'왕관',en:'crown',d:(c,l)=>`<path d="M-36 20L-42 -18L-18 2L0 -30L18 2L42 -18L36 20Z" fill="#FFD23F" ${S}/><rect x="-37" y="14" width="74" height="13" rx="5" fill="#FFB800" ${S}/><circle cy="-30" r="6.5" fill="${c}" ${S}/><circle cx="-42" cy="-18" r="5.5" fill="${l}" ${S}/><circle cx="42" cy="-18" r="5.5" fill="${l}" ${S}/><circle cy="3" r="6" fill="${c}"/>`},
     {ko:'꽃',en:'flower',d:(c,l)=>`${[0,1,2,3,4].map(i=>{const a=-Math.PI/2+i*Math.PI*2/5;return `<circle cx="${(22*Math.cos(a)).toFixed(1)}" cy="${(22*Math.sin(a)).toFixed(1)}" r="16" fill="${c}" ${S}/>`}).join('')}<circle r="13" fill="#FFE066" ${S}/><circle cx="-4" cy="-4" r="3.5" fill="#fff" opacity=".8"/>`},
     {ko:'고깔모자',en:'party hat',d:(c,l)=>`<path d="M0 -44L30 24H-30Z" fill="${c}" ${S}/><path d="M-13 -14L17 -6M-21 4L25 14" stroke="${l}" stroke-width="7" stroke-linecap="round"/><circle cy="-46" r="10" fill="${l}" ${S}/><path d="M-34 24Q0 36 34 24" stroke="${OL}" stroke-width="10" stroke-linecap="round" fill="none"/><path d="M-34 24Q0 36 34 24" stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none"/>`},
@@ -114,26 +130,31 @@ const ICON={
   dryer:`<svg viewBox="0 0 100 100"><path d="M52 52L60 90H44L40 54Z" fill="${PAL.lilac}" ${S}/><path d="M16 24H62Q84 24 84 40Q84 56 62 56H16Z" fill="${PAL.rose}" ${S}/><rect x="8" y="26" width="12" height="28" rx="4" fill="#8F7F9C" ${S}/><g class="tf"><g class="tf-eye"><circle cx="40" cy="36" r="4.5" fill="${OL}"/><circle cx="41.5" cy="34.5" r="1.5" fill="#fff"/></g><g class="tf-eye"><circle cx="58" cy="36" r="4.5" fill="${OL}"/><circle cx="59.5" cy="34.5" r="1.5" fill="#fff"/></g><path class="tf-smile" d="M42 44Q49 52 56 44" fill="none" stroke="${OL}" stroke-width="3.5" stroke-linecap="round"/><path class="tf-grin" opacity="0" d="M41 43Q49 55 57 43Z" fill="#B8474B" stroke="${OL}" stroke-width="2.2" stroke-linejoin="round"/></g></svg>`,
   /* 2-나 tools.brush: a round comb with a little face */
   brush:`<svg viewBox="0 0 100 100"><rect x="40" y="52" width="20" height="40" rx="10" fill="${PAL.lilac}" ${S}/><path d="M14 54Q14 18 50 18Q86 18 86 54Z" fill="${PAL.peach}" ${S}/>${[22,32,42,52,62,72].map(x=>`<path d="M${x+3} 54V70" stroke="${OL}" stroke-width="6" stroke-linecap="round"/><path d="M${x+3} 54V69" stroke="${PAL.peach}" stroke-width="2.5" stroke-linecap="round"/>`).join('')}<g class="tf"><circle class="tf-eye" cx="41" cy="36" r="3.8" fill="${OL}"/><circle class="tf-eye" cx="59" cy="36" r="3.8" fill="${OL}"/><path class="tf-smile" d="M44 44Q50 50 56 44" fill="none" stroke="${OL}" stroke-width="3" stroke-linecap="round"/><path class="tf-grin" opacity="0" d="M43 43Q50 54 57 43Z" fill="#B8474B" stroke="${OL}" stroke-width="2" stroke-linejoin="round"/></g><path d="M24 40Q28 28 40 24" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" opacity=".7"/></svg>`,
+  /* P18 hairCustomers.flow 수건: a folded towel with a little face */
+  towel:`<svg viewBox="0 0 100 100"><path d="M16 30Q16 20 26 20H74Q84 20 84 30V74Q84 84 74 84H26Q16 84 16 74Z" fill="${PAL.sky}" ${S}/><path d="M16 64H84" stroke="${OL}" stroke-width="3.5"/><path d="M24 74H76" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-dasharray="7 7" opacity=".75"/><path d="M26 28Q30 24 38 24" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" opacity=".7"/><g class="tf"><circle class="tf-eye" cx="41" cy="42" r="3.8" fill="${OL}"/><circle class="tf-eye" cx="59" cy="42" r="3.8" fill="${OL}"/><path class="tf-smile" d="M44 50Q50 56 56 50" fill="none" stroke="${OL}" stroke-width="3" stroke-linecap="round"/><path class="tf-grin" opacity="0" d="M43 49Q50 60 57 49Z" fill="#B8474B" stroke="${OL}" stroke-width="2" stroke-linejoin="round"/></g></svg>`,
   mirror:`<svg viewBox="0 0 100 100"><ellipse cx="50" cy="44" rx="30" ry="36" fill="${PAL.butter}" ${S}/><ellipse cx="50" cy="44" rx="21" ry="27" fill="#EAF3F6" ${S}/><path d="M38 30Q43 22 53 21" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M50 81V92M36 94H64" stroke="${OL}" stroke-width="9" stroke-linecap="round"/><path d="M50 81V92M36 94H64" stroke="${PAL.butter}" stroke-width="3.5" stroke-linecap="round"/>${A.twinkle(82,16,7,'#F0D58A')}</svg>`,
   /* rules.sameLayoutEverywhere / shell.header.left: back is always the same round arrow (64px), one level up (salon → shop front → town) */
   back:`<svg viewBox="0 0 48 48"><path d="M17 13H29Q40 13 40 25Q40 37 29 37H16" fill="none" stroke="${OL}" stroke-width="6" stroke-linecap="round"/><path d="M19 4L8 13L19 22" fill="none" stroke="${OL}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   star:'<svg viewBox="0 0 20 20"><path d="M10 1l2.6 5.6 6 .7-4.5 4.1 1.2 6L10 14.5 4.7 17.4l1.2-6L1.4 7.3l6-.7z" fill="#F0D58A" stroke="#5B3A29" stroke-width="1.2"/></svg>'
 };
 /* P12 touch.tool.intro: the name the tool says when it jumps out of the tray */
-const TOOL_NAME={foam:['수세미!','Sponge!'],rinse:['샤워기!','Shower!'],dry:['드라이기!','Dryer!'],brush:['빗!','Comb!']};
+const TOOL_NAME={towel:['수건!','Towel!'],foam:['수세미!','Sponge!'],rinse:['샤워기!','Shower!'],dry:['드라이기!','Dryer!'],brush:['빗!','Comb!']};
 /* tool pictures and their working point (sponge bottom, shower head, dryer mouth) */
 const TOOL_OF={
   foam:{icon:ICON.sponge,effect:'foam',anchor:[.5,.86],gapScale:.35,log:'rub',alive:'sponge'}   /* 수세미는 문지르는 도구라 손가락에 더 가깝게 */,
   rinse:{icon:ICON.shower,effect:'water',anchor:[.52,.69],log:'water',alive:'shower'},
   dry:{icon:ICON.dryer,effect:'wind',anchor:[.08,.4],log:'dry',alive:'dryer'},
-  brush:{icon:ICON.brush,effect:'brush',anchor:[.5,.7],gapScale:.35,log:'brush',alive:'brush'}
+  brush:{icon:ICON.brush,effect:'brush',anchor:[.5,.7],gapScale:.35,log:'brush',alive:'brush'},
+  towel:{icon:ICON.towel,effect:'towel',anchor:[.5,.8],gapScale:.35,log:'towel',alive:'sponge'}
 };
 /* need bubbles: what the customer wants, as a picture (no letters) */
 const NEED_ICON={
   muddy:`<path d="${A.blob(30,23,12,.55,8,5)}" fill="#8A5A36"/><circle cx="45" cy="13" r="3.2" fill="#8A5A36"/><circle cx="16" cy="33" r="2.6" fill="#8A5A36"/>`,
   leaves:`<g transform="translate(26 24) rotate(-30)"><path d="M0 -14Q12 -4 0 14Q-12 -4 0 -14Z" fill="#9CC48F" stroke="${OL}" stroke-width="2.2" stroke-linejoin="round"/><path d="M0 -10V11" stroke="#6E9E66" stroke-width="1.8"/></g><g transform="translate(40 22) rotate(35) scale(.7)"><path d="M0 -14Q12 -4 0 14Q-12 -4 0 -14Z" fill="#C9D98A" stroke="${OL}" stroke-width="2.6" stroke-linejoin="round"/></g>`,
   tangled:`<path d="M15 28q4-10 8 0t8 0t8 0t6 0M17 18q4-8 8 0t8 0t8 0" stroke="#B98154" stroke-width="3" fill="none" stroke-linecap="round"/>`,
-  party:`<g transform="translate(30 23) scale(.34)">${WEAR.head[0].d(PAL.rose,'#F6D3DB')}</g>`
+  party:`<g transform="translate(30 23) scale(.34)">${WEAR.head[0].d(PAL.rose,'#F6D3DB')}</g>`,
+  /* P18 long hair: a little comb */
+  hair:`<g transform="translate(13 5) scale(.34)">${ICON.brush.replace(/^<svg[^>]*>/,'').replace(/<\/svg>$/,'')}</g>`
 };
 const bubble=need=>`<svg viewBox="0 0 60 56"><path d="M10 4H50Q58 4 58 12V34Q58 42 50 42H26L15 52L17 42H10Q2 42 2 34V12Q2 4 10 4Z" fill="#FFFDF9" stroke="${OL}" stroke-width="2.5" stroke-linejoin="round"/>${NEED_ICON[need]||''}</svg>`;
 const LEAF=(x,y,r,s)=>`<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${r}) scale(${s.toFixed(2)})"><path d="M0 -13Q12 -3 0 13Q-12 -3 0 -13Z" fill="#9CC48F" stroke="${OL}" stroke-width="2.2" stroke-linejoin="round"/><path d="M0 -9V10" stroke="#6E9E66" stroke-width="1.6"/></g>`;
@@ -188,8 +209,13 @@ const css=`
 @keyframes psout{to{transform:translateX(-220%)}}
 .ps-pet.callme{animation:pscall .7s ease-in-out}
 @keyframes pscall{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.05)}}
-.ps-pet .pop{animation:pspop .5s cubic-bezier(.3,1.6,.5,1);transform-box:fill-box;transform-origin:center}
-@keyframes pspop{from{opacity:0}}
+.ps-pet .ps-bt{position:absolute;inset:0;transform-origin:50% 96%}
+/* motion.squash: a decoration lands with a 착 (flat → tall → settles); motion.secondary: ribbon tails sway twice */
+.ps-pet .pop{animation:pspop .6s cubic-bezier(.3,1.5,.5,1);transform-box:fill-box;transform-origin:50% 85%}
+@keyframes pspop{0%{transform:scale(1.28,.7);opacity:.3}35%{transform:scale(.9,1.12);opacity:1}65%{transform:scale(1.05,.96)}100%{transform:scale(1)}}
+.ps-pet .pop .rb-tail{animation:psrib .9s ease-out;transform-box:fill-box;transform-origin:50% 0}
+@keyframes psrib{0%{transform:rotate(0)}20%{transform:rotate(16deg)}45%{transform:rotate(-11deg)}70%{transform:rotate(5deg)}100%{transform:rotate(0)}}
+.ps-card.style{background:color-mix(in srgb,var(--paper) 86%,var(--peach))}
 .ps-tub{position:absolute;left:50%;bottom:3%;transform:translateX(-50%) translateY(130%);z-index:4;pointer-events:none;transition:transform .7s cubic-bezier(.3,1.2,.5,1)}
 .ps-tub.on{transform:translateX(-50%)}
 .ps-tub svg{width:100%;height:auto;display:block}
@@ -268,7 +294,7 @@ const stEl=document.createElement('style');stEl.textContent=css;document.head.ap
 const sec=document.createElement('section');sec.id=id;sec.className='screen';sec.hidden=true;
 sec.innerHTML=`${PAPER_DEFS}<div class="bar"><button class="round" data-go="home" id="psHome" aria-label="뒤로">${ICON.back}</button><button class="round" id="psBack" aria-label="가게 앞으로" hidden>${ICON.back}</button><h2>동물 미용실</h2><div class="psstars" id="psStars"></div></div>
 <div class="ps-lobby" id="psLobby"><div class="lb-bg">${LB_WALL}</div><div class="lb-awn">${LB_AWN}</div><div class="lb-frames" id="psFrames"></div><div class="lb-win">${LB_WIN}</div><div class="lb-door" id="psDoor">${LB_DOOR}</div><div class="lb-seats" id="psSeats"></div></div>
-<div class="ps-salon" id="psSalon" hidden><div class="ps-stage" id="psStage">${BG}<div class="ps-pet" id="psPet"><div class="psbase"></div><svg class="over" viewBox="0 0 200 230">${A.animalOverlay()}</svg></div>
+<div class="ps-salon" id="psSalon" hidden><div class="ps-stage" id="psStage">${BG}<div class="ps-pet" id="psPet"><div class="ps-bt"><div class="psbase"></div><svg class="over" viewBox="0 0 200 230">${A.animalOverlay()}</svg></div></div>
 <div class="ps-tub" id="psTub">${TUB}</div><div class="ps-pfx" id="psPfx"></div><button class="ps-mirbtn" id="psMirBtn" aria-label="거울" hidden>${ICON.mirror}</button></div>
 <div class="ps-panel" id="psPanel"></div></div>`;
 document.getElementById('app').appendChild(sec);M.NAMES[id]='동물 미용실';
@@ -316,14 +342,31 @@ function drawOver(popSlot){
     out[k==='neck'?'b':'h']+=`<g data-slot="${k}" data-item="${it.id||it.en}" transform="${SLOT[k]}">`+(b<BLOOM&&!it.photo?`<g class="${popSlot===k?'pop':''}"><g>${itemSVG(it,col[2],col[3])}</g><g class="bloom" style="animation-duration:${BLOOM}ms;animation-delay:${-Math.round(b)}ms">${viv}</g></g>`:`<g class="${(popSlot===k?'pop':'')+wig}">${viv}</g>`)+`</g>`});
   if(phase==='dress'&&!st.hintOff)openSlots().forEach(k=>{if(!st.wear[k])out[k==='neck'?'b':'h']+=A.twinkle(HINT_PT[k][0],HINT_PT[k][1],10,'#F0D58A')});
   ovBody.innerHTML=out.b;ovHead.innerHTML=out.h;
+  A.fluffSet(baseEl,st.cells);hairSync();   // P18: the soft outline and the hair follow the cells without a redraw
 }
-function drawPet(m,extra){mood=m||mood;if(!st)return;baseEl.innerHTML=A.animal(st.kind,mood,Object.assign({lash:true,state:st.look||''},extra||{}));if(al)al.refresh()}
+function drawPet(m,extra){mood=m||mood;if(!st)return;
+  baseEl.innerHTML=A.animal(st.kind,mood,Object.assign({lash:true,state:st.look||'',layer:false,cells:st.cells,grid:GR,hairStyle:st.style,knots:st.knots,brushed:st.brushed,hairD:hairDAvg()},extra||{}));
+  if(al){al.refresh();hairSync()}}
+/* P18 motion.hair: how dry each strand is (wet → towel a little → dry), from the cell under its root */
+const hairDOf=v=>!v||v.shaken||!((v.rinse||0)>0)?1:Math.min(1,.3*(v.towel||0)+(v.dry||0)*1.4);
+const hairDAvg=()=>st&&st.hairy?st.cells.reduce((s,v)=>s+hairDOf(v),0)/st.cells.length:1;
+const nearCell=(x,y)=>{let b=0,bd=1e9;CELLS.forEach((c,i)=>{const d=(c.cx-x)**2+(c.cy-y)**2;if(d<bd){bd=d;b=i}});return b};
+function hairSync(){if(!al||!st||!st.hairy)return;al.hair({d:al.strands().map(s=>hairDOf(st.cells[nearCell(s.x,s.y)])),neat:st.brushed})}
+/* motion.threeBeats on the whole customer: ready (a little squash) → act → after (a bounce that settles) */
+const btEl=petEl.querySelector('.ps-bt');
+function beat(k){
+  if(!btEl||!btEl.animate)return;let kf,ms;
+  if(k==='down'){kf=[{transform:'scale(1,1)'},{transform:'scale(1.045,.94)'},{transform:'scale(1.02,.98)'}];ms=BEAT.ready+120}
+  else if(k==='up'){kf=[{transform:'scale(1.02,.98)'},{transform:'scale(.97,1.045) translateY(-2%)'},{transform:'scale(1.015,.985)'},{transform:'scale(1,1)'}];ms=BEAT.after}
+  else{kf=[{transform:'scale(1,1)'},{transform:'scale(1.05,.93)',offset:.25},{transform:'scale(.96,1.05) translateY(-3%)',offset:.55},{transform:'scale(1.02,.98)',offset:.8},{transform:'scale(1,1)'}];ms=BEAT.ready+BEAT.after+150}
+  btEl.getAnimations().forEach(a=>a.cancel());btEl.animate(kf,{duration:ms,easing:'ease-out',fill:k==='down'?'forwards':'none'});LOG.push('beat:'+k);
+}
 /* the face area on screen (head circle of the picture), so a big tool turns see-through over it */
 const faceRect=()=>{const r=petEl.getBoundingClientRect(),u=r.width/200,v=r.height/230;return{left:r.left+40*u,right:r.left+160*u,top:r.top+48*v,bottom:r.top+150*v,width:120*u,height:102*v}};
 function rd(){if(!raf)raf=requestAnimationFrame(()=>{raf=0;drawOver()})}
 const svgInner=s=>s.replace(/^<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'');
 function wearSVG(wear){return['neck','face','head'].map(k=>{const it=itemOf(wornId(k,wear[k]));if(!it)return'';const col=COLORS[wear[k].col]||COLORS[0];return `<g transform="${SLOT[k]}">${itemSVG(it,col[4],col[3])}</g>`}).join('')}
-function portrait(kind,wear,m){return svgInner(A.animal(kind,m||'happy',{lash:true}))+wearSVG(wear||{})}
+function portrait(kind,wear,m,hs){return svgInner(A.animal(kind,m||'happy',Object.assign({lash:true},hs&&hs.style?{hairStyle:hs.style,knots:hs.knots,brushed:true}:{})))+wearSVG(wear||{})}
 function size(){
   const r=stage.getBoundingClientRect();if(!r.width)return;
   const w=Math.round(Math.max(150,Math.min(r.width*.74,r.height*.66*200/230))),h=Math.round(w*230/200);petEl.style.width=w+'px';petEl.style.height=h+'px';
@@ -343,9 +386,10 @@ const inPet=e=>{const r=petEl.getBoundingClientRect(),px=r.width*.12,py=r.height
 const MISS=VO.onWrongPlace.map(m=>[m.ko,m.en]);
 function miss(){misses++;if(st)st.wrong++;G.nudge();if(['foam','rinse','dry'].includes(phase))anim('callme');const n=performance.now();if(n-lastMiss<2400)return;lastMiss=n;const c=pick(MISS);say(c[0],c[1])}
 function spawn(html,x,y,cls,o={}){
-  if(pfx.childElementCount>18)return;const e=document.createElement('i');e.className='pf '+cls;e.innerHTML=`<svg viewBox="-15 -15 30 30">${html}</svg>`;
+  if(pfx.childElementCount>=PART.max)return;   // motion.particles.max
+  const e=document.createElement('i');e.className='pf '+cls;e.innerHTML=`<svg viewBox="-15 -15 30 30">${html}</svg>`;
   e.style.left=x+'px';e.style.top=y+'px';e.style.setProperty('--dx',(o.dx||0)+'px');e.style.setProperty('--dy',(o.dy||0)+'px');e.style.setProperty('--rot',(o.rot||0)+'deg');
-  const ms=o.ms||700;e.style.animationDuration=ms+'ms';pfx.appendChild(e);setTimeout(()=>e.remove(),ms+60);
+  const ms=o.ms||PART.fadeMs;e.style.animationDuration=ms+'ms';pfx.appendChild(e);setTimeout(()=>e.remove(),ms+60);
 }
 const cellXY=i=>{const r=petEl.getBoundingClientRect(),s=stage.getBoundingClientRect(),c=CELLS[i];return[r.left-s.left+r.width*c.dx/200,r.top-s.top+r.height*c.dy/230]};
 const unitPx=()=>petEl.getBoundingClientRect().width/200;
@@ -354,16 +398,23 @@ const unitPx=()=>petEl.getBoundingClientRect().width/200;
 /* customers of this level (levels[].customers) with needs of this level (needs[].from) */
 const levelKinds=()=>{const ks=(LV().customers||[]).map(k=>KINDS.find(a=>a.id===k)).filter(Boolean);return ks.length?ks:KINDS};
 function newCustomer(avoidKinds,wantNeed){
+  /* P18: a long-haired customer (hairCustomers, from level HC_FROM) wants the whole hair flow */
+  if(wantNeed==='hair'){const hs=HAIRK.filter(k=>!avoidKinds.includes(k.id)),k=pick(hs.length?hs:HAIRK);return{kind:k.id,need:'hair',name:k.name||k.ko,inside:false}}
   const pool=levelKinds(),kinds=pool.filter(k=>!avoidKinds.includes(k.id)),k=pick(kinds.length?kinds:pool),NP=needPool();
   const need=NP.find(n=>n.id===wantNeed)||pick(NP)||{id:'party',steps:[]};
   return{kind:k.id,need:need.id,name:k.name||k.ko,inside:false};
 }
 /* a waiting customer this level cannot serve (after the parent lowers the level, or a quiet step down) goes home */
-const validCust=c=>!!c&&levelKinds().some(k=>k.id===c.kind)&&needPool().some(n=>n.id===c.need);
+const validCust=c=>!!c&&(c.need==='hair'?hairOn()&&isHair(c.kind):levelKinds().some(k=>k.id===c.kind)&&needPool().some(n=>n.id===c.need));
 function fillLobby(avoid){
   while(lobby.length<WAITING)lobby.push(null);
-  const NP=needPool().map(n=>n.id);
-  lobby.forEach((c,i)=>{if(c)return;const others=lobby.filter(Boolean),missing=NP.filter(n=>!others.some(o=>o.need===n));lobby[i]=newCustomer(others.map(o=>o.kind).concat(avoid||[]),pick(missing.length?missing:NP))});
+  const NP=needPool().map(n=>n.id),fresh=lobby.every(c=>!c);
+  /* a muddy customer always waits; from level HC_FROM one long-haired customer waits too (hairCustomers.from) */
+  lobby.forEach((c,i)=>{if(c)return;const others=lobby.filter(Boolean),missing=NP.filter(n=>!others.some(o=>o.need===n)),avoidK=others.map(o=>o.kind).concat(avoid||[]);
+    if(hairOn()&&!others.some(o=>o.need==='hair')&&others.some(o=>o.need==='muddy')){lobby[i]=newCustomer(avoidK,'hair');return}
+    lobby[i]=newCustomer(avoidK,missing.includes('muddy')?'muddy':pick(missing.length?missing:NP))});
+  if(fresh)shuffle(lobby);
+  if(forceKind&&fresh){const k=forceKind;forceKind=null;lobby[0]={kind:k,need:isHair(k)?'hair':'muddy',name:kindOf(k).name||kindOf(k).ko,inside:false}}   // tests only
 }
 function seatBox(i){const r=lobbyEl.getBoundingClientRect(),W=r.width,H=r.height,bw=Math.round(Math.max(112,Math.min(W*.3,H*.26,210))),gap=(W-3*bw)/4,bh=Math.round(bw*1.32);return{left:gap+i*(bw+gap),bottom:Math.round(H*.03),w:bw,h:bh,W,H}}
 function custHTML(c,i){const a=kindOf(c.kind);return `<button class="lb-cust" data-i="${i}" aria-label="${a.ko}"><span class="lb-ani">${A.animal(c.kind,'idle',{lash:true})}</span><span class="lb-bub">${bubble(c.need)}</span></button>`}
@@ -376,7 +427,7 @@ function renderSeats(skip){
 }
 function layoutLobby(){if(view!=='lobby'||!lobbyEl.getBoundingClientRect().width)return;seatsEl.querySelectorAll('.lb-slot').forEach(sl=>{const b=seatBox(+sl.dataset.i);Object.assign(sl.style,{left:b.left+'px',bottom:b.bottom+'px',width:b.w+'px',height:b.h+'px'})})}
 function renderFrames(fresh){
-  framesEl.innerHTML=[0,1,2].map(i=>{const w=DATA.wall[i];return `<div class="lb-frame${w?' full':''}${w&&fresh&&i===0?' new':''}">${FRAME(w?portrait(w.kind,w.wear):'')}</div>`}).join('');
+  framesEl.innerHTML=[0,1,2].map(i=>{const w=DATA.wall[i];return `<div class="lb-frame${w?' full':''}${w&&fresh&&i===0?' new':''}">${FRAME(w?portrait(w.kind,w.wear,'happy',w):'')}</div>`}).join('');
 }
 seatsEl.addEventListener('click',e=>{const b=e.target.closest('.lb-cust');if(!b||b.classList.contains('arriving'))return;pickCustomer(+b.dataset.i,b)});
 lobbyEl.addEventListener('pointerdown',e=>{actx();if(phase!=='lobby'||e.target.closest('.lb-cust'))return;miss()});
@@ -417,7 +468,7 @@ function greet(){phase='lobby';say(LINE.lobby[0],LINE.lobby[1],true);
 /* the served customer walks out of the door and away */
 function walkOut(c,then){
   const lr=lobbyEl.getBoundingClientRect(),dr=doorEl.getBoundingClientRect(),w=Math.round(seatBox(0).w*.92),h=Math.round(w*230/200);
-  const wk=document.createElement('div');wk.className='lb-walker';wk.innerHTML=`<svg viewBox="0 0 200 230" style="overflow:visible">${portrait(c.kind,c.wear,'happy')}</svg>`;
+  const wk=document.createElement('div');wk.className='lb-walker';wk.innerHTML=`<svg viewBox="0 0 200 230" style="overflow:visible">${portrait(c.kind,c.wear,'happy',c)}</svg>`;
   Object.assign(wk.style,{width:w+'px',height:h+'px',left:(dr.left-lr.left+dr.width/2-w/2)+'px',top:(dr.bottom-lr.top-h)+'px'});lobbyEl.appendChild(wk);
   const dist=lr.right-dr.left+w;
   wk.animate([{transform:'translate(0,0)'},{transform:`translate(${dist*.25}px,-8px)`},{transform:`translate(${dist*.5}px,0)`},{transform:`translate(${dist*.75}px,-8px)`},{transform:`translate(${dist}px,0)`}],{duration:1500,easing:'linear',fill:'forwards'});
@@ -447,12 +498,12 @@ backBtn.addEventListener('click',()=>{if(view!=='salon')return;actx();sfx.pop();
 /* ============================== in the salon ============================== */
 function freshState(c){
   const R=A.rng((Date.now()&0xffff)+c.kind.length*97);
-  const cells=CELLS.map(()=>({mud:0,mr:10,leaf:0,lr:0,foam:0,rinse:0,dry:0,tangle:0,brush:0,shaken:0}));
+  const cells=CELLS.map(()=>({mud:0,mr:10,leaf:0,lr:0,foam:0,rinse:0,towel:0,dry:0,tangle:0,brush:0,shaken:0}));
   if(c.need==='muddy'){cells.forEach(x=>{x.mud=R()<.7?1:0;x.mr=9+R()*6});let k=0;while(cells.filter(x=>x.mud).length<7&&k<99)cells[(R()*cells.length)|0].mud=1,k++}
   if(c.need==='leaves'){cells.forEach(x=>{x.leaf=R()<.4?1:0;x.lr=Math.round(R()*360)});let k=0;while(cells.filter(x=>x.leaf).length<6&&k<99)cells[(R()*cells.length)|0].leaf=1,k++}
   if(c.need==='tangled'){cells.forEach((x,i)=>{x.tangle=!CELLS[i].face&&R()<.55?1:0});let k=0;while(cells.filter(x=>x.tangle).length<8&&k<99){const i=(R()*cells.length)|0;if(!CELLS[i].face)cells[i].tangle=1;k++}}
-  const need=NEEDS.find(n=>n.id===c.need)||{steps:[]},steps=stepsOf(need);
-  return{kind:c.kind,need:c.need,name:c.name,steps,plan:steps.slice(),level:lvNo(),cells,look:'',states:[],wear:{},used:{},drag:null,bloom:null,wiggle:null,hintOff:false,doneRatio:{},wrong:0,idle:0,lastTouch:0};
+  const hairy=c.need==='hair',need=NEEDS.find(n=>n.id===c.need)||{steps:[]},steps=hairy?HAIR_FLOW.filter(s=>s!=='style'||STYLES.length):stepsOf(need);
+  return{kind:c.kind,need:c.need,name:c.name,steps,plan:steps.slice(),hairy,style:null,knots:0,brushed:false,styleRot:0,level:lvNo(),cells,look:'',states:[],wear:{},used:{},drag:null,bloom:null,wiggle:null,hintOff:false,doneRatio:{},wrong:0,idle:0,lastTouch:0};
 }
 function enterSalon(i){
   L.begin();killTool();G.stop();clearFloats();
@@ -463,8 +514,8 @@ function enterSalon(i){
   if(AL){al=AL.attach(petEl,{kind:st.kind});const me=al;L.onEnd(()=>{me.detach();if(al===me)al=null})}
   st.look=A.petState(st.cells);size();drawPet('idle');drawOver();stars();anim('enter');
   /* bigMoments: comes in with two hops and a wave; moods: dirty = sad, party = happy */
-  alMood(c.need==='party'?'happy':'sad');L.later(()=>{alPlay('hop',{n:2,wave:true});if(al)al.sound('hehe')},900);
-  const need=NEEDS.find(n=>n.id===c.need)||{},hello=c.need==='party'&&need.say?need.say:(LINE[c.need]||LINE.muddy)(c.name);
+  alMood(c.need==='party'||c.need==='hair'?'happy':'sad');L.later(()=>{alPlay('hop',{n:2,wave:true});if(al)al.sound('hehe')},900);
+  const need=NEEDS.find(n=>n.id===c.need)||{},hello=c.need==='party'&&need.say?need.say:(LINE[c.need]||LINE.muddy)(c.name);   // LINE.hair for the long-haired customers
   L.later(()=>say(hello[0],hello[1],true),500);
   if(!st.steps.length){L.later(()=>{drawPet('idle');dress()},2600);return}
   L.later(()=>{tub.classList.add('on');noise(.4,{type:'lowpass',freq:900,vol:.2})},2400);
@@ -473,6 +524,7 @@ function enterSalon(i){
 function nextStep(){
   const k=st.steps.shift();
   if(!k){tub.classList.remove('on');dress();return}
+  if(k==='style'){tub.classList.remove('on');styleStep();return}
   toolStep(k);
 }
 function toolStep(key){
@@ -482,39 +534,58 @@ function toolStep(key){
   const nm=TOOL_NAME[key];let introStop=P.toolIntro?P.toolIntro(stage,panel.querySelector('.mi'),T.icon,{ko:nm[0],en:nm[1]}):null;L.onEnd(()=>{if(introStop)introStop()});
   if(key==='foam'){const w=VO.actionWords.rub;say(w.ko,w.en,true);say(LINE.foam[0],LINE.foam[1],true)}   // queued after the tool's name
   else if(key==='brush')say(LINE.brush[0],LINE.brush[1],true);
+  else if(key==='towel')say(LINE.towel[0],LINE.towel[1],true);
   else{const w=(key==='rinse'?CF.sound.shower:CF.sound.dryer).warnBefore;LOG.push('warn:'+lk);say(w.ko,w.en,true);say(LINE[key][0],LINE[key][1],true)}
   st.lastTouch=performance.now();
-  let lastS=0,lastPop=0,qk=0,belly=0,nose=0,lastF=null,lastT=0;killTool();
+  let lastS=0,lastPop=0,qk=0,belly=0,nose=0,lastF=null,lastT=0,lastP=0;killTool();
+  /* P18: the wind of the dryer (from its mouth W to the finger F) in picture units; the comb and the water press the hair down */
+  const toU=(x,y)=>{const r=petEl.getBoundingClientRect(),s=stage.getBoundingClientRect();return[(x+s.left-r.left)/r.width*200,(y+s.top-r.top)/r.height*230]};
+  const windOf=(Fp,Wp)=>{const [x,y]=toU(Fp.x,Fp.y);if(key==='dry'&&Wp){let dx=Fp.x-Wp.wx,dy=Fp.y-Wp.wy;const l=Math.hypot(dx,dy)||1;return{x,y,dx:dx/l,dy:dy/l,p:1}}
+    if(key==='brush'||key==='rinse')return{x,y,dx:0,dy:1,p:key==='brush'?.5:.3};return null};
+  const furCol=()=>{const H=A.HAIR[st.kind];return H?H.col:(A.KINDS[st.kind]||{}).body||'#fff'};
+  const MOTE=c=>`<circle r="5" fill="${c}" stroke="#E9DCCF" stroke-width="1.5"/><circle cx="-1.5" cy="-1.5" r="1.6" fill="#fff" opacity=".8"/>`;
+  const towelFx=key!=='towel'?null:({x,y,rad,now})=>{const k=.9+.1*Math.sin(now/180);return `<circle cx="${x}" cy="${y}" r="${(rad*.75*k).toFixed(1)}" fill="#EAF4FB" opacity=".35"/><circle cx="${x}" cy="${y}" r="${(rad*.75*k).toFixed(1)}" fill="none" stroke="#CFE5F4" stroke-width="3" stroke-dasharray="6 7"/>`};
   const side=F=>{const r=petEl.getBoundingClientRect(),s=stage.getBoundingClientRect();return F.x+s.left<r.left+r.width/2?'l':'r'};
   /* the comb draws its own effect: a few soft lines where its teeth pass */
   const brushFx=key!=='brush'?null:({x,y,rad,now})=>{const w=Math.sin(now/140)*rad*.15;let o=`<circle cx="${x}" cy="${y}" r="${(rad*.6).toFixed(1)}" fill="#fff" opacity=".3"/>`;
     for(let i=-2;i<=2;i++)o+=`<path d="M${(x-rad*.55).toFixed(1)} ${(y+i*rad*.16+w).toFixed(1)}Q${x} ${(y+i*rad*.16-w).toFixed(1)} ${(x+rad*.55).toFixed(1)} ${(y+i*rad*.16+w).toFixed(1)}" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" opacity=".75"/>`;return o};
-  toolE=P.makeTool(stage,{tool:T.icon,effect:T.effect,fx:brushFx||undefined,anchor:T.anchor,gapScale:T.gapScale,cells:CELLS.map(c=>[c.fx,c.fy]),cfg:()=>TOOLS,target:()=>petEl.getBoundingClientRect(),face:faceRect,
+  toolE=P.makeTool(stage,{tool:T.icon,effect:T.effect,fx:brushFx||towelFx||undefined,tapAnim:TAP_MS,tilt:true,anchor:T.anchor,gapScale:T.gapScale,cells:CELLS.map(c=>[c.fx,c.fy]),cfg:()=>TOOLS,target:()=>petEl.getBoundingClientRect(),face:faceRect,
     onMiss:miss,
-    onTouch:()=>{G.touch();LOG.push('press:'+lk);const now=performance.now();st.idle=Math.max(st.idle,now-st.lastTouch);if(introStop){introStop();introStop=null}if(al)al.setTool(T.alive)},
-    onRelease:()=>{G.release();lastF=null;if(al)al.setTool(null);if(st)st.lastTouch=performance.now()},
+    onTouch:()=>{G.touch();LOG.push('press:'+lk);const now=performance.now();st.idle=Math.max(st.idle,now-st.lastTouch);if(introStop){introStop();introStop=null}if(al)al.setTool(T.alive);beat('down')},
+    onRelease:()=>{G.release();lastF=null;if(al){al.setTool(null);al.wind(null);al.kick(.45)}beat('up');if(st)st.lastTouch=performance.now()},
+    /* motion.tapAlso: one tap = one puff of wind / one spray / one stroke, with its animation */
+    onTap:(Fp,Wp)=>{LOG.push('tap:'+lk);beat('tap');const w=windOf(Fp,Wp);if(al&&w)al.gust(w,TAP_MS);
+      if(key==='rinse'||key==='dry')for(let k=0;k<4;k++){const a=(k/4-.5)*1.6;spawn(DROP(0,0,.9),Fp.x,Fp.y,'fly',{dx:Math.sin(a)*60+(w?w.dx*40:0),dy:-20-Math.cos(a)*30,rot:a*60})}},
     sound:n=>{if(key==='foam')return null;const h=P.holdSound(key==='dry'?'dryer':'shower',{count:key==='dry'&&n===1});LOG.push('sound:'+lk);return h},
     onCell:(i,v,pv,why)=>{const c=st.cells[i];c[key]=v;
       const n=performance.now();
       if(key==='rinse'&&v>=1&&pv<1){const [x,y]=cellXY(i);if(c.foam>.2)spawn(`<circle r="9" fill="none" stroke="#CDE9FA" stroke-width="3"/><circle r="4" fill="#fff"/>`,x,y,'pop',{ms:450});
         if(c.leaf)spawn(LEAF(0,0,c.lr,.9),x,y,'fly',{dx:(Math.random()-.5)*60,dy:90,rot:120,ms:900});
         if(why!=='auto'&&n-lastPop>90){lastPop=n;tone(900+rand(500),.05,'sine',.06)}}
-      if(key==='dry'&&v>=.5&&pv<.5&&st.cells[i].rinse>0){const [x,y]=cellXY(i),dir=lastF&&lastF.x>x?-1:1;spawn(DROP(0,0,1),x+6,y-4,'fly',{dx:dir*70,dy:-30,rot:dir*60,ms:650})}
+      if(key==='dry'&&v>=.5&&pv<.5&&st.cells[i].rinse>0){const [x,y]=cellXY(i),dir=lastF&&lastF.x>x?-1:1;spawn(DROP(0,0,1),x+6,y-4,'fly',{dx:dir*70,dy:-30,rot:dir*60,ms:650});
+        /* fluffyFix: the fur there puffs up and settles (the outline bump, 0.4 s) and three little fluffs float up and fade */
+        const fc=furCol();for(let k=0;k<3;k++)spawn(MOTE(fc),x+(k-1)*10,y,'fly',{dx:(k-1)*14+dir*10,dy:-34-k*6,rot:0});LOG.push('puff:'+i)}
+      if(key==='towel'&&v>=1&&pv<1){const [x,y]=cellXY(i);spawn(DROP(0,0,.8),x,y,'pop',{ms:500})}
       if(key==='foam'&&v>=1&&pv<1&&why!=='auto'&&n-lastPop>110){lastPop=n;tone(700+rand(600),.05,'sine',.06)}
       if(key==='brush'&&v>=1&&pv<1&&c.tangle){const [x,y]=cellXY(i);spawn(A.twinkle(0,0,8,'#fff'),x,y,'pop',{ms:500});if(why!=='auto'&&n-lastPop>110){lastPop=n;tone(1000+rand(400),.05,'sine',.06)}}
       rd()},
     onProgress:(p,ratio,why)=>{prog(p);if(key==='foam'&&why==='move'){const n=performance.now();if(n-lastS>130){lastS=n;SFX.scrub()}}
-      const k=Math.floor(ratio*3);if(k>qk&&k<3&&key!=='brush'){qk=k;word(key==='foam'?'bubbles':key==='rinse'?'water':'dry')}},
+      const k=Math.floor(ratio*3);if(k>qk&&k<3&&key!=='brush'&&key!=='towel'){qk=k;word(key==='foam'?'bubbles':key==='rinse'?'water':'dry')}},
     onMove:(pt,d)=>{lastF=pt;const r=petEl.getBoundingClientRect(),s=stage.getBoundingClientRect(),px=(pt.x+s.left-r.left)/r.width*200,py=(pt.y+s.top-r.top)/r.height*230;
       if(Math.hypot(px-100,py-196)<34){belly+=d;if(belly>r.width*.9){belly=0;tickle()}}},
-    onFrame:(F,t)=>{lastF=F;const dt=lastT?Math.min(.1,(t-lastT)/1000):0;lastT=t;
+    onFrame:(F,t,Wp)=>{lastF=F;const dt=lastT?Math.min(.1,(t-lastT)/1000):0;lastT=t;
+      /* motion.hair: strands lie down with the wind and their tips follow later; particles fly with it (motion.particles) */
+      const w=windOf(F,Wp);if(al&&w)al.wind(w);
+      if(key==='dry'&&w&&t-lastP>140){lastP=t;spawn(Math.random()<.5?DROP(0,0,.8):MOTE(furCol()),F.x,F.y,'fly',{dx:w.dx*80+(Math.random()-.5)*30,dy:w.dy*80-10,rot:w.dx*80})}
       /* the side the tool works on (wink, wet ear) and the wind direction (the dryer sits on the other side of the finger) */
       if(al){const sd=side(F);al.setTool(T.alive,{side:sd,wind:key==='dry'?(F.x>stage.clientWidth/2?1:-1):0})}
       if(key==='foam'&&!st.used.sneeze){const r=petEl.getBoundingClientRect(),s=stage.getBoundingClientRect(),px=(F.x+s.left-r.left)/r.width*200,py=(F.y+s.top-r.top)/r.height*230;
         if(Math.hypot(px-100,py-116)<30){nose+=dt;if(nose>.5)sneeze()}}},
     onAutoFinish:rest=>{rest.slice(0,6).forEach((i,k)=>L.later(()=>{const [x,y]=cellXY(i);spawn(A.twinkle(0,0,10,'#F0D58A'),x,y,'pop',{ms:600})},k*90))},
-    onDone:()=>{st.doneRatio[key]=toolE?toolE.doneRatio:0;killTool();if(al)al.setTool(null);G.stop();prog(1);drawPet('happy');drawOver();SFX.sparkle();
-      const w=key==='brush'?{ko:LINE.smooth[0],en:LINE.smooth[1]}:VO.actionWords[key==='foam'?'bubbles':key==='rinse'?'clean':'fluffy'],t=praise(w.ko,w.en);say(t[0],t[1]);
+    onDone:()=>{st.doneRatio[key]=toolE?toolE.doneRatio:0;killTool();if(al){al.setTool(null);al.wind(null)}G.stop();prog(1);
+      if(key==='brush'&&st.hairy){st.brushed=true;LOG.push('brushed')}   // motion.hair.afterDry: brushed hair lies neat with a shine
+      drawPet('happy');drawOver();SFX.sparkle();if(al)al.kick(.8);
+      const w=key==='brush'?{ko:LINE.smooth[0],en:LINE.smooth[1]}:VO.actionWords[key==='foam'?'bubbles':key==='rinse'||key==='towel'?'clean':'fluffy'],t=praise(w.ko,w.en);say(t[0],t[1]);
       /* bigMoments: each step ends with a hop and a clap; after rinsing it shakes the water off first */
       if(key==='rinse')L.later(shake,700);else alPlay('clap');
       if(key==='dry')alMood('happy');   // 보송 = 활짝
@@ -522,6 +593,38 @@ function toolStep(key){
   L.onEnd(killTool);
   G.start({type:'scrub',at:()=>petXY(.5,.5),ko:LINE[key][0],en:LINE[key][1]});
 }
+/* ============================== hairstyle (머리 모양 고르기) ============================== */
+const styleOf=id=>STYLES.find(s=>s.id===id)||null;
+function styleStep(){
+  phase='style';H.dress=false;killTool();if(al){al.setTool(null);al.wind(null)}st.style=null;st.knots=0;
+  showStyleCards();say(LINE.style[0],LINE.style[1],true);
+  G.start({type:'tap',at:()=>{const b=panel.querySelector('.ps-card');if(!b)return petXY(.5,.5);const r=b.getBoundingClientRect();return secXY(r.left+r.width/2,r.top+r.height/2)},ko:LINE.style[0],en:LINE.style[1]});
+}
+/* three cards (the customer's own head with that style); tapping the hair again shows the others */
+function showStyleCards(){
+  const n=Math.min(3,STYLES.length),list=Array.from({length:n},(_,k)=>STYLES[(st.styleRot*n+k)%STYLES.length]);panel.innerHTML='';
+  list.forEach((s,k)=>{const b=document.createElement('button');b.className='ps-card style in';b.style.animationDelay=(k*60)+'ms';b.dataset.style=s.id;b.setAttribute('aria-label',s.ko);
+    b.innerHTML=A.animal(st.kind,'happy',{lash:true,hairStyle:s.id,knots:s.knots,brushed:true}).replace('viewBox="0 0 200 230"','viewBox="-14 -16 228 196"');
+    if(st.style===s.id)b.classList.add('worn');panel.appendChild(b)});
+  LOG.push('styles:'+list.map(s=>s.id).join(','));
+}
+function chooseStyle(id){
+  const s=styleOf(id);if(!s||phase!=='style')return;actx();sfx.pop();st.style=id;st.knots=0;LOG.push('style:'+id);
+  panel.querySelectorAll('.ps-card.style').forEach(b=>b.classList.toggle('worn',b.dataset.style===id));
+  beat('tap');drawPet('happy');say(s.ko+'!',cap(s.en)+'!');say(LINE.knot[0],LINE.knot[1],true);
+  G.start({type:'tap',at:()=>{const [x,y]=petPt(100,60);return secXY(x,y)},ko:LINE.knot[0],en:LINE.knot[1]});
+}
+/* one tap on the hair = one knot (ready → act → after), the strands bounce and settle */
+function knot(){
+  const s=styleOf(st.style);if(!s||st.knots>=s.knots)return;st.knots++;LOG.push('knot:'+st.knots);G.touch();
+  beat('tap');drawPet('happy');if(al)al.kick(1);tone(660+st.knots*110,.1,'sine',.09);
+  const [x,y]=petPt(100,44),sr=stage.getBoundingClientRect();[[-24,-6],[22,-10],[0,-26]].forEach(([dx,dy],k)=>L.later(()=>spawn(A.twinkle(0,0,8,'#F0D58A'),x-sr.left+dx,y-sr.top+dy,'pop',{ms:PART.fadeMs}),k*80));
+  if(st.knots<s.knots)return;
+  phase='styled';G.stop();panel.innerHTML='';const p=praise(LINE.styled[0],LINE.styled[1]);say(p[0],p[1]);SFX.sparkle();alPlay('clap');
+  L.later(()=>{if(st){drawPet('idle');dress()}},1800);
+}
+panel.addEventListener('click',e=>{const b=e.target.closest('.ps-card.style');if(!b||phase!=='style'||!st)return;chooseStyle(b.dataset.style)});
+
 /* reactions: each at most once per customer (games.petsalon.reactions) */
 /* reactions (P12: through Alive). Only the sneeze stays once per customer; giggles and faces keep coming (a few seconds apart) */
 function tickle(){const n=performance.now();if(n-lastTickle<4000)return;lastTickle=n;st.used.tickle=1;LOG.push('react:tickle');const m=mood;drawPet('happy');if(al)al.sound('giggle');say(LINE.tickle[0],LINE.tickle[1]);L.later(()=>{if(st)drawPet(m==='happy'?'idle':m)},1000)}
@@ -611,7 +714,7 @@ function putOn(slot,iid,col,fromEl){
     drawPet('happy');drawOver(slot);L.later(()=>{if(st&&st.bloom&&performance.now()-st.bloom.t>=BLOOM){st.bloom=null;drawOver()}},BLOOM+60);
     sfx.pop();SFX.sparkle();const it=itemOf(iid),c=COLORS[col];
     if(it&&it.photo){const v=PHO.voice||[];say(fill(v[0],it),fill(v[1],it))}else if(it)say(`${c[0]} ${it.ko}!`,`${cap(c[1])} ${it.en}!`);
-    markWorn();if(al)al.sound('wow');
+    markWorn();if(al){al.sound('wow');al.kick(.6)}
     peek();if(mirBtn.hidden)G.stop();armMirror();
   };
   if(fromEl){flyTo(fromEl,tx,ty,slotPx(slot),350,done)}else done();
@@ -640,6 +743,7 @@ function hideMirror(){mirBtn.classList.remove('on');mirBtn.hidden=true;G.stop()}
 
 stage.addEventListener('pointerdown',e=>{
   if(view!=='salon')return;e.preventDefault();actx();
+  if(phase==='style'&&st){G.touch();if(!inPet(e)){miss();return}if(st.style)knot();else{st.styleRot++;sfx.pop();showStyleCards()}return}
   if(phase!=='dress'||!st||e.target.closest('.ps-mirbtn'))return;
   G.touch();
   const k=itemAt(e);
@@ -688,14 +792,14 @@ panel.addEventListener('pointerup',endCard);panel.addEventListener('pointercance
 mirBtn.addEventListener('click',()=>{
   if(phase!=='dress'||!st||mirBtn.hidden)return;actx();
   phase='mirror';H.dress=false;G.stop();cards=null;panel.innerHTML='';mirBtn.classList.remove('on');mirBtn.hidden=true;st.hintOff=true;LOG.push('mirror');
-  petEl.classList.remove('up');stage.classList.remove('up');drawPet('happy');drawOver();sfx.pop();
+  petEl.classList.remove('up');stage.classList.remove('up');drawPet('happy');drawOver();sfx.pop();beat('tap');
   L.later(()=>{alPlay('dance');sweep()},450);   // bigMoments: dance (4 beats), then thanks and a wave
   L.later(()=>{noise(.05,{type:'lowpass',freq:2200,vol:.12});noise(.07,{type:'lowpass',freq:1400,vol:.1,when:.07});photo()},2900);   // the photo after the dance
   L.later(()=>{
-    const rec={kind:st.kind,wear:JSON.parse(JSON.stringify(st.wear))};DATA.wall.unshift(rec);DATA.wall=DATA.wall.slice(0,3);DATA.served++;save();unlockByServed();
+    const rec={kind:st.kind,wear:JSON.parse(JSON.stringify(st.wear))};if(st.style){rec.style=st.style;rec.knots=st.knots}DATA.wall.unshift(rec);DATA.wall=DATA.wall.slice(0,3);DATA.served++;save();unlockByServed();
     drawPet('happy');alPlay('wave');say(LINE.thanks[0],LINE.thanks[1]);tone(1318,.4,'sine',.12);tone(1046,.6,'sine',.12,.3)},4300);
   L.later(()=>{anim('leave')},5900);
-  L.later(()=>{const c=lobby[seatIdx]||{kind:st.kind};const served={kind:st.kind,wear:st.wear};const i=seatIdx;lobby[i]=c;
+  L.later(()=>{const c=lobby[seatIdx]||{kind:st.kind};const served={kind:st.kind,wear:st.wear,style:st.style,knots:st.knots};const i=seatIdx;lobby[i]=c;
     /* progress: was this round hard (progress.struggle)? then one star; three stars open the next level */
     let result=null;if(PROG){PROG.struggle(id,{wrong:st.wrong,idleMs:st.idle});result=PROG.clear(id)}
     showLobby({served,slot:i,result})},6700);
@@ -703,7 +807,7 @@ mirBtn.addEventListener('click',()=>{
 function sweep(){[1318,1568,2093].forEach((f,i)=>tone(f,.25,'sine',.06,i*.12))}
 function photo(){
   const r=petEl.getBoundingClientRect(),sr=stage.getBoundingClientRect(),w=r.width*.92,h=w*112/100;
-  const f=document.createElement('div');f.className='ps-photo';f.innerHTML=FRAME(portrait(st.kind,st.wear));
+  const f=document.createElement('div');f.className='ps-photo';f.innerHTML=FRAME(portrait(st.kind,st.wear,'happy',st));
   Object.assign(f.style,{width:w+'px',height:h+'px',left:(r.left-sr.left+r.width/2-w/2)+'px',top:(r.top-sr.top+r.height*.5-h/2)+'px'});stage.appendChild(f);
   requestAnimationFrame(()=>f.classList.add('on'));
   L.later(()=>{const a=f.animate([{transform:'translate(0,0) scale(1)',opacity:1},{transform:`translate(${-(r.left-sr.left)-w*.2}px,${-(r.top-sr.top)-h*.25}px) scale(.3)`,opacity:.2}],{duration:1000,easing:'ease-in',fill:'forwards'});a.onfinish=()=>f.remove()},500);
@@ -711,7 +815,8 @@ function photo(){
 }
 
 /* debug hook for tests: send the waiting customers home so new ones of this level come */
-M.__psReset=()=>{lobby=[];return true};
+let forceKind=null;
+M.__psReset=o=>{lobby=[];forceKind=o&&o.kind||null;return true};
 /* debug hook for tests */
 M.__ps=()=>{
   const grid=Array.from({length:GR[1]},()=>Array(GR[0]).fill(null));const v=toolE?toolE.grid:null;
@@ -736,6 +841,8 @@ M.__ps=()=>{
     items:{unlocked:DATA.items.unlocked.slice(),fresh:DATA.items.fresh.slice(),photoSeen:DATA.items.photoSeen.slice()},
     pools:Object.fromEntries(SLOTS.map(k=>[k,drawnPool(k)])),
     mirror:!mirBtn.hidden,served:DATA.served,wall:DATA.wall.length,frames:framesEl.querySelectorAll('.lb-frame.full').length,
+    hairy:st?st.hairy:false,hair:st&&st.hairy?{style:st.style,knots:st.knots,brushed:st.brushed,strands:al?al.strands():[]}:null,styles:STYLES.map(s=>s.id),
+    fluff:[...baseEl.querySelectorAll('.ps-fb')].map(e=>+(e.style.getPropertyValue('--f')||0)),
     used:st?Object.keys(st.used):[],guide:G.state(),log:LOG.slice(),alive:al?al.state():null,lobbyAlive:lobbyAl.map(h=>h.state())};
 };
 function exitAll(){L.begin();killTool();G.stop();clearFloats();lobbyAliveOff();if(al){al.detach();al=null}dd=null;cd=null;cards=null;lobby.forEach(c=>{if(c)c.inside=false})}

@@ -1057,7 +1057,9 @@ function holdSound(kind,opt={}){
    Optional (nail shop): o.radius(hostRect,targetRect) → brush radius in px, o.fx({wx,wy,sz,x,y,rad,now}) → effect SVG, tool.fill(i,d).
    P12: tool size = touch.tool (stage width × stageWidthRatio, minPx..maxPx) or o.size(hostRect) px (nail shop: hand width × 55%).
    o.face() → client rect of the character's face: when the tool covers it, the tool turns 60% see-through.
-   Tool pictures may carry a small face (.tf: .tf-eye, .tf-smile, .tf-grin): while in use the eyes blink and the smile opens. */
+   Tool pictures may carry a small face (.tf: .tf-eye, .tf-smile, .tf-grin): while in use the eyes blink and the smile opens.
+   P18 (opt-in, salon): o.tapAnim ms = a quick tap plays one stroke of the tool for that long (motion.tapAlso), o.onTap(F,W) at that moment;
+   o.tilt = the tool leans toward where the finger moves (motion.toolFeel, up to 20 deg) and wobbles when it stops. o.onFrame(F,t,W): W = the working point. */
 const toolCss=document.createElement('style');toolCss.textContent=
 '.tl-tool{position:absolute;left:0;top:0;z-index:8;pointer-events:none;display:none;filter:drop-shadow(0 4px 3px rgba(91,74,66,.2))}'+
 '.tl-tool svg{width:100%;height:100%;display:block;overflow:visible}'+
@@ -1077,6 +1079,8 @@ function makeTool(el,o={}){
   const fx=document.createElementNS(SVGNS,'svg');fx.setAttribute('class','tl-fx tl-fx-'+(o.effect||'foam'));fx.style.display='none';host.appendChild(fx);
   const N=o.cells.length,v=o.cells.map(()=>0);
   let processed=0,id=null,F=null,lastMove=0,lastT=0,raf=0,done=false,enabled=true,snd=null,doneRatio=0,timers=[],trailD=0,G=null,downs=0;
+  let held=false,ghost=0,downT=0,moveSum=0,lastW=null,tilt={a:0,v:0,goal:0};
+  const TILT_MAX=20;   // motion.toolFeel: '최대 20도'
   const hr=()=>host.getBoundingClientRect();
   function geom(){
     const h=hr(),t=o.target(),[cols,rows]=(cov().grid||[6,6]);
@@ -1113,10 +1117,10 @@ function makeTool(el,o={}){
     const ax=a[0];   // flip mirrors the picture around its working point
     tool.style.width=tool.style.height=sz+'px';tool.style.display='block';
     tool.style.left=(wx-ax*sz)+'px';tool.style.top=(wy-a[1]*sz)+'px';tool.style.transformOrigin=`${ax*100}% ${a[1]*100}%`;
-    tool.style.transform=`rotate(${rot.toFixed(1)}deg)${flip?' scaleX(-1)':''}`;
+    tool.style.transform=`rotate(${(rot+(o.tilt?tilt.a:0)).toFixed(1)}deg)${flip?' scaleX(-1)':''}`;
     if(o.face){const f=o.face();let over=false;if(f&&f.width){const tl=h.left+wx-ax*sz,tt=h.top+wy-a[1]*sz,ix=Math.max(0,Math.min(tl+sz,f.right)-Math.max(tl,f.left)),iy=Math.max(0,Math.min(tt+sz,f.bottom)-Math.max(tt,f.top));
       over=ix*iy>f.width*f.height*.3}tool.classList.toggle('over-face',over)}
-    return{wx,wy,sz};
+    return lastW={wx,wy,sz};
   }
   function drawFx(now){
     const W=placeTool();if(!W)return;const rad=G.rad,x=F.x,y=F.y;let s='';
@@ -1143,29 +1147,32 @@ function makeTool(el,o={}){
     fx.innerHTML=s;
   }
   function loop(t){
-    raf=0;if(id==null||done||!enabled)return;
+    raf=0;if(done||!enabled)return;
+    if(id==null){if(!ghost)return;if(performance.now()>ghost){ghost=0;release();return}}
     const dt=Math.min(.1,(t-lastT)/1000);lastT=t;
     const c=rub(),hold=c.holdProgressPerSec==null?.12:c.holdProgressPerSec;
-    if(cov().holdStillCleansNearest!==false&&performance.now()-lastMove>200&&hold>0){spend(hold*N*dt,F.x,F.y,1e9,'hold');report('hold')}
-    if(!done){drawFx(t);if(o.onFrame)o.onFrame(F,t);raf=requestAnimationFrame(loop)}
+    if(cov().holdStillCleansNearest!==false&&(ghost||performance.now()-lastMove>200)&&hold>0){spend(hold*N*dt,F.x,F.y,1e9,'hold');report('hold')}
+    if(o.tilt){if(performance.now()-lastMove>90)tilt.goal=0;const w=16,acc=w*w*(tilt.goal-tilt.a)-2*.25*w*tilt.v;tilt.v+=acc*dt;tilt.a+=tilt.v*dt}
+    if(!done){drawFx(t);if(o.onFrame)o.onFrame(F,t,lastW);raf=requestAnimationFrame(loop)}
   }
   function release(keepDone){
     if(raf){cancelAnimationFrame(raf);raf=0}
     if(snd){snd.stop();snd=null}
-    const was=id!=null;id=null;F=null;tool.style.display='none';fx.style.display='none';fx.innerHTML='';
+    ghost=0;const was=held;held=false;id=null;F=null;tilt.a=tilt.v=tilt.goal=0;tool.style.display='none';fx.style.display='none';fx.innerHTML='';
     if(was&&o.onRelease)o.onRelease();
   }
   function down(e){
     if(!enabled||done||id!=null)return;e.preventDefault();actx();
+    if(ghost){ghost=0;release()}
     const r=o.target(),c=rub(),tm=(c.targetMargin==null?.25:c.targetMargin)/4,mx=r.width*tm,my=r.height*tm;
     if(!(e.clientX>=r.left-mx&&e.clientX<=r.right+mx&&e.clientY>=r.top-my&&e.clientY<=r.bottom+my)){if(o.onMiss)o.onMiss(e);return}
     try{el.setPointerCapture(e.pointerId)}catch(_){}
-    G=geom();const h=G.h;id=e.pointerId;F={x:e.clientX-h.left,y:e.clientY-h.top};lastMove=performance.now()+120;lastT=performance.now();downs++;
+    G=geom();const h=G.h;id=e.pointerId;held=true;downT=performance.now();moveSum=0;F={x:e.clientX-h.left,y:e.clientY-h.top};lastMove=performance.now()+120;lastT=performance.now();downs++;
     if(o.onTouch)o.onTouch(e,downs);
     if(o.sound)snd=o.sound(downs);
     fx.style.display='block';
     spend((c.tapChunk==null?.08:c.tapChunk)*N,F.x,F.y,G.rad*1.5,'tap');report('tap');
-    if(!done){drawFx(performance.now());if(o.onFrame)o.onFrame(F,performance.now());raf=requestAnimationFrame(loop)}
+    if(!done){drawFx(performance.now());if(o.onFrame)o.onFrame(F,performance.now(),lastW);raf=requestAnimationFrame(loop)}
   }
   function move(e){
     if(id==null||e.pointerId!==id||done)return;
@@ -1174,6 +1181,7 @@ function makeTool(el,o={}){
     const k=N/(h.width*(c.needStageWidths||2)*G.perRad),steps=Math.max(1,Math.ceil(d/(G.rad/3))),seg=d/steps;
     for(let s=1;s<=steps;s++){const px=F.x+(x-F.x)*(s-.5)/steps,py=F.y+(y-F.y)*(s-.5)/steps;within(px,py,k*seg,'move')}
     if(o.onMove)o.onMove({x,y},d);
+    moveSum+=d;if(o.tilt){const ms=Math.max(8,performance.now()-lastMove);tilt.goal=Math.max(-TILT_MAX,Math.min(TILT_MAX,(x-F.x)/ms*9))}
     if(o.effect==='foam'){trailD+=d;if(trailD>G.rad*.8){trailD=0;trail(x,y)}}
     F={x,y};lastMove=performance.now();report('move');
   }
@@ -1181,12 +1189,15 @@ function makeTool(el,o={}){
     if(host.querySelectorAll('.rub-trail').length>8)return;const b=document.createElement('i');b.className='rub-trail';const sz=G.rad*(.5+Math.random()*.5);
     b.style.width=b.style.height=sz+'px';b.style.left=(x+(Math.random()-.5)*G.rad)+'px';b.style.top=(y+(Math.random()-.5)*G.rad)+'px';host.appendChild(b);setTimeout(()=>b.remove(),750);
   }
-  function up(e){if(id==null||(e&&e.pointerId!==id))return;release()}
+  function up(e){if(id==null||(e&&e.pointerId!==id))return;
+    /* motion.tapAlso: a quick tap = one stroke of the tool, shown for tapAnim ms (it keeps working a little while it plays) */
+    if(o.tapAnim&&!done&&performance.now()-downT<300&&moveSum<14){id=null;ghost=performance.now()+o.tapAnim;if(o.onTap)o.onTap(F,lastW);if(!raf)raf=requestAnimationFrame(loop);return}
+    release()}
   const vis=()=>{if(document.hidden)release()};
   el.addEventListener('pointerdown',down);el.addEventListener('pointermove',move);
   ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>el.addEventListener(ev,up));document.addEventListener('visibilitychange',vis);
   return{
-    get progress(){return progress()},get ratio(){return ratio()},get doneRatio(){return doneRatio},get done(){return done},get active(){return id!=null},
+    get progress(){return progress()},get ratio(){return ratio()},get doneRatio(){return doneRatio},get done(){return done},get active(){return id!=null||!!ghost},get tilt(){return tilt.a},
     get grid(){return v.slice()},
     /* add to one cell from outside (e.g. a brush that paints by itself after a tap) */
     fill(i,d){if(!enabled||done)return 0;const r=add(i,d,'fill');report('fill');return r},
