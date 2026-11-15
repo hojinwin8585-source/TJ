@@ -146,13 +146,13 @@ function bowlSVG(w){
 const dishSVG=`<svg viewBox="0 0 300 170"><ellipse cx="152" cy="150" rx="140" ry="14" fill="rgba(90,50,20,.14)"/><path d="M8 70Q12 146 150 148Q288 146 292 70Z" fill="#C9D9E6" ${S3}/><ellipse cx="150" cy="70" rx="142" ry="50" fill="#DCE7F0" ${S3}/><ellipse cx="150" cy="74" rx="126" ry="40" fill="#FFFBF2"/><path d="M50 70Q70 54 92 68M170 60Q196 48 222 62M110 92Q140 80 164 94" stroke="#EFE6D4" stroke-width="5" fill="none" stroke-linecap="round"/></svg>`;
 const smallDishSVG=`<svg viewBox="0 0 200 130"><ellipse cx="102" cy="116" rx="92" ry="10" fill="rgba(90,50,20,.14)"/><ellipse cx="100" cy="66" rx="94" ry="46" fill="#FFFDF9" ${S3}/><ellipse cx="100" cy="66" rx="74" ry="32" fill="none" stroke="#EADFD0" stroke-width="3"/></svg>`;
 /* oil pot (viewBox 0 0 260 210): pieces float in the oil */
-const POT_S=[[78,70],[130,62],[182,72],[130,86],[96,92],[166,94]];
+const POT_S=[[62,72],[108,62],[154,70],[200,78],[96,90],[166,92]];
 function potSVG(st){
   let s=`<ellipse cx="132" cy="198" rx="112" ry="11" fill="rgba(90,50,20,.16)"/><path d="M2 64Q-8 60 -6 74Q-4 84 14 84" fill="none" stroke="${OL}" stroke-width="9" stroke-linecap="round"/><path d="M258 64Q268 60 266 74Q264 84 246 84" fill="none" stroke="${OL}" stroke-width="9" stroke-linecap="round"/>`;
   s+=`<path d="M14 66V150Q14 194 130 194Q246 194 246 150V66Z" fill="#E2977C" ${S3}/><path d="M30 120Q34 170 90 180" stroke="#F2B9A2" stroke-width="8" fill="none" stroke-linecap="round"/>`;
   s+=`<ellipse cx="130" cy="66" rx="116" ry="30" fill="#6B4A3C" ${S3}/><ellipse cx="130" cy="70" rx="104" ry="23" fill="#F0BE52"/><ellipse cx="104" cy="64" rx="40" ry="7" fill="#FFE29A" opacity=".7"/>`;
   [[60,74,4,0],[110,80,3,.5],[170,70,4,.9],[200,78,3,.3],[140,62,3,1.2]].forEach(([x,y,r,d])=>{s+=`<circle class="rs-bub" cx="${x}" cy="${y}" r="${r}" fill="none" stroke="#FFF1C4" stroke-width="2" style="animation-delay:${d}s"/>`});
-  (st.pieces||[]).forEach((f,i)=>{const p=POT_S[i%POT_S.length];if(f==null)return;s+=`<g transform="translate(${p[0]} ${p[1]}) rotate(${-30+i*40}) scale(.5)">${drum(1,f)}</g>`});
+  (st.pieces||[]).forEach((f,i)=>{const p=POT_S[i%POT_S.length];if(f==null)return;s+=`<g transform="translate(${p[0]} ${p[1]}) rotate(${[-20,15,-35,25,0,10][i%6]}) scale(.46)">${drum(1,f)}</g>`});
   if((st.pieces||[]).some(f=>f!=null))s+=`<path d="M26 72Q130 104 234 72Q234 92 130 96Q26 92 26 72Z" fill="#F0BE52" opacity=".55"/>`;
   return `<svg viewBox="0 0 260 210" style="overflow:visible">${s}</svg>`;
 }
@@ -379,7 +379,7 @@ function fly(html,from,to,s0,s1,ms,then,o={}){
   const f=document.createElement('div');f.className='rs-float';f.innerHTML=html;const [x,y]=stXY(from[0],from[1]);
   Object.assign(f.style,{width:s0+'px',height:s0+'px',left:(x-s0/2)+'px',top:(y-s0/2)+'px',zIndex:o.z||''});fxEl.appendChild(f);
   const dx=to[0]-from[0],dy=to[1]-from[1],k=s1/s0,up=o.up==null?60:o.up,sp=o.spin||0;let done=false;
-  const fin=()=>{if(done)return;done=true;if(o.keep){if(then)then(f);return}f.remove();if(then)then()};
+  const fin=()=>{if(done)return;done=true;if(o.keep){const [tx,ty]=stXY(to[0],to[1]);f.getAnimations().forEach(x=>x.cancel());Object.assign(f.style,{left:(tx-s1/2)+'px',top:(ty-s1/2)+'px',width:s1+'px',height:s1+'px',transform:sp?`rotate(${sp}deg)`:''});if(then)then(f);return}f.remove();if(then)then()};
   const a=anim(f,[{transform:'translate(0,0) scale(1) rotate(0)'},{transform:`translate(${dx/2}px,${Math.min(dy/2,0)-up}px) scale(${(1+k)/2}) rotate(${sp/2}deg)`,offset:.5},{transform:`translate(${dx}px,${dy}px) scale(${k}) rotate(${sp}deg)`}],{duration:ms,easing:'ease-in-out',fill:'forwards'});
   if(a)a.onfinish=fin;
   setTimeout(fin,ms+400);
@@ -716,7 +716,7 @@ function makeOrders(v){if(v.menus.length<2)return[v.menus[0],v.menus[0],v.menus[
 function newRound(){
   L.begin();gen++;H={};act=null;killTool();G.stop();fxEl.innerHTML='';ptNow=0;tray.innerHTML='';tray.onpointerdown=null;busy=false;
   if(al){al.detach();al=null}lobbyOff();custEl.classList.remove('leave','enter','rs-rub');cfxEl.classList.remove('puff','sniff');
-  lv=levelInfo(levelNo());const orders=makeOrders(lv),kinds=shuffle(KINDS.slice()).slice(0,3);
+  lv=levelInfo(levelNo());const orders=makeOrders(lv),kinds=shuffle(KINDS.map(k=>k.id)).slice(0,3);
   S={view:'lobby',orders,kinds,menu:null,kind:null,name:'',board:0,toast:{n:0,heat:0,glow:0,lever:0,up:0},plate:{toast:0,egg:false,fruit:[]},pan:{egg:false,cells:null,flip:false,raw:true},wash:null,
     cp:Array(N_CHICKEN).fill('none'),coat:Array(N_CHICKEN).fill(0),cells:Array(N_CHICKEN*2).fill(0),coated:Array(N_CHICKEN).fill(false),fried:Array(N_CHICKEN).fill(false),pot:[],basketN:0,
     cnt:{breadIn:0,press:0,toastMade:0,toastPlated:0,crack:0,eggs:0,flip:0,eggPlated:0,washed:0,fruitPlated:0,coated:0,dropped:0,fried:0,basket:0}};
