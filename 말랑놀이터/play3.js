@@ -407,7 +407,7 @@ function makeBakery(id,title,steps,o){
     H={};props.innerHTML='';if(eng&&eng.stop)eng.stop();eng=null;const s=steps[i];
     bar.querySelectorAll('.rs').forEach((r,k)=>{r.className='rs'+(k<i?' done':k===i?' on':'')});
     const on=bar.querySelector('.rs.on');if(on)bar.scrollLeft=Math.max(0,on.offsetLeft-bar.clientWidth/2+30);
-    if(s.type!=='top'&&s.type!=='decorate')tray.innerHTML=`<span class="hint" style="font-size:16px">${i+1}단계 · ${s.icon} ${s.ko}</span>`;
+    if(s.type!=='top'&&s.type!=='decorate')tray.innerHTML='';   // P16: no text hint line (shell.banned)
     hint(stage,s.hint||s.ko);if(s.say)say(s.say[0],s.say[1]);
     T[s.type](s);size();
   }
@@ -456,7 +456,7 @@ makeBakery('cake','케이크 만들기',[
    ================================================================= */
 (()=>{
   const id='rhythm',L=life(id);
-  const sec=screen(id,'리듬 박수','<div class="seg" id="rhInst"><button data-i="drum" class="on">🥁 북</button><button data-i="clap">👏 박수</button><button data-i="bell">🔔 종</button></div>',
+  const sec=screen(id,'리듬 박수','',
     '<div class="kstage rstage" id="rhStage"><div class="rcards" id="rhCards"></div><button class="drum" id="rhDrum" aria-label="치기">🥁</button></div><div class="ktray" id="rhTray"></div>');
   const cards=sec.querySelector('#rhCards'),drum=sec.querySelector('#rhDrum'),tray=sec.querySelector('#rhTray'),stage=sec.querySelector('#rhStage');
   const PAT=[['ta','ta','ta','z'],['ta','ta','ti','ta'],['ti','ti','ta','z'],['ta','z','ta','ta'],['ti','ta','ti','ta'],['ta','ti','ti','ta']];
@@ -489,8 +489,12 @@ makeBakery('cake','케이크 만들기',[
     if(mode!=='play')return;const k=hits[hk++];lit(k);
     if(hk>=hits.length){mode='done';PAT[pi].forEach((tk,j)=>{if(tk==='z')lit(j)});L.later(()=>{cheer('리듬을 똑같이 쳤어요!','You copied the rhythm!');L.later(()=>{pi=(pi+1)%PAT.length;listen()},2600)},400)}
   });
-  sec.querySelector('#rhInst').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;inst=b.dataset.i;sec.querySelectorAll('#rhInst button').forEach(x=>x.classList.toggle('on',x===b));render();SOUND[inst]()});
-  games[id]={enter:()=>{pi=0;say('선생님이 먼저 치면 똑같이 따라 쳐요!','I play first, then you copy!');L.later(listen,1500)},exit:()=>L.begin()};
+  /* P16: the instrument is picked with picture cards at the start (shell.insteadOfTabs), not with text tabs in the header */
+  function begin(){pi=0;say('선생님이 먼저 치면 똑같이 따라 쳐요!','I play first, then you copy!');L.later(listen,1500)}
+  games[id]={enter:()=>{L.begin();const SHL=M.Shell;if(!SHL){begin();return}cards.innerHTML='';tray.innerHTML='';
+      SHL.start(sec,[{svg:SHL.art('drum'),ko:'북',en:'Drum',v:'drum'},{svg:SHL.art('clap'),ko:'박수',en:'Clap',v:'clap'},{svg:SHL.art('bell'),ko:'종',en:'Bell',v:'bell'}],
+        it=>{if(M.current()!==id)return;inst=it.v;render();SOUND[inst]();L.later(begin,500)},{ko:'무엇으로 칠까?',en:'What shall we play?'})},
+    exit:()=>{L.begin();sec.querySelectorAll(':scope > .sh-start').forEach(x=>x.remove())}};
   void timers;
 })();
 
@@ -542,8 +546,7 @@ function renderStamps(){
       ${missions.map(m=>`<button class="mrow ${STP.done.includes(m[0])?'done':''}" data-go="${m[0]}"><span class="mi">${m[1]}</span><span class="mt">${m[2]}</span><span class="mc">${STP.done.includes(m[0])?'✅':'▶'}</span></button>`).join('')}</div>
     <div class="stpcard"><h4 style="margin:0;font-weight:400;font-size:20px">도장판 ${page+1}장째</h4><div class="sgrid2">${Array.from({length:20},(_,k)=>`<span class="slot">${k<showN?STAMP_SVG:''}</span>`).join('')}</div></div>
     <button class="pillhold holdbtn" id="stpGive" style="align-self:center">👩 엄마 아빠 칭찬 도장 (어른 꾹 2초)</button>
-    <button class="pillhold holdbtn" id="stpCloset" style="align-self:center">👗 우리 집 드레스 옷장 관리 (어른 꾹 2초)</button>
-    <p class="hint">도장은 실제로 칭찬할 일이 있을 때 어른이 찍어 주세요. 진짜 드레스 사진은 옷장 관리에서 넣고, 도장 몇 개에 열릴지 정할 수 있어요. 사진은 이 기기에만 저장돼요.</p>`;
+    <button class="pillhold holdbtn" id="stpCloset" style="align-self:center">👗 우리 집 드레스 옷장 관리 (어른 꾹 2초)</button>`;
   hold(sec.querySelector('#stpGive'),2000,openReasons);
   hold(sec.querySelector('#stpCloset'),2000,openCloset);
 }

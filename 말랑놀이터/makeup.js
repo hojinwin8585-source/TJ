@@ -383,15 +383,13 @@ const css=`
 `;
 const stEl=document.createElement('style');stEl.textContent=css;document.head.appendChild(stEl);
 
-const sec=document.createElement('section');sec.id=id;sec.className='screen';sec.hidden=true;
-sec.innerHTML=`${PAPER_DEFS}<div class="bar mk-head"><button class="round mk-back" id="mkHome" data-go="home" aria-label="뒤로">${ICON.back}</button><button class="round mk-back" id="mkBack" aria-label="가게 앞으로" hidden>${ICON.back}</button><div class="mk-strip" id="mkStrip"></div><div class="mk-stars" id="mkStars"></div></div>
-<div class="mk-stage" id="mkStage">
+/* P16: the screen and its header come from the common shell (ML.Shell.screen): same back picture, size and place on every screen */
+const sec=M.Shell.screen(id,{title:'화장 가게',pre:PAPER_DEFS,headClass:'mk-head',backClass:'mk-back',backId:'mkHome',backs:[{id:'mkBack',label:'가게 앞으로'}],stripClass:'mk-strip',stripId:'mkStrip',after:`<div class="mk-stars" id="mkStars"></div>`,body:`<div class="mk-stage" id="mkStage">
   <div class="mk-lobby" id="mkLobby"><div class="mk-bg">${LOBBY_BG}</div><div class="mk-frames" id="mkFrames"></div><div id="mkSeats"></div></div>
   <div class="mk-room" id="mkRoom" hidden><div class="mk-bg">${ROOM_BG}</div><div class="mk-bigmirror" id="mkBigMirror"></div><div class="mk-cust" id="mkCust"></div><div class="mk-glow" id="mkGlow"></div><div class="mk-hand" id="mkHand"></div><div class="mk-bub" id="mkBub" hidden></div>
     <div class="mk-fx" id="mkFx"></div><button class="mk-mirbtn" id="mkMirBtn" aria-label="거울" hidden>${ICON.mirror}</button><div class="mk-flash" id="mkFlash"></div></div>
 </div>
-<div class="mk-tray" id="mkTray"></div>`;
-document.getElementById('app').appendChild(sec);M.NAMES[id]='화장 가게';
+<div class="mk-tray" id="mkTray"></div>`}).sec;
 const $=s=>sec.querySelector(s);
 const stage=$('#mkStage'),stripEl=$('#mkStrip'),lobbyEl=$('#mkLobby'),roomEl=$('#mkRoom'),seatsEl=$('#mkSeats'),framesEl=$('#mkFrames'),custEl=$('#mkCust'),glowEl=$('#mkGlow'),handEl=$('#mkHand'),bubEl=$('#mkBub'),
   fxEl=$('#mkFx'),mirBtn=$('#mkMirBtn'),flashEl=$('#mkFlash'),bigMirEl=$('#mkBigMirror'),tray=$('#mkTray'),homeBtn=$('#mkHome'),backBtn=$('#mkBack');

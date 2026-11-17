@@ -430,14 +430,14 @@ body{background:linear-gradient(180deg,var(--bg),color-mix(in srgb,var(--bg) 82%
   <section id="friends" class="screen" hidden>
     <div class="bar"><button class="round" data-go="home" aria-label="처음으로">🏠</button><h2>우리 친구들</h2>
       <button class="round holdbtn" id="editHold" aria-label="어른 편집, 2초 길게 누르기">✏️</button></div>
-    <p class="hint" id="editHint">모험을 하나 깰 때마다 새 친구가 생겨요. 어른: ✏️를 2초 꾹 누르면 아기·엄마·아빠·친구 사진과 이름을 바꿀 수 있어요.</p>
+    <p class="hint" id="editHint" hidden></p>
     <div class="cast" id="cast"></div>
   </section>
 
   <!-- ANIMALS -->
   <section id="animals" class="screen" hidden>
     <div class="bar"><button class="round" data-go="home" aria-label="처음으로">🏠</button><h2>동물 친구</h2>
-      <div class="seg" id="animalMode"><button data-m="play" class="on">놀기</button><button data-m="find">찾기</button></div></div>
+</div>
     <div class="stage animal-grid" id="animalStage"></div>
     <button class="round ask" id="animalAsk" aria-label="다시 듣기" hidden>🔊</button>
   </section>
@@ -467,7 +467,7 @@ body{background:linear-gradient(180deg,var(--bg),color-mix(in srgb,var(--bg) 82%
   <!-- JELLY -->
   <section id="jelly" class="screen" hidden>
     <div class="bar"><button class="round" data-go="home" aria-label="처음으로">🏠</button><h2>젤리 세기</h2>
-      <div class="seg" id="jellyRange"><button data-v="5" class="on">1~5</button><button data-v="10">1~10</button></div></div>
+</div>
     <div class="jelly-num" id="jellyNum"></div>
     <div class="plate" id="plate"></div>
   </section>
@@ -475,25 +475,21 @@ body{background:linear-gradient(180deg,var(--bg),color-mix(in srgb,var(--bg) 82%
   <!-- MUSIC -->
   <section id="music" class="screen" hidden>
     <div class="bar"><button class="round" data-go="home" aria-label="처음으로">🏠</button><h2>동물 음악회</h2>
-      <div class="seg" id="musicMode"><button data-m="free" class="on">마음대로</button><button data-m="song">작은 별</button></div>
       <button class="round" id="musicListen" aria-label="노래 들어보기" hidden>▶️</button></div>
     <div class="keys" id="keys"></div>
   </section>
 
   <!-- DRAW -->
   <section id="draw" class="screen" hidden>
-    <div class="bar"><button class="round" data-go="home" aria-label="처음으로">🏠</button><h2>그림 그리기</h2>
-      <button class="round" id="drawSize" aria-label="붓 굵기">🖌️</button>
-      <button class="round" id="drawStamp" aria-label="도장">🐶</button>
-      <button class="round holdbtn" id="drawClear" aria-label="새 종이, 1초 길게 누르기">🗑️</button></div>
+    <div class="bar"><button class="round" data-go="home" aria-label="처음으로">🏠</button><h2>그림 그리기</h2></div>
     <canvas id="drawCanvas"></canvas>
-    <div class="tools"><div class="palette" id="palette"></div></div>
+    <div class="tools"><button class="round" id="drawSize" aria-label="붓 굵기"></button><button class="round" id="drawStamp" aria-label="도장">🐶</button><div class="palette" id="palette"></div><button class="round holdbtn" id="drawClear" aria-label="새 종이, 1초 길게 누르기"></button></div>
   </section>
 
   <!-- WORDS -->
   <section id="words" class="screen" hidden>
     <div class="bar"><button class="round" data-go="home" aria-label="처음으로">🏠</button><h2>낱말 카드</h2>
-      <div class="seg" id="wordCat"><button data-c="food" class="on">음식</button><button data-c="ride">탈것</button><button data-c="home">우리 집</button></div></div>
+</div>
     <button class="wcard" id="wcard" aria-label="낱말 듣기"></button>
     <div class="wnav"><button class="round" id="wPrev" aria-label="이전">⬅️</button><div class="dots" id="wDots"></div><button class="round" id="wNext" aria-label="다음">➡️</button></div>
   </section>
@@ -762,6 +758,7 @@ function bump(id){
   store.set('mallang_stats',st);
 }
 function go(id,noEnter){
+  const SHL=window.ML&&window.ML.Shell;if(SHL)id=SHL.route(id);   // catalog.retired: an old screen opens the game that replaced it
   if(!document.getElementById(id))id='home';
   try{if(games[current]&&games[current].exit)games[current].exit()}catch(err){console.error(err)}
   document.querySelectorAll('.screen').forEach(s=>{s.hidden=s.id!==id});
@@ -1387,8 +1384,8 @@ games.friends=(()=>{
       if(!edit)d.onclick=()=>{bounce(d.querySelector('.chara'));sfx.pop();say(ko+'!',en+'!')};
       box.appendChild(d)});
     FRIEND_DEF.forEach((_,i)=>box.appendChild(card(friendData(i),i,i>=PROG.cleared)));
-    $('#editHint').textContent=edit?'사진은 이 기기 안에만 저장돼요. 이름은 칸을 벗어나면 저장돼요. 다 하면 ✏️를 한 번 누르세요.'
-      :'모험을 하나 깰 때마다 새 친구가 생겨요. 어른: ✏️를 2초 꾹 누르면 사진과 이름을 바꿀 수 있어요.';
+    /* P16: the text line is for grown-ups only, so it shows while editing (no text hint line on the child screen) */
+    $('#editHint').textContent=edit?'사진은 이 기기 안에만 저장돼요. 이름은 칸을 벗어나면 저장돼요. 다 하면 연필 그림을 한 번 누르세요.':'';$('#editHint').hidden=!edit;
     $('#editHold').classList.toggle('on',edit);
   }
   box.addEventListener('click',e=>{
@@ -1429,10 +1426,12 @@ games.animals=(()=>{
       say('동물 친구를 눌러 봐!','Tap an animal friend!');
     }else F.start({pool:ANIMALS});
   }
-  $('#animalMode').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
-    mode=b.dataset.m;$('#animalMode').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));render()});
+  /* P16: no 놀기/찾기 text tab; the kind is picked with picture cards at the start (shell.insteadOfTabs) */
+  function choose(){const SHL=window.ML&&window.ML.Shell;if(!SHL){render();return}
+    F.stop();stage.innerHTML='';$('#animalAsk').hidden=true;
+    SHL.start('animals',[{svg:SHL.art('paw'),ko:'놀기',en:'Play',v:'play'},{svg:SHL.art('find'),ko:'찾기',en:'Find',v:'find'}],it=>{if(current!=='animals')return;mode=it.v;render()},{ko:'무엇을 할까?',en:'What shall we do?'})}
   $('#animalAsk').onclick=()=>F.ask();
-  return{enter:render,exit:()=>F.stop()};
+  return{enter:choose,exit:()=>{F.stop();document.querySelectorAll('#animals > .sh-start').forEach(x=>x.remove())}};
 })();
 
 /* =================================================================
@@ -1532,10 +1531,9 @@ games.trace=(()=>{
   const T=makeTracer($('#traceCanvas'),()=>{t=setTimeout(()=>{if(current!=='trace')return;level=(level+1)%LV.length;run(true)},3000)});
   function run(intro){
     clearTimeout(t);
-    $('#traceDots').innerHTML=LV.map((_,i)=>`<button class="${i===level?'on':''}" data-i="${i}" aria-label="${i+1}단계"></button>`).join('');
+    $('#traceDots').innerHTML=LV.map((_,i)=>`<i class="${i===level?'on':i<level?'done':''}"></i>`).join('');
     T.start(Object.assign({style:'path'},LV[level]));if(intro)say(LV[level].ko,LV[level].en);
   }
-  $('#traceDots').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;level=+b.dataset.i;run(true)});
   return{enter:()=>run(true),resize:T.resize,exit:()=>{clearTimeout(t);T.stop()}};
 })();
 
@@ -1548,10 +1546,9 @@ games.shapes=(()=>{
   const Sx=makeSorter($('#board'),()=>{t=setTimeout(()=>{if(current==='shapes'){level=Math.min(LEVELS.length-1,level+1);run(false)}},2600)});
   function run(intro){
     clearTimeout(t);
-    $('#shapeDots').innerHTML=LEVELS.map((_,i)=>`<button class="${i===level?'on':''}" data-i="${i}" aria-label="${i+1}단계"></button>`).join('');
+    $('#shapeDots').innerHTML=LEVELS.map((_,i)=>`<i class="${i===level?'on':i<level?'done':''}"></i>`).join('');
     Sx.start({types:LEVELS[level]});if(intro)say('모양을 같은 자리에 쏙 넣어 봐!','Put each shape in its home!');
   }
-  $('#shapeDots').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;level=+b.dataset.i;run(false)});
   return{enter:()=>run(true),resize:Sx.resize,exit:()=>{clearTimeout(t);Sx.stop()}};
 })();
 
@@ -1560,15 +1557,17 @@ games.shapes=(()=>{
    ================================================================= */
 games.jelly=(()=>{
   let n=1,max=5,first=true,t=0;
-  const C=makeCounter($('#plate'),$('#jellyNum'),()=>{t=setTimeout(()=>{if(current!=='jelly')return;n=max===5?(n>=5?1:n+1):3+rand(8);run()},2800)});
+  /* P16: no 1~5 / 1~10 tab. The level engine picks it (ML.Progress 'jelly': 1단계 1~5, 2단계 1~10); grown-ups can change it in the settings */
+  const PRG=()=>window.ML&&window.ML.Progress;
+  setTimeout(()=>{const p=PRG();if(p)p.register('jelly',{max:2,name:'젤리 세기'})},0);
+  const lvMax=()=>{const p=PRG();return p&&p.get('jelly').level>=2?10:5};
+  const C=makeCounter($('#plate'),$('#jellyNum'),()=>{const round=max===10||n>=5;if(round)try{const p=PRG();if(p)p.clear('jelly')}catch(e){}
+    t=setTimeout(()=>{if(current!=='jelly')return;const m=lvMax();if(m!==max){max=m;n=max===5?1:3+rand(8)}else n=max===5?(n>=5?1:n+1):3+rand(8);run()},2800)});
   function run(){
     clearTimeout(t);C.start({n,item:'jelly',ko:'젤리',en:'jelly',ens:'jellies'});
     if(first){say('젤리를 하나씩 눌러서 세어 봐!','Tap each jelly and count!');first=false}else say('젤리가 몇 개일까?','How many jellies?');
   }
-  $('#jellyRange').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
-    max=+b.dataset.v;$('#jellyRange').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
-    n=max===5?1:3+rand(8);run()});
-  return{enter:()=>{first=true;run()},exit:()=>{clearTimeout(t);C.stop()}};
+  return{enter:()=>{const m=lvMax();if(m!==max){max=m;n=max===5?1:3+rand(8)}first=true;run()},exit:()=>{clearTimeout(t);C.stop()}};
 })();
 
 /* =================================================================
@@ -1589,16 +1588,20 @@ games.music=(()=>{
   wrap.addEventListener('pointerdown',e=>{e.preventDefault();actx();const i=keyAt(e);last[e.pointerId]=i;if(i>=0)press(i)});
   wrap.addEventListener('pointermove',e=>{if(!(e.pointerId in last)||mode!=='free')return;const i=keyAt(e);if(i>=0&&i!==last[e.pointerId]){last[e.pointerId]=i;press(i)}});
   ['pointerup','pointercancel','pointerleave'].forEach(ev=>wrap.addEventListener(ev,e=>{delete last[e.pointerId]}));
-  $('#musicMode').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
-    mode=b.dataset.m;idx=0;$('#musicMode').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
-    $('#musicListen').hidden=mode!=='song';mark();
-    if(mode==='song')say('반짝이는 건반을 눌러 봐! 어떤 건반을 눌러도 노래가 나와요.','Tap the glowing key to play the song!')});
+  /* P16: no 마음대로 / 작은 별 text tab; picture cards at the start (shell.insteadOfTabs) */
+  function setMode(m){
+    mode=m;idx=0;$('#musicListen').hidden=mode!=='song';mark();
+    if(mode==='song')say('반짝이는 건반을 눌러 봐! 어떤 건반을 눌러도 노래가 나와요.','Tap the glowing key to play the song!');
+    else say('건반을 눌러 봐! 동물 친구들이 노래해요.','Tap the keys and make music!')}
   $('#musicListen').onclick=()=>{
     if(playing)return;playing=true;mark();
     TWINKLE.forEach((n,i)=>setTimeout(()=>{if(current==='music')hitKey(keys[n],n)},i*480+(i>=7?240:0)));
     setTimeout(()=>{playing=false;idx=0;mark()},TWINKLE.length*480+500);
   };
-  return{enter:()=>{idx=0;playing=false;mark();say('건반을 눌러 봐! 동물 친구들이 노래해요.','Tap the keys and make music!')}};
+  return{enter:()=>{idx=0;playing=false;mode='free';$('#musicListen').hidden=true;mark();const SHL=window.ML&&window.ML.Shell;
+      if(!SHL){say('건반을 눌러 봐! 동물 친구들이 노래해요.','Tap the keys and make music!');return}
+      SHL.start('music',[{svg:SHL.art('keys'),ko:'마음대로',en:'Free play',v:'free'},{svg:SHL.art('song'),ko:'작은 별',en:'Twinkle twinkle',v:'song'}],it=>{if(current==='music')setMode(it.v)},{ko:'무엇을 연주할까?',en:'What shall we play?'})},
+    exit:()=>document.querySelectorAll('#music > .sh-start').forEach(x=>x.remove())};
 })();
 
 /* =================================================================
@@ -1614,7 +1617,8 @@ games.draw=(()=>{
   $('#palette').addEventListener('click',e=>{const b=e.target.closest('.swatch');if(!b)return;const p=PAL[+b.dataset.i];
     color=p[0];tool='brush';$('#drawStamp').classList.remove('on');
     document.querySelectorAll('.swatch').forEach(x=>x.classList.toggle('on',x===b));say(p[1],cap(p[2]))});
-  $('#drawSize').onclick=()=>{thick=!thick;$('#drawSize').textContent=thick?'🖌️':'✏️';tool='brush';$('#drawStamp').classList.remove('on');sfx.pop()};
+  const tIcon=()=>{const I=(window.ML&&window.ML.Shell)?window.ML.Shell.ICON:{};$('#drawSize').innerHTML=(thick?I.brushThick:I.brushThin)||'';if(!$('#drawClear').querySelector('svg'))$('#drawClear').innerHTML=I.paper||''};
+  $('#drawSize').onclick=()=>{thick=!thick;tIcon();tool='brush';$('#drawStamp').classList.remove('on');sfx.pop()};
   $('#drawStamp').onclick=()=>{if(tool==='stamp')stampI=(stampI+1)%STAMPS.length;tool='stamp';$('#drawStamp').textContent=STAMPS[stampI];$('#drawStamp').classList.add('on');sfx.pop()};
   hold($('#drawClear'),1000,()=>{fillWhite();sfx.boing();say('새 종이!','New paper!')});
   function fillWhite(){g.save();g.setTransform(1,0,0,1,0,0);g.fillStyle='#FFFFFF';g.fillRect(0,0,cv.width,cv.height);g.restore()}
@@ -1640,7 +1644,7 @@ games.draw=(()=>{
     lastP[e.pointerId]=[x,y];
   });
   ['pointerup','pointercancel'].forEach(ev=>cv.addEventListener(ev,e=>{delete lastP[e.pointerId]}));
-  return{enter:()=>requestAnimationFrame(()=>{size();say('마음대로 그려 봐!',"Let's draw!")}),resize:size};
+  return{enter:()=>requestAnimationFrame(()=>{tIcon();size();say('마음대로 그려 봐!',"Let's draw!")}),resize:size};
 })();
 
 /* =================================================================
@@ -1671,9 +1675,10 @@ games.words=(()=>{
   card.addEventListener('pointerup',e=>{if(sx===null)return;const dx=e.clientX-sx;sx=null;if(Math.abs(dx)>60){swiped=true;step(dx<0?1:-1)}});
   $('#wPrev').onclick=()=>step(-1);$('#wNext').onclick=()=>step(1);
   $('#wDots').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;i=+b.dataset.k;show(true)});
-  $('#wordCat').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;cat=b.dataset.c;i=0;
-    $('#wordCat').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));show(true)});
-  return{enter:()=>show(true)};
+  /* P16: no 음식/탈것/우리 집 text tab; picture cards at the start (shell.insteadOfTabs) */
+  return{enter:()=>{const SHL=window.ML&&window.ML.Shell;show(false);if(!SHL){show(true);return}
+      SHL.start('words',[{svg:SHL.art('apple'),ko:'음식',en:'Food',v:'food'},{svg:SHL.art('car'),ko:'탈것',en:'Rides',v:'ride'},{svg:SHL.art('teddy'),ko:'우리 집',en:'At home',v:'home'}],it=>{if(current!=='words')return;cat=it.v;i=0;show(true)},{ko:'어떤 낱말을 볼까?',en:'Which words?'})},
+    exit:()=>document.querySelectorAll('#words > .sh-start').forEach(x=>x.remove())};
 })();
 
 window.ML={$,say,sfx,tone,cheer,confetti,bounce,pick,rand,shuffle,cap,batchim,go,games,charaHTML,heroData,friendData,CAST,saveCast,pickPhoto,hold,store,S,
@@ -1692,6 +1697,7 @@ if('serviceWorker' in navigator&&location.protocol==='https:'){
 <script src="play3.js"></script>
 <script src="guide.js"></script>
 <script src="progress.js"></script>
+<script src="shell.js"></script>
 <script src="pizzashop.js"></script>
 <script src="salon.js"></script>
 <script src="nailshop.js"></script>

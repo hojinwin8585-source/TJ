@@ -160,12 +160,10 @@ const stEl=document.createElement('style');stEl.textContent=css;document.head.ap
 
 const WALL=`<svg viewBox="0 0 100 34" preserveAspectRatio="none"><rect width="100" height="34" fill="#F3E7DC"/><rect y="24" width="100" height="10" fill="#EEDFD1"/>
   <rect x="34" y="4" width="22" height="15" rx="2.5" fill="#DCEBF0" stroke="#D9BFA6" stroke-width="1.4"/><path d="M45 4V19M34 11.5H56" stroke="#D9BFA6" stroke-width="1.2"/></svg>`;
-const sec=document.createElement('section');sec.id=id;sec.className='screen';sec.hidden=true;
-sec.innerHTML=`<div class="bar pz-head"><button class="round pz-back" data-go="home" aria-label="뒤로">${ICON.back}</button><div class="pz-strip" id="pzStrip"></div></div>
-<div class="pz-stage" id="pzStage"><div class="pz-wall">${WALL}</div><div class="pz-shelf" id="pzShelf"></div><div class="pz-table"></div>
+/* P16: the screen and its header come from the common shell (ML.Shell.screen): same back picture, size and place on every screen */
+const sec=M.Shell.screen(id,{title:'피자가게',headClass:'pz-head',backClass:'pz-back',stripClass:'pz-strip',stripId:'pzStrip',body:`<div class="pz-stage" id="pzStage"><div class="pz-wall">${WALL}</div><div class="pz-shelf" id="pzShelf"></div><div class="pz-table"></div>
 <div class="pz-cust" id="pzCust"></div><div class="pz-bub" id="pzBub" hidden></div><div class="pz-main" id="pzMain"></div><div class="pz-plate" id="pzPlate" hidden></div><div class="pz-fx" id="pzFx"></div></div>
-<div class="pz-tray" id="pzTray"></div>`;
-document.getElementById('app').appendChild(sec);M.NAMES[id]='피자가게';
+<div class="pz-tray" id="pzTray"></div>`}).sec;
 const $=s=>sec.querySelector(s);
 const stage=$('#pzStage'),stripEl=$('#pzStrip'),custEl=$('#pzCust'),bubEl=$('#pzBub'),mainEl=$('#pzMain'),plateEl=$('#pzPlate'),fxEl=$('#pzFx'),tray=$('#pzTray'),shelfEl=$('#pzShelf');
 const G=M.Guide.make(stage,{say});

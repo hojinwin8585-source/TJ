@@ -65,9 +65,8 @@ const kcss=`
 .rt-callme{filter:drop-shadow(0 0 12px ${PAL.butter||'#F0D58A'})}
 `;
 const kst=document.createElement('style');kst.textContent=kcss;document.head.appendChild(kst);
-const sec=document.createElement('section');sec.id=id;sec.className='screen';sec.hidden=true;
-sec.innerHTML=`<div class="bar rt-head"><button class="round rt-back" data-go="home" aria-label="뒤로">${ICON.back}</button><div class="rt-strip" id="routine2Strip"></div></div><div class="rt-stage" id="routine2Stage"></div><div class="rt-tray" id="routine2Tray"></div>`;
-document.getElementById('app').appendChild(sec);M.NAMES[id]='하루일과';
+/* P16: the screen and its header come from the common shell (ML.Shell.screen): same back picture, size and place on every screen */
+const sec=M.Shell.screen(id,{title:'하루일과',headClass:'rt-head',backClass:'rt-back',stripClass:'rt-strip',stripId:'routine2Strip',body:`<div class="rt-stage" id="routine2Stage"></div><div class="rt-tray" id="routine2Tray"></div>`}).sec;
 const $=s=>sec.querySelector(s);
 const stage=$('#routine2Stage'),stripEl=$('#routine2Strip'),tray=$('#routine2Tray');
 const G=M.Guide.make(stage,{say});

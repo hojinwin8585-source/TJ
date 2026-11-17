@@ -49,38 +49,26 @@ const css=`
 .tree{position:absolute;width:9%;transform:translate(-50%,-100%);pointer-events:none;z-index:1}
 .tree svg{width:100%;height:auto;display:block}
 /* 건물 안 (영역 화면) */
-.zonegrid{flex:1;min-height:0;overflow:auto;display:grid;grid-template-columns:repeat(2,1fr);gap:16px;align-content:start;padding:4px 2px 18px}
-.zonegrid .tile{aspect-ratio:1/.92;position:relative}
-.zonegrid .tile .ic{font-size:clamp(46px,14vw,70px)}
-.zonegrid .tile b{font-size:clamp(17px,4.8vw,22px)}
-.zonehead{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
-.zonehead svg{width:70px;height:56px;flex:none}
 .tile .ic svg{width:1.3em;height:1.3em;display:block}
 .tile .newb{position:absolute;right:8px;top:8px;background:#FF3B6B;color:#fff;font-size:12px;border-radius:999px;padding:1px 7px}
 `;
 const st=document.createElement('style');st.textContent=css;document.head.appendChild(st);
 
+/* P16: the place screens (요리 마을 · 꾸미기 살롱 · 배움 학교 · 노래 극장 · 내 방) are ML.Shell.place screens: the same header,
+   drawn tiles 2×2 on the place's paper background, a big arrow for the next page. Which games are in which place: MLCFG.home.places + catalog */
+const SHL=M.Shell;
 const ZONES=[
-  {id:'zone-cook',label:'엄마 아빠 따라하기',art:'kitchen',title:'요리 마을',en:'Cooking town',pal:['bunny',{chef:true}],at:[27,68]},
-  {id:'zone-salon',label:'꾸미기',art:'salon',title:'꾸미기 살롱',en:'Dress-up salon',pal:['cat',{bow:'#FF6F91'}],at:[73,94]},
-  {id:'zone-job',label:'직업 놀이',art:'fire',title:'직업 마을',en:'Job town',pal:['dog',{}],at:[27,120]},
-  {id:'zone-school',label:'배움 놀이',art:'school',title:'배움 학교',en:'School',pal:['bear',{}],at:[73,146]},
-  {id:'zone-music',label:'소리·노래',art:'music',title:'노래 극장',en:'Music hall',pal:['bunny',{bow:'#9A7BFF'}],at:[27,172]}
-];
+  {key:'cook',art:A.BUILD.kitchen,pal:['bunny',{chef:true}],at:[27,68]},
+  {key:'salon',art:A.BUILD.salon,pal:['cat',{bow:'#FF6F91'}],at:[73,94]},
+  {key:'learn',art:A.BUILD.school,pal:['bear',{}],at:[27,120]},
+  {key:'music',art:A.BUILD.music,pal:['bunny',{bow:'#9A7BFF'}],at:[73,146]},
+  {key:'myroom',art:null,pal:['dog',{}],at:[27,172]}
+].filter(z=>SHL&&SHL.places[z.key]).map(z=>{const P=SHL.places[z.key];return Object.assign(z,{id:P.id,title:P.ko,en:P.en})});
 const home=document.getElementById('home'),scroll=home.querySelector('.home-scroll');
-const zoneOf={};
-/* move each section's tiles into its own building screen */
-const labels=[...scroll.querySelectorAll('.section-label')];
-ZONES.forEach(z=>{
-  const lab=labels.find(l=>l.textContent.includes(z.label));if(!lab)return;
-  const tiles=[];let n=lab.nextElementSibling;while(n&&!n.classList.contains('section-label')){if(n.classList.contains('tile'))tiles.push(n);n=n.nextElementSibling}
-  const sec=document.createElement('section');sec.id=z.id;sec.className='screen';sec.hidden=true;
-  sec.innerHTML=`<div class="bar"><button class="round" data-go="home" aria-label="마을로">🏠</button><div class="zonehead">${A.BUILD[z.art]}<h2>${z.title}</h2></div></div><div class="zonegrid"></div>`;
-  const g=sec.querySelector('.zonegrid');tiles.forEach(t=>{g.appendChild(t);zoneOf[t.dataset.go]=z.id});
-  document.getElementById('app').appendChild(sec);M.NAMES[z.id]=z.title;
-  games[z.id]={enter:()=>say(`${z.title}에 왔어요! 무엇을 할까?`,`Welcome to the ${z.en}!`)};
-  lab.remove();
-});
+ZONES.forEach(z=>SHL.place(z.key));
+/* the section labels and any tile no place took leave the home list */
+scroll.querySelectorAll('.section-label').forEach(l=>l.remove());
+scroll.querySelectorAll(':scope > .tile').forEach(t=>t.remove());
 document.querySelectorAll('.tile[data-go="pizza"]').forEach(t=>{t.querySelector('.ic').innerHTML=`<svg viewBox="-120 -120 240 240">${A.pizza({r:100,sauce:true,cheese:Array.from({length:24},(_,i)=>[Math.cos(i*2.4)*i*3.4,Math.sin(i*2.4)*i*3.4,i*40]),tops:[['tomato',-38,-30,0],['mushroom',34,-36,20],['pepperoni',-30,40,0],['olive',40,30,0],['pepper',4,4,0]],baked:true})}</svg>`;
   t.querySelector('b').textContent='피자가게';t.insertAdjacentHTML('beforeend','<span class="newb">NEW</span>')});
 
@@ -112,7 +100,7 @@ function renderTown(){
   let h=bgSVG()+[['3%','46s','0s'],['6.5%','60s','-22s'],['1.5%','70s','-48s']].map(c=>`<span class="cloud" style="--y:${c[0]};--t:${c[1]};--d:${c[2]}">${CLOUD}</span>`).join('');
   [[8,52],[93,62],[52,100],[6,108],[95,132],[48,158],[6,186],[94,184],[52,214]].forEach(t=>{h+=`<span class="tree" style="${pos(t)}">${TREE}</span>`});
   h+=bld({go:'map',en:'Princess adventure',at:[50,31],w:64,art:A.BUILD.castle,pal:M.charaHTML(M.heroData()),side:'l',title:'공주 모험',sub:cleared>=7?'모험 성공! 👑':`별 ${cleared} / 7`});
-  ZONES.forEach((z,i)=>{h+=bld({go:z.id,en:z.en,at:z.at,art:A.BUILD[z.art],pal:A.animal(z.pal[0],'idle',z.pal[1]),side:z.at[0]<50?'r':'l',title:z.title,d:.5+i*.6})});
+  ZONES.forEach((z,i)=>{h+=bld({go:z.id,en:z.en,at:z.at,art:z.art||HOUSE,pal:A.animal(z.pal[0],'idle',z.pal[1]),side:z.at[0]<50?'r':'l',title:z.title,d:.5+i*.6})});
   h+=bld({go:'friends',en:'Our friends',at:[73,198],w:40,art:HOUSE,title:'친구들 집',sub:cleared?`친구 ${cleared}명`:'',d:3.4});
   h+=bld({go:'stamps',en:'Praise stamps',at:[27,220],w:34,art:A.BUILD.stamp,title:'칭찬 도장',sub:`도장 ${stamps}개`,d:4});
   town.innerHTML=h;
@@ -141,9 +129,5 @@ games.home.enter=()=>{he();renderToday();renderTown();
   if(HG){if(nextTarget)HG.start({type:'tap',wait:true,after:4000,quiet:true,at:()=>{const r=nextTarget.getBoundingClientRect(),hr=home.getBoundingClientRect();return[r.left-hr.left+r.width/2,r.top-hr.top+r.height/2]}});else HG.stop()}};
 games.home.exit=()=>{if(HG)HG.stop()};
 games.home.enter();
-/* back button inside a game returns to its building, not all the way home */
-document.addEventListener('click',e=>{
-  const b=e.target.closest('[data-go="home"]');if(!b)return;const scr=b.closest('.screen');if(!scr)return;const z=zoneOf[scr.id];
-  if(z){e.stopPropagation();e.preventDefault();sfx.pop();M.go(z)}
-},true);
+/* the back button inside a game goes one step up by itself (ML.Shell: game → place → home) */
 })();

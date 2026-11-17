@@ -180,12 +180,10 @@ const stEl=document.createElement('style');stEl.textContent=css;document.head.ap
 const WALL=`<svg viewBox="0 0 100 34" preserveAspectRatio="none"><rect width="100" height="34" fill="#F3EADD"/>${Array.from({length:14},(_,i)=>`<path d="M${i*8} 0V34" stroke="#EADFCE" stroke-width="1"/>`).join('')}<rect y="26" width="100" height="8" fill="#E8DAC5"/></svg>`;
 const WIN=`<svg viewBox="0 0 100 70"><rect x="4" y="4" width="92" height="62" rx="6" fill="#DCEBF0" ${S3}/><path d="M50 4V66M4 35H96" stroke="${OL}" stroke-width="3"/><path d="M10 10L40 30M60 42L90 60" stroke="#fff" stroke-width="5" opacity=".5" stroke-linecap="round"/></svg>`;
 const PLANK=`<svg viewBox="0 0 100 14" preserveAspectRatio="none"><rect x="0" y="0" width="100" height="14" rx="4" fill="#D9B48A" ${S3}/></svg>`;
-const sec=document.createElement('section');sec.id=id;sec.className='screen';sec.hidden=true;
-sec.innerHTML=`<div class="bar ch-head"><button class="round ch-back" data-go="home" aria-label="뒤로">${ICON.back}</button><div class="ch-strip" id="ch2Strip"></div></div>
-<div class="ch-stage" id="ch2Stage"><div class="ch-wall">${WALL}</div><div class="ch-floor"></div><div class="ch-win" id="ch2Win">${WIN}</div><div class="ch-plank" id="ch2Plank">${PLANK}</div>
+/* P16: the screen and its header come from the common shell (ML.Shell.screen): same back picture, size and place on every screen */
+const sec=M.Shell.screen(id,{title:'집안일',headClass:'ch-head',backClass:'ch-back',stripClass:'ch-strip',stripId:'ch2Strip',body:`<div class="ch-stage" id="ch2Stage"><div class="ch-wall">${WALL}</div><div class="ch-floor"></div><div class="ch-win" id="ch2Win">${WIN}</div><div class="ch-plank" id="ch2Plank">${PLANK}</div>
 <div class="ch-cust" id="ch2Cust"></div><div class="ch-bub" id="ch2Bub" hidden></div><div class="ch-main" id="ch2Main"></div><div class="ch-water" id="ch2Water"></div><div class="ch-fx" id="ch2Fx"></div></div>
-<div class="ch-tray" id="ch2Tray"></div>`;
-document.getElementById('app').appendChild(sec);M.NAMES[id]='집안일';
+<div class="ch-tray" id="ch2Tray"></div>`}).sec;
 const $=s=>sec.querySelector(s);
 const stage=$('#ch2Stage'),stripEl=$('#ch2Strip'),custEl=$('#ch2Cust'),bubEl=$('#ch2Bub'),mainEl=$('#ch2Main'),waterEl=$('#ch2Water'),plankEl=$('#ch2Plank'),winEl=$('#ch2Win'),fxEl=$('#ch2Fx'),tray=$('#ch2Tray');
 const G=M.Guide.make(stage,{say});
@@ -193,6 +191,7 @@ const DATA=Object.assign({level:1,served:0,last:''},store.get('mallang_chores2',
 const save=()=>store.set('mallang_chores2',DATA);
 const PRG=()=>M.Progress&&typeof M.Progress.get==='function'?M.Progress:null;
 function levelNo(){const pr=PRG();let n=pr?pr.get(GID).level:DATA.level;n=Math.round(+n||1);return Math.max(1,Math.min(LV.length,n))}
+if(PRG())PRG().register(GID,{max:LV.length,name:'집안일',seg:'setChoreLv',seed:DATA.level});   // P16: shows in the parent settings '놀이별 단계' block
 function levelInfo(n){
   const f={level:n,boxes:1,plants:false,laundry:false,vacuum:false,hang:false,fold:false,chain:false};
   LV.slice(0,n).forEach(l=>{const t=l.new||'',m=t.match(/상자\s*(\d)개/);if(m)f.boxes=+m[1];
@@ -226,7 +225,7 @@ function size(){
   Object.assign(waterEl.style,{});
   if(S)S.items.forEach(pos);
 }
-function pos(it){const w=M0.w,h=M0.h,g=it.g,s=g.s*w,sh=s*(g.ar||1);Object.assign(it.el.style,{left:(g.x*w-s/2)+'px',top:(g.y*h-sh/2)+'px',width:s+'px',height:sh+'px'})}
+function pos(it){const w=M0.w,h=M0.h,g=it.g,s=Math.max(g.s*w,g.min||0),sh=s*(g.ar||1);Object.assign(it.el.style,{left:(g.x*w-s/2)+'px',top:(g.y*h-sh/2)+'px',width:s+'px',height:sh+'px'})}
 function mkItem(cls,g,svg,extra){
   const el=document.createElement('div');el.className='ch-it '+(cls||'');mainEl.appendChild(el);
   const it=Object.assign({el,g,svg},extra||{});it.draw=()=>{el.innerHTML=it.svg(it)};S.items.push(it);it.draw();pos(it);return it;
@@ -290,13 +289,14 @@ plankEl.style.overflow='visible';
 /* ============================== building the rooms ============================== */
 function clearMain(){mainEl.innerHTML='';S.items=[];plankEl.querySelectorAll('.ch-shelved').forEach(e=>e.remove());waterEl.classList.remove('on');killTool()}
 const nameToy=t=>TOYS[t.toy.name];
+const TOY_PX=(CF.touch||{}).minTargetPx||110;   // P16: every toy the child taps is at least touch.minTargetPx (110px)
 function buildToys(){
   clearMain();const pools={doll:shuffle(['bear','bunny','kitty','doll']).slice(0,3),car:shuffle(['car','bus','truck','train']).slice(0,3)};
   const cols=shuffle(CC.slice()).map(c=>c.hex);let ci=0;
   S.rug=mkItem('back',{x:.5,y:.36,s:.9,ar:.52},rugSVG,{});
   const toys=[];['doll','car'].forEach(cat=>pools[cat].forEach(n=>toys.push({name:n,cat,col:cols[ci++%cols.length]})));
   const spots=shuffle([[.16,.12],[.5,.1],[.84,.12],[.16,.4],[.5,.42],[.84,.4]]);
-  S.toys=shuffle(toys).map((t,i)=>mkItem('toy',{x:spots[i][0]+(Math.random()-.5)*.05,y:spots[i][1]+(Math.random()-.5)*.04,s:.2},it=>toySVG(it.toy),{toy:t,done:false}));
+  S.toys=shuffle(toys).map((t,i)=>mkItem('toy',{x:spots[i][0]+(Math.random()-.5)*.05,y:spots[i][1]+(Math.random()-.5)*.04,s:.2,min:TOY_PX},it=>toySVG(it.toy),{toy:t,done:false}));
   S.boxes=(lv.boxes>=2?['doll','car']:['any']).map((cat,i,a)=>{const b={cat,toys:[],lid:false};
     return mkItem('box',{x:a.length===1?.5:(i?.74:.26),y:.82,s:a.length===1?.4:.34,ar:.93},it=>boxSVG(it.box),{box:b,shelved:false,si:i})});
 }
@@ -600,7 +600,7 @@ M.__chore=()=>{
     cellPts:tool?tool.cellPts():[],toolOn:!!tool,alive:al?al.state():null,misses,guide:G.state(),served:DATA.served,log:LOG.slice()};
 };
 M.__choreDepth=()=>LV.map((l,i)=>{const v=levelInfo(i+1),H2={sort:'tap',lid:'tap',shelf:'tap',rug:'rub',fill:'tap',water:'rub',pluck:'tap',sun:'tap',load:'tap',soap:'tap',start:'tap',hang:'tap',fold:'rub',vac:'rub',socks:'tap',mop:'rub'};
-  lv=v;const per=v.jobs.map(j=>stepsOf(j));const all=new Set(['pick'].concat(...per));const hands=new Set(['choose']);per.forEach(a=>a.forEach(k=>hands.add(H2[k])));
+  const keep=lv;lv=v;const per=v.jobs.map(j=>stepsOf(j));lv=keep;/* stepsOf reads lv: put the round's level back */const all=new Set(['pick'].concat(...per));const hands=new Set(['choose']);per.forEach(a=>a.forEach(k=>hands.add(H2[k])));
   return{level:i+1,jobs:v.jobs,processesPerJob:per.map(a=>a.length+1),processes:all.size,hands:[...hands],someone:!!M.Alive,choice:true,ending:true,chain:v.chain}});
 games[id]={enter:()=>{requestAnimationFrame(()=>{if(cur()===id)newRound()})},
   exit:()=>{L.begin();gen++;H={};act=null;killTool();G.stop();fxEl.innerHTML='';tray.onpointerdown=null;if(al){al.detach();al=null}phase='';kind='wait'},resize:size};

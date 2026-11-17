@@ -175,14 +175,12 @@ const css=`
 `;
 const stEl=document.createElement('style');stEl.textContent=css;document.head.appendChild(stEl);
 const WALL=`<svg viewBox="0 0 100 34" preserveAspectRatio="none"><rect width="100" height="34" fill="#F3EADD"/>${Array.from({length:14},(_,i)=>`<path d="M${i*8} 0V34" stroke="#EADFCE" stroke-width="1"/>`).join('')}<rect y="26" width="100" height="8" fill="#E8DAC5"/><rect x="60" y="3" width="16" height="12" rx="2" fill="#DCEBF0" stroke="#D9BFA6" stroke-width="1.2"/><path d="M68 3V15M60 9H76" stroke="#D9BFA6" stroke-width="1"/></svg>`;
-const sec=document.createElement('section');sec.id=id;sec.className='screen';sec.hidden=true;
-sec.innerHTML=`<div class="bar dk-head"><button class="round dk-back" data-go="home" aria-label="뒤로">${ICON.back}</button><div class="dk-strip" id="dkStrip"></div></div>
-<div class="dk-stage" id="dkStage"><div class="dk-wall">${WALL}</div><div class="dk-counter"></div><div class="dk-rack" id="dkRack"></div><div class="dk-bin" id="dkBin">${ICON.bin}</div>
+/* P16: the screen and its header come from the common shell (ML.Shell.screen): same back picture, size and place on every screen */
+const sec=M.Shell.screen(id,{title:'설거지',headClass:'dk-head',backClass:'dk-back',stripClass:'dk-strip',stripId:'dkStrip',body:`<div class="dk-stage" id="dkStage"><div class="dk-wall">${WALL}</div><div class="dk-counter"></div><div class="dk-rack" id="dkRack"></div><div class="dk-bin" id="dkBin">${ICON.bin}</div>
 <div class="dk-cust" id="dkCust"></div><div class="dk-bub" id="dkBub" hidden></div>
 <div class="dk-sink" id="dkSink"><div class="dk-tabletop"></div><div class="dk-basin"></div><div class="dk-dishes" id="dkDishes"></div></div>
 <div class="dk-water" id="dkWater"></div><div class="dk-faucet" id="dkFaucet">${ICON.faucet}</div><div class="dk-bottle" id="dkBottle"></div><div class="dk-fx" id="dkFx"></div></div>
-<div class="dk-tray" id="dkTray"></div>`;
-document.getElementById('app').appendChild(sec);M.NAMES[id]='설거지';
+<div class="dk-tray" id="dkTray"></div>`}).sec;
 const $=s=>sec.querySelector(s);
 const stage=$('#dkStage'),stripEl=$('#dkStrip'),custEl=$('#dkCust'),bubEl=$('#dkBub'),sinkEl=$('#dkSink'),dishesEl=$('#dkDishes'),waterEl=$('#dkWater'),faucetEl=$('#dkFaucet'),bottleEl=$('#dkBottle'),rackEl=$('#dkRack'),binEl=$('#dkBin'),fxEl=$('#dkFx'),tray=$('#dkTray');
 const G=M.Guide.make(stage,{say});
@@ -276,6 +274,7 @@ const DATA=Object.assign({level:1,served:0,last:''},store.get('mallang_dishes2',
 const save=()=>store.set('mallang_dishes2',DATA);
 const PRG=()=>M.Progress&&typeof M.Progress.get==='function'?M.Progress:null;
 function levelNo(){const pr=PRG();let n=pr?pr.get(GID).level:DATA.level;n=Math.round(+n||1);return Math.max(1,Math.min(LV.length,n))}
+if(PRG())PRG().register(GID,{max:LV.length,name:'설거지',seg:'setDishLv',seed:DATA.level});   // P16: shows in the parent settings '놀이별 단계' block
 function levelInfo(n){
   const f={level:n,count:2,collect:false,dry:false,scrape:false,shelve:false,burnt:false,cup:false};
   LV.slice(0,n).forEach(l=>{const t=l.new||'',m=t.match(/(\d+)\s*개/);if(m)f.count=+m[1];

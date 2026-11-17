@@ -291,13 +291,11 @@ const css=`
 `;
 const stEl=document.createElement('style');stEl.textContent=css;document.head.appendChild(stEl);
 
-const sec=document.createElement('section');sec.id=id;sec.className='screen';sec.hidden=true;
-sec.innerHTML=`${PAPER_DEFS}<div class="bar"><button class="round" data-go="home" id="psHome" aria-label="뒤로">${ICON.back}</button><button class="round" id="psBack" aria-label="가게 앞으로" hidden>${ICON.back}</button><h2>동물 미용실</h2><div class="psstars" id="psStars"></div></div>
-<div class="ps-lobby" id="psLobby"><div class="lb-bg">${LB_WALL}</div><div class="lb-awn">${LB_AWN}</div><div class="lb-frames" id="psFrames"></div><div class="lb-win">${LB_WIN}</div><div class="lb-door" id="psDoor">${LB_DOOR}</div><div class="lb-seats" id="psSeats"></div></div>
+/* P16: the screen and its header come from the common shell (ML.Shell.screen): same back picture, size and place on every screen */
+const sec=M.Shell.screen(id,{title:'동물 미용실',pre:PAPER_DEFS,backId:'psHome',backs:[{id:'psBack',label:'가게 앞으로'}],after:'<div class="psstars" id="psStars"></div>',body:`<div class="ps-lobby" id="psLobby"><div class="lb-bg">${LB_WALL}</div><div class="lb-awn">${LB_AWN}</div><div class="lb-frames" id="psFrames"></div><div class="lb-win">${LB_WIN}</div><div class="lb-door" id="psDoor">${LB_DOOR}</div><div class="lb-seats" id="psSeats"></div></div>
 <div class="ps-salon" id="psSalon" hidden><div class="ps-stage" id="psStage">${BG}<div class="ps-pet" id="psPet"><div class="ps-bt"><div class="psbase"></div><svg class="over" viewBox="0 0 200 230">${A.animalOverlay()}</svg></div></div>
 <div class="ps-tub" id="psTub">${TUB}</div><div class="ps-pfx" id="psPfx"></div><button class="ps-mirbtn" id="psMirBtn" aria-label="거울" hidden>${ICON.mirror}</button></div>
-<div class="ps-panel" id="psPanel"></div></div>`;
-document.getElementById('app').appendChild(sec);M.NAMES[id]='동물 미용실';
+<div class="ps-panel" id="psPanel"></div></div>`}).sec;
 const $=s=>sec.querySelector(s);
 const stage=$('#psStage'),petEl=$('#psPet'),baseEl=petEl.querySelector('.psbase'),overEl=petEl.querySelector('.over'),ovBody=overEl.querySelector('.ov-body'),ovHead=overEl.querySelector('.ov-head'),tub=$('#psTub'),panel=$('#psPanel'),pfx=$('#psPfx'),mirBtn=$('#psMirBtn');
 const lobbyEl=$('#psLobby'),salonEl=$('#psSalon'),seatsEl=$('#psSeats'),framesEl=$('#psFrames'),doorEl=$('#psDoor'),homeBtn=$('#psHome'),backBtn=$('#psBack');

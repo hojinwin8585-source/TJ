@@ -380,13 +380,11 @@ const css=`
 const stEl=document.createElement('style');stEl.textContent=css;document.head.appendChild(stEl);
 const HOOK=`<svg viewBox="0 0 30 24"><path d="M15 22V12Q15 4 21 4Q26 4 26 9" stroke="#9C8670" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M2 22L15 14L28 22" stroke="#9C8670" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
-const sec=document.createElement('section');sec.id=id;sec.className='screen';sec.hidden=true;
-sec.innerHTML=`${PAPER_DEFS}<div class="bar cl-headbar"><button class="round cl-back" id="clHome" data-go="home" aria-label="뒤로">${ICON.back}</button><button class="round cl-back" id="clBack" aria-label="가게 처음으로" hidden>${ICON.back}</button><div class="cl-strip" id="clStrip"></div><div class="cl-stars" id="clStars"></div></div>
-<div class="cl-stage" id="clStage"><div class="cl-bg" id="clBg">${SHOP_BG}</div><div class="cl-scene" id="clScene"></div><div class="cl-mates" id="clMates"></div><div class="cl-doll" id="clDoll"></div>
+/* P16: the screen and its header come from the common shell (ML.Shell.screen): same back picture, size and place on every screen */
+const sec=M.Shell.screen(id,{title:'옷 가게',pre:PAPER_DEFS,headClass:'cl-headbar',backClass:'cl-back',backId:'clHome',backs:[{id:'clBack',label:'가게 처음으로'}],stripClass:'cl-strip',stripId:'clStrip',after:`<div class="cl-stars" id="clStars"></div>`,body:`<div class="cl-stage" id="clStage"><div class="cl-bg" id="clBg">${SHOP_BG}</div><div class="cl-scene" id="clScene"></div><div class="cl-mates" id="clMates"></div><div class="cl-doll" id="clDoll"></div>
   <div class="cl-curt l" id="clCurtL">${CURTAIN('l')}</div><div class="cl-curt r" id="clCurtR">${CURTAIN('r')}</div><div class="cl-fx" id="clFx"></div>
   <button class="cl-mirbtn" id="clMirBtn" aria-label="거울" hidden>${ICON.mirror}</button><div class="cl-flash" id="clFlash"></div></div>
-<div class="cl-tray" id="clTray"></div>`;
-document.getElementById('app').appendChild(sec);M.NAMES[id]='옷 가게';
+<div class="cl-tray" id="clTray"></div>`}).sec;
 const $=s=>sec.querySelector(s);
 const stage=$('#clStage'),stripEl=$('#clStrip'),matesEl=$('#clMates'),dollEl=$('#clDoll'),fxEl=$('#clFx'),mirBtn=$('#clMirBtn'),flashEl=$('#clFlash'),sceneEl=$('#clScene'),tray=$('#clTray'),homeBtn=$('#clHome'),backBtn=$('#clBack');
 const G=M.Guide.make(sec,{say});

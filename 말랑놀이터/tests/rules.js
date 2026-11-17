@@ -4,7 +4,10 @@
    - noEmojiArt  : 아이 화면의 글자 노드에 이모지 문자가 있으면 실패
    - sameLayoutEverywhere : 뒤로 가기(64px 이상, 왼쪽 위) · 무대(화면 높이 60~66%) · 도구 칸(18~22%, 맨 아래)
    - madeEqualsUsed / everyIngredientPrepared : 피자 1단계를 콕·쓱쓱으로 끝까지 해서 썬 수 == 접시 수 == 피자 위 수, 접시 0 / 모든 재료에 준비 과정, 조각 크기 16% 이상
-   - depth : 놀이마다 과정 수 · 손동작 종류 · 살아 있는 손님 · 고르기 · 끝내기 장면 표
+   - depth : 놀이마다 과정 수 · 손동작 종류 · 살아 있는 손님 · 고르기 · 끝내기 장면 표. 놀이가 깊이 훅(ML.__pzDepth, __dishDepth, __choreDepth, __bakeDepth,
+             __routineDepth, __mkDepth, __clDepth, __rsDepth, __icDepth, __jbDepth)을 주면 그 값을 쓰고, 없을 때만 첫 화면에서 추정
+   - oneShell (P16) : 모든 놀이 화면(장소 화면 포함)이 ML.Shell 로 만들어졌는지 · 머리줄 높이 · 뒤로 가기 그림의 위치와 크기가 모든 화면에서 같은지 ·
+             오른쪽 그림 버튼 하나까지 · 오른쪽 위 글자 전환 버튼 0 · 단계 탭 0 · 글자 안내 줄 0. 하나라도 어기면 실패
    pizza · petsalon · nailshop 은 통과해야 하고(하나라도 어기면 실패로 끝남), 다른 화면은 어긴 것의 목록만 보여 줍니다(P8 이후에 고침). */
 const {chromium}=require('playwright');
 const path=require('path');
@@ -107,7 +110,8 @@ const TOL=.01;   // measuring tolerance on the height ratios
   }
 
   /* ---------- the other screens: list only ---------- */
-  const others=await p.evaluate(m=>[...document.querySelectorAll('#app > .screen')].map(s=>s.id).filter(id=>id!=='home'&&!m.includes(id)),MAIN);
+  const RETIRED=await p.evaluate(()=>(window.ML.Shell&&window.ML.Shell.retired)||{});
+  const others=await p.evaluate(([m,ret])=>[...document.querySelectorAll('#app > .screen')].map(s=>s.id).filter(id=>id!=='home'&&!m.includes(id)&&!ret[id]),[MAIN,RETIRED]);
   console.log('\n=== 다른 화면: 목록만 (P8 이후에 고침, 실패로 치지 않음) ===');
   console.log('화면 | 글자 버튼 | 글자 안내 줄 | 이모지 | 세 구역');
   const probe={};
@@ -131,9 +135,15 @@ const TOL=.01;   // measuring tolerance on the height ratios
   rows.push({g:'petsalon',proc:Math.min(3,needSteps)+1,hands:['rub(도구 따라옴)','card'],someone:true,choice:true,ending:'거울·사진·액자',src:'config needs + salon.js'});
   const ns=(CFG.games||{}).nailshop||{},lvls=ns.levels||[],nl=lvls.length?lvls[lvls.length-1].steps:[],nf=lvls.length?lvls[0].steps:[];
   rows.push({g:`nailshop (1~${lvls.length}단계)`,proc:`${new Set(nf).size}~${new Set(nl).size}`,hands:['rub(도구 따라옴)','tap','card'],someone:true,choice:true,ending:'거울·액자',src:'config levels'});
-  for(const g of others){const q=probe[g];if(!q||/^zone-|^map$|^friends$|^stamps$|^videos$/.test(g))continue;
+  /* the games' own depth hooks (P16): use what the game says about itself; guess from the first screen only when there is no hook */
+  const HOOKS={dishes2:'__dishDepth',chores2:'__choreDepth',bakery:'__bakeDepth',routine2:'__routineDepth',makeup2:'__mkDepth',clothes:'__clDepth',restaurant:'__rsDepth',icecream2:'__icDepth',jobs:'__jbDepth'};
+  const hooked=await p.evaluate(H=>{const out={};Object.keys(H).forEach(g=>{const f=window.ML[H[g]];if(typeof f!=='function')return;try{let v=f();if(!Array.isArray(v))v=[v];
+      out[g]=v.map(d=>({level:d.level,processes:d.processes,hands:(d.hands||d.handActions||[]).filter(Boolean),someone:!!(d.someone!=null?d.someone:d.customer),choice:d.choice,ending:d.ending}))}catch(e){out[g]={err:e.message}}});return out},HOOKS);
+  for(const g of others){const q=probe[g];if(!q||/^zone-|^map$|^stage$|^friends$|^stamps$|^videos$/.test(g))continue;
+    const hk=hooked[g];
+    if(hk&&Array.isArray(hk)){hk.forEach(d=>rows.push({g:hk.length>1?`${g} ${d.level}단계`:`${g}${d.level?' '+d.level+'단계':''}`,proc:d.processes,hands:d.hands,someone:d.someone,choice:d.choice===true?true:d.choice===false?false:d.choice?true:'?',ending:d.ending===true?'끝내기 장면':d.ending||'',src:`놀이 코드(ML.${HOOKS[g]})`}));continue}
     const hands=[];if(q.canvas||q.tool)hands.push('rub');if(q.btn)hands.push('tap');if(q.drag)hands.push('drag');
-    rows.push({g,proc:q.dots||1,hands,someone:q.alive>0,choice:'?',ending:'?',src:'화면에서 추정'})}
+    rows.push({g,proc:q.dots||1,hands,someone:q.alive>0,choice:'?',ending:'?',src:hk&&hk.err?'훅 오류 → 화면에서 추정':'화면에서 추정'})}
   console.log('\n=== 깊이 표 (rules.depth: 과정 '+minProc+'개 이상 · 손동작 '+minHands+'가지 이상 · 살아 있는 손님 · 고르기 · 끝내기 장면) ===');
   console.log('놀이 | 과정 | 손동작 | 살아 있는 손님 | 고르기 | 끝내기 장면 | 판정 | 근거');
   rows.forEach(r=>{const pr=typeof r.proc==='string'?+r.proc.split('~').pop():r.proc,lack=[];
@@ -141,7 +151,49 @@ const TOL=.01;   // measuring tolerance on the height ratios
     console.log([r.g,r.proc,r.hands.join('+')||'-',r.someone?'있음':'없음',r.choice===true?'있음':r.choice===false?'없음':r.choice,r.ending||'없음',lack.length?'고칠 것('+lack.join(',')+')':'갖춤',r.src].join(' | '))});
   console.log('  * 피자 1단계는 rules.depth.must.processes 의 "1단계는 3개부터" 에 따라 과정 4개(소스·썰기·올리기·굽기), 고르기는 3단계부터(games.pizza.levels).');
 
+  /* ---------- oneShell (P16): one header for every screen ---------- */
+  const HEAD=(SH.header||{}).heightPx||72;
+  const shellIds=['pizza','petsalon','nailshop'].concat(others);
+  const shell=[];let ref=null;
+  for(const g of shellIds){
+    await p.evaluate(()=>{document.querySelectorAll('.modal').forEach(m=>{m.hidden=true})});
+    await p.evaluate(g=>window.ML.go(g),g);await W(1200);
+    const r=await p.evaluate(([g,HEAD])=>{
+      const scr=document.getElementById(g),o={g,shown:!!scr&&!scr.hidden,reg:!!(window.ML.Shell&&window.ML.Shell.has(g)),head:null,back:null,right:0,toggles:[],tabs:[],hints:[]};if(!o.shown)return o;
+      const vis=e=>{if(!e)return false;const r=e.getBoundingClientRect();if(!r.width||!r.height||r.bottom<0||r.top>innerHeight)return false;
+        for(let x=e;x&&x!==document.body;x=x.parentElement){if(x.hidden)return false;const cs=getComputedStyle(x);if(cs.display==='none'||cs.visibility==='hidden'||+cs.opacity===0)return false}return true};
+      const hd=scr.querySelector(':scope > .sh-head');if(hd)o.head=Math.round(hd.getBoundingClientRect().height);
+      const bk=[...scr.querySelectorAll(':scope > .sh-head .sh-back')].find(vis);if(bk){const b=bk.getBoundingClientRect();o.back=[Math.round(b.left),Math.round(b.top),Math.round(b.width),Math.round(b.height)];o.backSvg=!!bk.querySelector('svg')&&!(bk.textContent||'').trim()}
+      if(hd)o.right=[...hd.querySelectorAll('.sh-right button')].filter(vis).length;
+      const sw=innerWidth,top=innerHeight*.2;
+      /* text toggles: a segmented control, or a button with letters, in the top right */
+      [...scr.querySelectorAll('.seg, button')].filter(vis).forEach(e=>{const r=e.getBoundingClientRect();if(r.top>top||r.left+r.width/2<sw*.4)return;
+        if(e.matches('.seg')||(e.matches('button')&&/[가-힣A-Za-z0-9~]/.test(e.textContent||'')&&!e.closest('.seg')))o.toggles.push((e.id?'#'+e.id:e.className||e.tagName)+' "'+(e.textContent||'').trim().slice(0,12)+'"')});
+      /* level tabs: buttons inside a dot row, or buttons named as a level */
+      [...scr.querySelectorAll('.dots button, button[aria-label*="단계"], .seg button')].filter(vis).forEach(e=>{if(e.closest('.sh-head')||/단계/.test(e.getAttribute('aria-label')||'')||/^\d/.test((e.textContent||'').trim()))o.tabs.push((e.closest('[id]')||{}).id+' '+(e.getAttribute('aria-label')||e.textContent||'').trim().slice(0,10))});
+      /* text hint lines */
+      [...scr.querySelectorAll('.hint, .khint, p')].filter(vis).forEach(e=>{const t=(e.textContent||'').trim();if(t)o.hints.push(t.slice(0,18))});
+      return o},[g,HEAD]);
+    if(r.back&&!ref)ref=r.back;
+    const lack=[];
+    if(!r.shown)lack.push('열리지 않음');
+    else{if(!r.reg)lack.push('ML.Shell 아님');if(r.head==null)lack.push('공통 머리줄 없음');else if(Math.abs(r.head-HEAD)>1)lack.push(`머리줄 ${r.head}px`);
+      if(!r.back)lack.push('뒤로 가기 없음');else{if(ref&&r.back.some((v,i)=>Math.abs(v-ref[i])>1))lack.push(`뒤로 가기 ${r.back.join(',')} ≠ ${ref.join(',')}`);if(Math.min(r.back[2],r.back[3])<lim.back)lack.push('뒤로 가기 작음');if(!r.backSvg)lack.push('뒤로 가기가 그림이 아님')}
+      if(r.right>1)lack.push(`오른쪽 그림 버튼 ${r.right}개`);if(r.toggles.length)lack.push('글자 전환 버튼 '+r.toggles.length);if(r.tabs.length)lack.push('단계 탭 '+r.tabs.length);if(r.hints.length)lack.push('글자 안내 줄 '+r.hints.length)}
+    shell.push(Object.assign(r,{lack}));
+  }
+  const shellBad=shell.filter(r=>r.lack.length);
+  console.log(`\n=== 공통 틀(oneShell): 화면 ${shell.length}개 · 머리줄 ${HEAD}px · 뒤로 가기 기준 ${ref?ref.join(','):'-'} (왼쪽,위,넓이,높이) ===`);
+  console.log('화면 | ML.Shell | 머리줄 | 뒤로 가기(왼쪽,위,넓이,높이) | 오른쪽 버튼 | 글자 전환 버튼 | 단계 탭 | 글자 안내 줄 | 판정');
+  shell.forEach(r=>console.log([r.g,r.reg?'예':'아니요',r.head==null?'-':r.head+'px',r.back?r.back.join(','):'-',r.right,r.toggles.length,r.tabs.length,r.hints.length,r.lack.length?'고칠 것('+r.lack.join(' / ')+')':'같음'].join(' | ')));
+  shellBad.forEach(r=>['toggles','tabs','hints'].forEach(k=>r[k].forEach(x=>console.log(`    - ${r.g} ${k}: ${x}`))));
+  const sum=k=>shell.reduce((a,r)=>a+r[k].length,0);
+  console.log(`  뒤로 가기 위치·크기가 다른 화면 ${shell.filter(r=>r.lack.some(x=>/뒤로 가기/.test(x))).length}개 · 오른쪽 위 글자 전환 버튼 ${sum('toggles')}개 · 단계 탭 ${sum('tabs')}개 · 글자 안내 줄 ${sum('hints')}개`);
+  if(shellBad.length)bad++;
+  const places=shell.filter(r=>/^zone-/.test(r.g));
+  console.log(`  장소 화면 ${places.length}개(${places.map(r=>r.g).join(', ')}) · 같은 틀: ${places.length&&places.every(r=>!r.lack.length)?'예':'아니요'}`);
+
   console.log('\n페이지 오류:',errs.length?JSON.stringify(errs.slice(0,5)):'없음');
-  console.log(bad?`\n반드시 통과할 화면 중 ${bad}개가 고칠 것`:'\n반드시 통과할 화면 모두 통과');
+  console.log(bad?`\n반드시 통과할 것 중 ${bad}개가 고칠 것`:'\n반드시 통과할 화면 모두 통과 · 공통 틀(oneShell) 통과');
   await b.close();process.exit(bad||errs.length?1:0);
 })().catch(e=>{console.error('실패',e.message.split('\n')[0]);process.exit(1)});

@@ -69,9 +69,8 @@ const kcss=`
 .bk-callme{filter:drop-shadow(0 0 12px ${PAL.butter||'#F0D58A'})}
 `;
 const kst=document.createElement('style');kst.textContent=kcss;document.head.appendChild(kst);
-const sec=document.createElement('section');sec.id=id;sec.className='screen';sec.hidden=true;
-sec.innerHTML=`<div class="bar bk-head"><button class="round bk-back" data-go="home" aria-label="뒤로">${ICON.back}</button><div class="bk-strip" id="bakeryStrip"></div></div><div class="bk-stage" id="bakeryStage"></div><div class="bk-tray" id="bakeryTray"></div>`;
-document.getElementById('app').appendChild(sec);M.NAMES[id]='빵집';
+/* P16: the screen and its header come from the common shell (ML.Shell.screen): same back picture, size and place on every screen */
+const sec=M.Shell.screen(id,{title:'빵집',headClass:'bk-head',backClass:'bk-back',stripClass:'bk-strip',stripId:'bakeryStrip',body:`<div class="bk-stage" id="bakeryStage"></div><div class="bk-tray" id="bakeryTray"></div>`}).sec;
 const $=s=>sec.querySelector(s);
 const stage=$('#bakeryStage'),stripEl=$('#bakeryStrip'),tray=$('#bakeryTray');
 const G=M.Guide.make(stage,{say});

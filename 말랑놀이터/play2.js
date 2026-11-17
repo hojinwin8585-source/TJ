@@ -187,10 +187,15 @@ function chip(tray,inner,label,fn,color,cls){
   b.innerHTML=`<span class="dot" style="--c:${color||'var(--paper)'}">${inner}</span><span>${label}</span>`;
   b.onclick=()=>{bounce(b);actx();fn(b)};tray.appendChild(b);return b;
 }
-function bigBtn(tray,text,fn,alt){const b=document.createElement('button');b.className='btn bigbtn kpulse'+(alt?' alt':'');b.textContent=text;b.style.flex='none';
+/* P16 (shell.banned: 글자 '다음' 버튼): the big button is a picture now; the words stay only as its label for the screen reader */
+function bigBtn(tray,text,fn,alt){const b=document.createElement('button');b.className='btn bigbtn kpulse sh-picbtn'+(alt?' alt':'');b.style.flex='none';
+  const SI=(window.ML&&window.ML.Shell)?window.ML.Shell.ICON:{},lab=String(text).replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu,'').trim();
+  const k=/다시 듣기/.test(text)?'ear':/새로운 하루/.test(text)?'sun':/말리기/.test(text)?'wind':/촛불/.test(text)?'candle':/드리기/.test(text)?'gift':/다시|새로/.test(text)?'replay':'next';
+  b.setAttribute('aria-label',lab);b.innerHTML=SI[k]||SI.next||'';
   let used=false;b.onclick=()=>{if(used)return;used=true;actx();sfx.pop();fn()};
   if(tray.classList.contains('scroll')){tray.prepend(b);tray.scrollLeft=0}else tray.appendChild(b);return b}
-function hint(stage,t){let h=stage.querySelector('.khint');if(!h){h=document.createElement('div');h.className='khint';stage.appendChild(h)}h.textContent=t;h.hidden=!t}
+/* P16 (shell.banned: 글자 안내 줄): no text hint line on the child screen any more; the voice that goes with it still speaks */
+function hint(stage){const h=stage&&stage.querySelector('.khint');if(h)h.remove()}
 function dotsHTML(n){return `<div class="dots kdots">${'<i></i>'.repeat(n)}</div>`}
 function setDots(sec,k){sec.querySelectorAll('.kdots i').forEach((d,i)=>{d.className=i<k?'done':i===k?'on':''})}
 function boxSize(stage,f=.9){const r=stage.getBoundingClientRect();return Math.max(160,Math.min(r.width,r.height)*f)}
@@ -457,7 +462,7 @@ function CNT_KO_UNIT(n){return ['한','두','세','네','다섯','여섯','일�
    ================================================================= */
 (()=>{
   const id='chores',L=life(id);
-  const sec=screen(id,'집안일 하기','<div class="seg" id="chTabs"><button data-t="toys" class="on">🧸</button><button data-t="laundry">🧺</button><button data-t="sweep">🧹</button><button data-t="water">🌷</button></div>',
+  const sec=screen(id,'집안일 하기','',
     '<div class="kstage" id="chStage" style="--kbg:linear-gradient(180deg,#FFF5E6 0%,#FFF5E6 60%,#F3D9B5 60%,#E9C99E 100%)"></div>');
   let tab='toys',eng=null;
   const ORDER=['toys','laundry','sweep','water'];
@@ -503,12 +508,14 @@ function CNT_KO_UNIT(n){return ['한','두','세','네','다섯','여섯','일�
   }
   function setTab(t){
     L.begin();if(eng&&eng.stop)eng.stop();eng=null;tab=t;
-    sec.querySelectorAll('#chTabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
     const old=sec.querySelector('#chStage'),fresh=old.cloneNode(false);old.replaceWith(fresh);
     requestAnimationFrame(()=>({toys,laundry,sweep,water})[t](fresh));
   }
-  sec.querySelector('#chTabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;setTab(b.dataset.t)});
-  games[id]={enter:()=>setTab('toys'),exit:()=>{L.begin();if(eng&&eng.stop)eng.stop()}};
+  /* P16: the four kinds are picked with picture cards at the start (shell.insteadOfTabs), not with emoji tabs in the header */
+  function choose(){const SHL=M.Shell;if(!SHL){setTab('toys');return}
+    SHL.start(sec,[{svg:SHL.art('teddy'),ko:'장난감 정리',en:'Toys',v:'toys'},{svg:SHL.art('basket'),ko:'빨래',en:'Laundry',v:'laundry'},{svg:SHL.art('broom'),ko:'쓸기',en:'Sweeping',v:'sweep'},{svg:SHL.art('plant'),ko:'물 주기',en:'Watering',v:'water'}],
+      it=>{if(M.current()===id)setTab(it.v)},{ko:'무엇을 할까?',en:'What shall we do?'})}
+  games[id]={enter:choose,exit:()=>{L.begin();if(eng&&eng.stop)eng.stop();sec.querySelectorAll(':scope > .sh-start').forEach(x=>x.remove())}};
 })();
 
 /* =================================================================
@@ -906,7 +913,7 @@ const VIDEOS=[
 function videoCards(list){return list.map(v=>`<a class="vcard" href="${v[3]}" target="_blank" rel="noopener noreferrer" data-v="${v[1]}"><span class="vi" style="--c:${v[4]}">${v[0]}</span><span class="vt"><b>${v[1]}</b><small>${v[2]}</small></span><span class="yt">YouTube</span></a>`).join('')}
 (()=>{
   const id='videos';
-  const sec=screen(id,'노래 영상','',`<p class="hint">누르면 유튜브가 새 창으로 열려요. 다 보고 나서 이 앱으로 돌아오면 이어서 놀 수 있어요. 어른과 함께 보세요.</p><div class="vlist">${videoCards(VIDEOS)}</div>`);
+  const sec=screen(id,'노래 영상','',`<div class="vlist">${videoCards(VIDEOS)}</div>`);
   sec.addEventListener('click',e=>{const a=e.target.closest('.vcard');if(a){try{speechSynthesis.cancel()}catch(_){}sfx.pop()}});
   games[id]={enter:()=>say('같이 노래 영상 볼까?','Shall we watch a song?')};
 })();

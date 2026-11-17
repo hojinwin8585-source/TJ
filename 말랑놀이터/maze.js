@@ -148,11 +148,9 @@ const css=`
 .mz-open .mz-hdoor{fill:#FFF3C9}
 `;
 const stEl=document.createElement('style');stEl.textContent=css;document.head.appendChild(stEl);
-const sec=document.createElement('section');sec.id=id;sec.className='screen';sec.hidden=true;
-sec.innerHTML=`<div class="bar"><button class="round" data-go="home" id="mzHome" aria-label="뒤로">${ICO.back}</button><div class="mzbar-sp"></div><div class="mzstars" id="mzStars"></div></div>
-<div class="mz-stage" id="mzStage"><svg class="mz-scene" id="mzScene"></svg><div class="mz-feet" id="mzFeet"></div></div>
-<div class="mz-tray" id="mzTray"></div>`;
-document.getElementById('app').appendChild(sec);M.NAMES[id]='길 찾기';
+/* P16: the screen and its header come from the common shell (ML.Shell.screen): same back picture, size and place on every screen */
+const sec=M.Shell.screen(id,{title:'길 찾기',backId:'mzHome',after:'<div class="mzstars" id="mzStars"></div>',body:`<div class="mz-stage" id="mzStage"><svg class="mz-scene" id="mzScene"></svg><div class="mz-feet" id="mzFeet"></div></div>
+<div class="mz-tray" id="mzTray"></div>`}).sec;
 const $=s=>sec.querySelector(s);
 const stage=$('#mzStage'),scene=$('#mzScene'),feetEl=$('#mzFeet'),tray=$('#mzTray');
 const G=M.Guide.make(sec,{say});

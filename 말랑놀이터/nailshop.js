@@ -178,15 +178,13 @@ const css=`
 `;
 const stEl=document.createElement('style');stEl.textContent=css;document.head.appendChild(stEl);
 
-const sec=document.createElement('section');sec.id=id;sec.className='screen';sec.hidden=true;
-sec.innerHTML=`${PAPER_DEFS}<div class="bar"><button class="round" data-go="home" id="nsHome" aria-label="뒤로">${ICON.back}</button><button class="round" id="nsBack" aria-label="가게 앞으로" hidden>${ICON.back}</button><h2>네일숍</h2><div class="nsstars" id="nsStars"></div></div>
-<div class="ns-lobby" id="nsLobby"><div class="nl-bg">${LB_WALL}</div><div class="nl-awn">${LB_AWN}</div><div class="nl-frames" id="nsFrames"></div><div class="nl-win">${LB_WIN}</div><div class="nl-door" id="nsDoor">${LB_DOOR}</div><div class="nl-seats" id="nsSeats"></div></div>
+/* P16: the screen and its header come from the common shell (ML.Shell.screen): same back picture, size and place on every screen */
+const sec=M.Shell.screen(id,{title:'네일숍',pre:PAPER_DEFS,backId:'nsHome',backs:[{id:'nsBack',label:'가게 앞으로'}],after:'<div class="nsstars" id="nsStars"></div>',body:`<div class="ns-lobby" id="nsLobby"><div class="nl-bg">${LB_WALL}</div><div class="nl-awn">${LB_AWN}</div><div class="nl-frames" id="nsFrames"></div><div class="nl-win">${LB_WIN}</div><div class="nl-door" id="nsDoor">${LB_DOOR}</div><div class="nl-seats" id="nsSeats"></div></div>
 <div class="ns-room" id="nsRoom" hidden><div class="ns-stage" id="nsStage"><div class="ns-table"></div><div class="ns-cust" id="nsCust"></div>
 <div class="lp lp-back" id="nsLpBack">${H.LAMP.back}</div><div class="ns-hand" id="nsHand"></div><div class="ns-glow" id="nsGlow"></div><div class="ns-dock"></div><div class="lp lp-glow" id="nsLpGlow">${H.LAMP.glow}</div><div class="lp lp-front" id="nsLpFront">${H.LAMP.front}</div><div class="lp ns-dots" id="nsDots"></div>
 <div class="ns-zbg" id="nsZbg"></div><div class="ns-zoom" id="nsZoom" hidden></div><div class="ns-pfx" id="nsPfx"></div>
 <button class="ns-corner" id="nsNext" aria-label="다음" hidden>${ICON.next}</button><button class="ns-corner" id="nsMir" aria-label="거울" hidden>${ICON.mirror}</button><button class="ns-corner" id="nsHandBack" aria-label="손 전체" hidden>${H.TOOLS.handIcon}</button><button class="ns-corner" id="nsMode" aria-label="꾸미기 도구 바꾸기" hidden></button><button class="ns-corner ns-arrow" id="nsArL" aria-label="왼쪽 손톱" hidden>${ICON.arrowL}</button><button class="ns-corner ns-arrow" id="nsArR" aria-label="오른쪽 손톱" hidden>${ICON.arrowR}</button></div>
-<div class="ns-panel" id="nsPanel"></div></div>`;
-document.getElementById('app').appendChild(sec);M.NAMES[id]='네일숍';
+<div class="ns-panel" id="nsPanel"></div></div>`}).sec;
 const $=s=>sec.querySelector(s);
 const lobbyEl=$('#nsLobby'),roomEl=$('#nsRoom'),seatsEl=$('#nsSeats'),framesEl=$('#nsFrames'),doorEl=$('#nsDoor'),homeBtn=$('#nsHome'),backBtn=$('#nsBack');
 const stage=$('#nsStage'),custEl=$('#nsCust'),handEl=$('#nsHand'),zoomEl=$('#nsZoom'),zbg=$('#nsZbg'),pfx=$('#nsPfx'),panel=$('#nsPanel');
