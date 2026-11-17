@@ -398,16 +398,16 @@ function LAY(){
     if(ph==='serve'){const w=Math.min(W*.86,Hc*1.2,340);r.plate=[W/2,Hc*.55,w,w*.64];return r}
     r.plate=plate;
     if(ph==='pick:bread'||ph==='toastIn'||ph==='toastPop'||ph==='enter'){const tw=Math.min(W*.58,Hc*.7,300),th=tw*190/220;r.toaster=[tw/2+10,Math.min(Hc-th/2-8,Hc*.58),tw,th];
-      if(ph!=='toastPop'&&S.board>0){const bw=Math.min(W*.36,150);r.board=[W-bw/2-6,Math.max(bw*.42,Hc*.3),bw,bw*130/160]}}
+      if(ph!=='toastPop'&&S.board>0){const bw=Math.max(140,Math.min(W*.38,160));r.board=[W-bw/2-6,Math.max(bw*.42,Hc*.3),bw,bw*130/160]}}
     else if(ph==='pick:egg'||ph==='crack'||ph==='fry'||ph==='flip'){const w=Math.min(W*.82,(Hc-20)*300/210,400),h=w*210/300;r.pan=[w/2+4,Math.max(h/2+Math.min(90,Hc*.2),Hc-pw*.64-h/2+20),w,h];
-      if(ph==='pick:egg'||ph==='crack'){const ew=Math.max(84,Math.min(118,w*.32)),[px,py]=[r.pan[0]-w/2+PAN_C[0]/300*w,r.pan[1]-h/2+PAN_C[1]/210*h];r.egg=[px,Math.max(ew*.6,py-h*.42-ew*.3),ew,ew*1.2]}}
+      if(ph==='pick:egg'||ph==='crack'){const ew=Math.max(110,Math.min(124,w*.34)),[px,py]=[r.pan[0]-w/2+PAN_C[0]/300*w,r.pan[1]-h/2+PAN_C[1]/210*h];r.egg=[px,Math.max(ew*.6,py-h*.42-ew*.3),ew,ew*1.2]}}
     else if(ph==='pick:fruit'||ph==='wash'||ph==='plateFruit'){const w=Math.min(W*.74,Hc*1.2,340),h=w*170/260;r.bowl=[w/2+8,Math.min(Hc*.42+h*.1,Hc-pw*.64-h/2+30),w,h]}
   }else{
     if(ph==='serve'){const w=Math.min(W*.8,Hc*1.1,320);r.basket=[W/2,Hc*.55,w,w*150/220];return r}
     if(ph==='pick:chicken'||ph==='coat'||ph==='enter'){const w=Math.min(W*.94,Hc*1.5,420),h=w*170/300;r.dish=[W/2,Hc*.56,w,h];const cs=Math.max(84,Math.min(w*.3,140));
       [[.27,.4],[.5,.32],[.73,.42],[.5,.6]].forEach((p,i)=>{if(S.cp[i]==='dish')r['c'+i]=[W/2-w/2+p[0]*w,Hc*.56-h/2+p[1]*h,cs,cs]})}
-    else if(ph==='drop'||ph==='lift'){const w=Math.min(W*.6,Hc*.82,300),h=w*210/260;r.pot=[w/2+6,Hc*.56,w,h];
-      if(ph==='drop'){const dw=Math.min(W*.4,170),dh=dw*130/200;r.sdish=[W-dw/2-4,Hc*.3,dw,dh];const cs=Math.max(70,dw*.46);[[.3,.36],[.7,.36],[.3,.66],[.7,.66]].forEach((p,i)=>{if(S.cp[i]==='dish')r['c'+i]=[W-dw-4+p[0]*dw,Hc*.3-dh/2+p[1]*dh,cs,cs]})}
+    else if(ph==='drop'||ph==='lift'){const dw=Math.max(170,Math.min(W*.44,200)),w=Math.min(ph==='drop'?W-dw-14:W*.6,Hc*.82,300),h=w*210/260;r.pot=[w/2+6,Hc*.56,w,h];
+      if(ph==='drop'){const dh=dw*130/200;r.sdish=[W-dw/2-4,Hc*.3,dw,dh];const cs=Math.max(70,dw*.46);[[.3,.36],[.7,.36],[.3,.66],[.7,.66]].forEach((p,i)=>{if(S.cp[i]==='dish')r['c'+i]=[W-dw-4+p[0]*dw,Hc*.3-dh/2+p[1]*dh,cs,cs]})}
       else{const bw=Math.min(W*.42,180);r.basket=[W-bw/2-4,Hc-bw*150/220/2-6,bw,bw*150/220]}}
     else if(ph==='fry2'){const w=Math.min(W*.86,Hc*1.05,380),h=w*210/260;r.pot=[W/2,Hc*.55,w,h]}
   }
@@ -637,7 +637,7 @@ const STEP={
   drop(){
     kind='tap';toolTray(tongsSVG);say(`닭고기를 콕! 기름에 퐁당! ${M.CNT_KO[N_CHICKEN-1]===undefined?'':'다 넣어요!'}`,'Tap each piece into the oil!',true);
     const next=()=>S.cp.findIndex(x=>x==='dish');
-    AIM=()=>{const i=next();return i<0?ctr(E.pot):ctr(E['c'+i])};HOT=()=>{const i=next();return i<0?[]:[E['c'+i]]};
+    AIM=()=>{const i=next();return i<0?ctr(E.pot):ctr(E['c'+i])};HOT=()=>[E.sdish,E.pot];
     H={down:e=>{let i=-1;for(let j=0;j<N_CHICKEN;j++)if(S.cp[j]==='dish'&&hit(e,'c'+j,6))i=j;if(i<0&&(hit(e,'pot',4)||hit(e,'sdish',6)))i=next();if(i<0)return false;if(busy||!tapOk())return;busy=true;G.stop();
       const g=gen,el=E['c'+i],from=ctr(el),slot=S.pot.length,ps=POT_S[slot],to=at('pot',ps[0],ps[1]+4);S.cp[i]='flying';el.classList.add('hide');
       sweepTone(600,400,.2,'triangle',.1);

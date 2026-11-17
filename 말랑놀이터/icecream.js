@@ -73,14 +73,14 @@ function tubSVG(f,cells,dim){
   let s=`<ellipse cx="82" cy="142" rx="66" ry="7" fill="rgba(90,50,20,.14)"/><path d="M14 52L24 132Q26 140 36 140H124Q134 140 136 132L146 52Z" fill="#FFFDF9" ${S3}/><path d="M18 78H142L138 108H22Z" fill="${f.hex}" opacity=".8"/><circle cx="80" cy="93" r="11" fill="#FFFDF9" opacity=".9"/>${ball(f,80,93,8,0).replace(S3,S2)}`;
   s+=`<ellipse cx="80" cy="52" rx="68" ry="20" fill="${f.hex}" ${S3}/><path d="M24 50Q40 32 58 44Q70 30 88 42Q104 30 120 44Q132 38 138 50" fill="${mix(f.hex,'#ffffff',.25)}" stroke="none"/>`;
   (cells||[]).forEach((v,i)=>{if(v<.05)return;const [x,y]=TUB_CELLS[i];s+=`<path d="M${x-14} ${y}Q${x} ${y-8} ${x+14} ${y}" stroke="${mix(f.hex,'#5B3A29',.25)}" stroke-width="4" fill="none" stroke-linecap="round" opacity="${Math.min(1,v).toFixed(2)}"/><path d="M${x-10} ${y+5}Q${x} ${y-1} ${x+10} ${y+5}" stroke="${mix(f.hex,'#fff',.4)}" stroke-width="3" fill="none" stroke-linecap="round" opacity="${Math.min(1,v).toFixed(2)}"/>`});
-  return `<svg viewBox="0 0 160 150" style="overflow:visible${dim?';opacity:.55':''}">${s}</svg>`;
+  return `<svg viewBox="0 0 160 165" style="overflow:visible${dim?';opacity:.55':''}"><g transform="translate(0 15)">${s}</g></svg>`;
 }
 /* scoop tool (viewBox 0 0 100 100): bowl at the lower left = working point */
 const scoopSVG=`<svg viewBox="0 0 100 100"><path d="M44 52L90 10" stroke="${OL}" stroke-width="14" stroke-linecap="round"/><path d="M44 52L90 10" stroke="${PAL.rose||'#E8A0AE'}" stroke-width="8" stroke-linecap="round"/><path d="M8 70Q8 46 30 46Q52 46 52 68Q52 90 30 90Q8 90 8 70Z" fill="#DDE3EA" ${S3}/><path d="M16 66Q20 54 32 54" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round"/>${FACE(76,26,.55)}</svg>`;
 /* topping shaker (viewBox 0 0 100 100): holes at the bottom = working point */
 const shakerSVG=`<svg viewBox="0 0 100 100"><rect x="30" y="18" width="40" height="66" rx="14" fill="#FFFDF9" fill-opacity=".9" ${S3}/>${[[40,40,0],[54,50,40],[44,62,-30],[58,70,70],[46,74,10]].map(([x,y,r],i)=>`<rect x="${x-5}" y="${y-2}" width="10" height="4" rx="2" fill="${SPRK[i%SPRK.length]}" transform="rotate(${r} ${x} ${y})"/>`).join('')}<path d="M28 80H72V90Q72 96 66 96H34Q28 96 28 90Z" fill="${PAL.lilac||'#C3B4E6'}" ${S3}/><circle cx="42" cy="90" r="2" fill="${OL}"/><circle cx="50" cy="92" r="2" fill="${OL}"/><circle cx="58" cy="90" r="2" fill="${OL}"/><rect x="34" y="6" width="32" height="14" rx="6" fill="${PAL.lilac||'#C3B4E6'}" ${S3}/>${FACE(50,32,.7)}</svg>`;
-const coneCard=`<svg viewBox="0 30 200 270">${svgInner(treat({holder:'cone'}))}</svg>`,cupCard=`<svg viewBox="0 30 200 270">${svgInner(treat({holder:'cup'}))}</svg>`;
-const flavorBub=f=>`<svg viewBox="-60 -66 120 120">${ball(f,0,-4,50,0)}</svg>`;
+const coneCard=`<svg viewBox="20 140 160 160">${svgInner(treat({holder:'cone'}))}</svg>`,cupCard=`<svg viewBox="20 140 160 160">${svgInner(treat({holder:'cup'}))}</svg>`;
+const flavorBub=f=>`<svg viewBox="10 70 180 230">${svgInner(treat({holder:'cone',scoops:[f]}))}</svg>`;
 const STEP_ICON={cone:()=>coneCard,tub:()=>tubSVG(FLV[0],[]),scoop:()=>scoopSVG,place:()=>`<svg viewBox="0 20 200 280">${svgInner(treat({holder:'cone',scoops:[FLV[0]]}))}</svg>`,sprinkle:()=>shakerSVG,cherry:()=>cherrySVG};
 const stepIcon=k=>(STEP_ICON[k]||(()=>ICON.cust))();
 const LOBBY_BG=`<svg viewBox="0 0 100 130" preserveAspectRatio="xMidYMax slice" style="width:100%;height:100%;display:block"><rect width="100" height="130" fill="#F3ECF3"/><rect y="88" width="100" height="42" fill="#E6D3DC"/><path d="M0 88H100" stroke="${OL}" stroke-width=".8"/>
@@ -154,8 +154,8 @@ const css=`
 .ic-tool{height:min(150px,92%);aspect-ratio:1;border-radius:32px;background:var(--paper);padding:10px;box-shadow:0 3px 10px rgba(91,74,66,.12);pointer-events:none}
 .ic-tool svg{width:100%;height:100%;display:block;overflow:visible}
 .ic-tool.in{animation:iccard .3s ease-out both}
-.ic-card{flex:1;min-width:110px;max-width:200px;height:min(150px,92%);border-radius:28px;border:0;padding:12px;background:var(--paper);display:grid;place-items:center;touch-action:none;box-shadow:0 4px 12px rgba(91,74,66,.16);transition:transform .15s,opacity .3s}
-.ic-card svg{width:100%;height:100%;display:block;pointer-events:none;overflow:visible}
+.ic-card{position:relative;flex:1;min-width:110px;max-width:200px;height:min(150px,92%);border-radius:28px;border:0;padding:12px;background:var(--paper);display:block;touch-action:none;box-shadow:0 4px 12px rgba(91,74,66,.16);transition:transform .15s,opacity .3s}
+.ic-card svg{position:absolute;left:12px;top:12px;width:calc(100% - 24px);height:calc(100% - 24px);display:block;pointer-events:none;overflow:visible}
 .ic-card.in{animation:iccard .3s ease-out both}
 .ic-card.sel{box-shadow:0 0 0 5px color-mix(in srgb,var(--berry) 60%,#fff),0 4px 12px rgba(91,74,66,.16);transform:translateY(-6px)}
 .ic-card.fade{opacity:.35}
@@ -198,7 +198,7 @@ const ctr=el=>{const r=el.getBoundingClientRect();return[r.left+r.width/2,r.top+
 const inRect=(e,r,m=0)=>e.clientX>=r.left-m&&e.clientX<=r.right+m&&e.clientY>=r.top-m&&e.clientY<=r.bottom+m;
 const rectOf=n=>E[n]?E[n].getBoundingClientRect():null;
 const hit=(e,n,m=6)=>{const r=rectOf(n);return!!r&&!E[n].classList.contains('hide')&&inRect(e,r,m)};
-const VB={treat:[200,300],tub0:[160,150],tub1:[160,150],tub2:[160,150]};
+const VB={treat:[200,300],tub0:[160,165],tub1:[160,165],tub2:[160,165]};
 const at=(n,x,y)=>{const r=rectOf(n),v=VB[n];return[r.left+x/v[0]*r.width,r.top+y/v[1]*r.height]};
 let raf=0;const rd=()=>{if(!raf)raf=requestAnimationFrame(()=>{raf=0;draw()})};
 function size(){
@@ -260,9 +260,9 @@ function LAY(){
   const big=ph==='sprinkle'||ph==='cherry'||ph==='serve'||ph==='cone';
   if(big){const h=Math.min(Hc*.94,W*.9*1.5),w=h*200/300;r.treat=[W/2,Hc/2+4,w,h];return r}
   const th=Math.min(Hc*.62,(W*.36)*1.5),tw=th*200/300;r.treat=[W-tw/2-8,Hc-th/2-6,tw,th];
-  if(ph==='tub'||ph==='enter'){const w=Math.max(112,Math.min((W-tw-24)/Math.min(2,nt)-8,(W-24)/nt-8,150)),h=w*150/160;
-    S.tubs.forEach((f,i)=>{const cols=nt>2&&W-tw-24<3*(w+8)?2:nt,row=Math.floor(i/cols),col=i%cols;const x0=10+w/2+col*(w+10),y0=Hc*.08+h/2+row*(h+14)+(cols===nt?Hc*.18:0);r['tub'+i]=[x0,y0,w,h]})}
-  else{const w=Math.min(W-tw-30,Hc*.85,320),h=w*150/160;r['tub'+S.tubI]=[10+w/2,Math.max(h/2+10,Hc*.48),w,h]}
+  if(ph==='tub'||ph==='enter'){const w=Math.max(112,Math.min((W-8)/nt-8,150)),h=w*165/160,gap=(W-nt*w)/(nt+1);
+    S.tubs.forEach((f,i)=>{r['tub'+i]=[gap+w/2+i*(w+gap),Math.max(h/2+6,Math.min(Hc*.3,Hc-th-h/2-14)),w,h]})}
+  else{const w=Math.min(W-tw-30,Hc*.85,320),h=w*165/160;r['tub'+S.tubI]=[10+w/2,Math.max(h/2+10,Hc*.48),w,h]}
   return r;
 }
 function lay(){if(!S||!G0.W||S.view!=='work')return;const R=LAY();Object.keys(E).forEach(n=>setIt(n,R[n]));placeBall()}
@@ -348,7 +348,7 @@ const STEP={
   /* 스쿱으로 통을 쓱쓱: 닿은 만큼만 공이 커지고, 움직이면 돌돌 말림 */
   scoop(){
     kind='rub';const stopI=intro(scoopSVG,'스쿱!','Scoop!');const f=S.ball;say('스쿱으로 통을 쓱쓱 긁어요! 동글동글 공이 생겨요!','Scrape the tub with the scoop! A ball grows!',true);
-    const cells=TUB_CELLS.map(([x,y])=>[x/160,y/150]);let lastFx=0,lastXY=null;
+    const cells=TUB_CELLS.map(([x,y])=>[x/160,(y+15)/165]);let lastFx=0,lastXY=null;
     const sync=()=>{placeBall()};
     rubTool({icon:scoopSVG,anchor:[.3,.68],gap:.32,log:'scoop',stopIntro:stopI,cells,grid:[3,2],rad:.12,target:()=>rectOf('tub'+S.tubI),
       sound:()=>noise(.12,{type:'bandpass',freq:1400,q:.7,vol:.08}),
