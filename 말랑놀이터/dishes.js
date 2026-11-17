@@ -2,7 +2,9 @@
    쇠규칙(MLCFG.rules): 글자 없음 · '다음' 버튼 없음(과정이 끝나면 1.5초 이음 장면 뒤 저절로) · 만든 만큼 쓰기(씻은 그릇 = 선반에 꽂힌 그릇) ·
    세 구역(위 과정 그림 줄, 가운데 무대, 아래 도구 칸) · 이모지 없음(그림은 모두 여기서 직접 그림).
    동작: 콕(걷기, 세제, 수도꼭지, 선반), 쓱쓱(손가락을 따라오는 도구 ML.P2.makeTool: 주걱, 수세미, 샤워기, 행주), 고르기(세제 색, 선반 칸).
-   숫자와 단계는 MLCFG.games.dishes(levels), rules, shell, touch, voice 에서 읽습니다. 단계: ML.Progress.get('dishes').level, 없으면 1단계 고정(ML.__dishLevel). */
+   숫자와 단계는 MLCFG.games.dishes(levels), rules, shell, touch, voice 에서 읽습니다. 단계: ML.Progress.get('dishes').level, 없으면 1단계 고정(ML.__dishLevel).
+   P18-나(motion): 그릇이 싱크대에 달그락 착 · 세제가 줄기로 쭉, 방울이 톡 · 수세미 거품 방울이 뽀글 · 탄 자국 부스러기 · 물방울이 튐 · 선반에 착.
+   쓱쓱 도구는 손가락 쪽으로 기울고(toolFeel) 콕으로도 한 번씩(tapAlso). */
 (()=>{
 'use strict';
 const M=window.ML,P=M&&M.P2,A=window.ART;if(!P||!A||!M.Guide||!P.makeTool)return;
@@ -184,6 +186,92 @@ document.getElementById('app').appendChild(sec);M.NAMES[id]='설거지';
 const $=s=>sec.querySelector(s);
 const stage=$('#dkStage'),stripEl=$('#dkStrip'),custEl=$('#dkCust'),bubEl=$('#dkBub'),sinkEl=$('#dkSink'),dishesEl=$('#dkDishes'),waterEl=$('#dkWater'),faucetEl=$('#dkFaucet'),bottleEl=$('#dkBottle'),rackEl=$('#dkRack'),binEl=$('#dkBin'),fxEl=$('#dkFx'),tray=$('#dkTray');
 const G=M.Guide.make(stage,{say});
+/* ---------- P18-나 motion kit (the salon.js pattern copied here, not shared): particle pool, three beats, squash, the customer eating ----------
+   motion.particles: at most max at once, each one gone within fadeMs, calm colours · motion.threeBeats: ready 0.15 s → act → after 0.4 s ·
+   motion.squash · motion.performance: only CSS transform and opacity move; when frames get slow the particle cap halves first. */
+function motionKit(host,pre){
+  const MO=(M.CFG||{}).motion||{},PART=Object.assign({max:40,fadeMs:800},MO.particles||{}),BEAT={ready:150,after:400};
+  const box=document.createElement('div');box.className=pre+'-pfx';box.style.cssText='position:absolute;inset:0;z-index:19;pointer-events:none;overflow:hidden';host.appendChild(box);
+  const K={PART,BEAT,box,max:0,spawned:0,cap:PART.max,ema:16,lt:0,last:0};
+  const ks=document.createElement('style');ks.textContent=`.alive.${pre}-hold .al-arm-l{animation:${pre}hl .6s ease-out forwards}.alive.${pre}-hold .al-arm-r{animation:${pre}hr .6s ease-out forwards}
+@keyframes ${pre}hl{to{transform:rotate(-50deg)}}@keyframes ${pre}hr{to{transform:rotate(50deg)}}`;document.head.appendChild(ks);
+  /* one particle: a small svg that moves (transform) and fades (opacity); removed when its fadeMs is over */
+  K.spawn=(svg,x,y,o={})=>{
+    if(box.childElementCount>=K.cap)return null;
+    const sz=o.sz||24,ms=Math.min(PART.fadeMs,o.ms||PART.fadeMs),e=document.createElement('i'),now=performance.now();
+    e.style.cssText=`position:absolute;left:${(x-sz/2).toFixed(1)}px;top:${(y-sz/2).toFixed(1)}px;width:${sz.toFixed(1)}px;height:${sz.toFixed(1)}px`;
+    e.innerHTML=`<svg viewBox="${o.vb||'-15 -15 30 30'}" style="width:100%;height:100%;display:block;overflow:visible">${svg}</svg>`;
+    e.dataset.t=now;box.appendChild(e);K.spawned++;K.last=now;if(box.childElementCount>K.max)K.max=box.childElementCount;
+    const dx=o.dx||0,dy=o.dy||0,g=o.g||0,s0=o.s0==null?1:o.s0,s1=o.s1==null?1:o.s1,r0=o.r0||0,r=o.rot||0,op=o.op==null?1:o.op;
+    const kf=[0,.3,.65,1].map((t,i)=>({offset:t,opacity:i===0?(o.fadeIn?0:op):i===3?0:i===2?op*.7:op,
+      transform:`translate(${(dx*t).toFixed(1)}px,${(dy*t+g*t*t).toFixed(1)}px) rotate(${(r0+r*t).toFixed(0)}deg) scale(${(s0+(s1-s0)*t).toFixed(2)})`}));
+    let gone=false;const rm=()=>{if(gone)return;gone=true;e.remove()};
+    try{const a=e.animate(kf,{duration:ms,easing:o.ease||'cubic-bezier(.25,.6,.45,1)',fill:'forwards'});a.onfinish=rm}catch(_){}
+    setTimeout(rm,ms);return e;
+  };
+  /* a puff of flour / dust: soft round clouds that rise, grow and fade */
+  K.cloud=(x,y,n,col,o={})=>{const sp=o.spread||46;for(let k=0;k<n;k++){const a=(k/n)*Math.PI*2+Math.random()*.7;
+    K.spawn(`<circle r="11" fill="${col}" stroke="${o.edge||'#E6DCCB'}" stroke-width="1.4"/><circle cx="-3.5" cy="-3.5" r="3.6" fill="#fff" opacity=".8"/>`,x+Math.cos(a)*sp*.22,y+Math.sin(a)*sp*.1,
+      {sz:(o.sz||24)+Math.random()*12,dx:Math.cos(a)*sp,dy:-(o.up||40)-Math.random()*18+Math.sin(a)*sp*.25,s0:.45,s1:1.55,op:o.op||.9})}};
+  /* drops / bits thrown up that fall back (gravity) */
+  K.drops=(x,y,n,col,o={})=>{const sp=o.sp||52;for(let k=0;k<n;k++){const a=((k+.5)/n-.5)*(o.fan||2.4)+(o.dir||0);
+    K.spawn(o.svg||`<ellipse rx="5" ry="6.4" fill="${col}" stroke="${o.edge||'rgba(91,58,41,.4)'}" stroke-width="1.3"/><circle cx="-1.6" cy="-2.2" r="1.6" fill="#fff" opacity=".85"/>`,x,y,
+      {sz:o.sz||16,dx:Math.sin(a)*sp,dy:-Math.cos(a)*sp*(o.lift||.9),g:o.g==null?95:o.g,rot:a*70,ms:o.ms||650})}};
+  /* the grain a spatula / knife / ladle leaves: a glossy stroke that slowly spreads out and melts away */
+  K.streak=(x,y,col,ang,o={})=>K.spawn(`<path d="M-13 1Q0 -5 13 1" stroke="${o.edge||'rgba(91,58,41,.25)'}" stroke-width="9" fill="none" stroke-linecap="round"/><path d="M-13 1Q0 -5 13 1" stroke="${col}" stroke-width="6.5" fill="none" stroke-linecap="round"/><path d="M-8 -1.2Q0 -4 8 -1.2" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" opacity=".75"/>`,x,y,{sz:o.sz||40,r0:ang||0,s0:1,s1:1.7,op:.95});
+  /* steam wisps rising softly */
+  K.steam=(x,y,n,o={})=>{for(let k=0;k<n;k++)K.spawn(`<path d="M0 13Q-7 6 0 0Q7 -6 0 -13" stroke="${o.col||'#fff'}" stroke-width="4.6" fill="none" stroke-linecap="round"/>`,x+(k-(n-1)/2)*(o.gap||18),y,
+    {sz:o.sz||36,dy:-(o.up||48),dx:(Math.random()-.5)*12,s0:.7,s1:1.35,op:o.op||.85,fadeIn:true,ease:'ease-out'})};
+  /* bubbles rising and growing */
+  K.bubbles=(x,y,n,o={})=>{for(let k=0;k<n;k++)K.spawn(`<circle r="9" fill="#fff" fill-opacity=".55" stroke="${o.edge||'#A7CFE8'}" stroke-width="1.8"/><circle cx="-3" cy="-3" r="2.4" fill="#fff"/>`,x+(Math.random()-.5)*(o.spread||30),y,
+    {sz:(o.sz||16)+Math.random()*10,dx:(Math.random()-.5)*30,dy:-(o.up||40)-Math.random()*24,s0:.5,s1:1.25,op:.95})};
+  K.crumbs=(x,y,n,col,o={})=>K.drops(x,y,n,col,Object.assign({sz:12,sp:44,g:110,svg:`<circle r="5" fill="${col}" stroke="rgba(91,58,41,.45)" stroke-width="1.3"/>`},o));
+  /* motion.squash: flat → tall → settles */
+  K.squash=(el,a=.16,ms=420,org='50% 100%')=>{if(!el||!el.animate)return;el.style.transformOrigin=org;
+    try{el.animate([{transform:'scale(1,1)'},{transform:`scale(${1+a},${1-a})`,offset:.28},{transform:`scale(${1-a*.45},${1+a*.5})`,offset:.62},{transform:`scale(${1+a*.12},${1-a*.12})`,offset:.84},{transform:'scale(1,1)'}],{duration:ms,easing:'ease-out'})}catch(_){}};
+  /* motion.threeBeats on the thing being worked on: down (a little squash while the finger is on), up (a bounce that settles), tap (both) */
+  K.beat=(el,k)=>{if(!el||!el.animate)return;let kf,ms;
+    if(k==='down'){kf=[{transform:'scale(1,1)'},{transform:'scale(1.04,.95)'},{transform:'scale(1.02,.98)'}];ms=BEAT.ready+120}
+    else if(k==='up'){kf=[{transform:'scale(1.02,.98)'},{transform:'scale(.98,1.035) translateY(-1.5%)'},{transform:'scale(1.01,.99)'},{transform:'scale(1,1)'}];ms=BEAT.after}
+    else{kf=[{transform:'scale(1,1)'},{transform:'scale(1.045,.94)',offset:.25},{transform:'scale(.97,1.04) translateY(-2%)',offset:.55},{transform:'scale(1.015,.985)',offset:.8},{transform:'scale(1,1)'}];ms=BEAT.ready+BEAT.after+150}
+    el.style.transformOrigin='50% 90%';el.getAnimations().filter(a=>a.id==='kbeat').forEach(a=>a.cancel());const a=el.animate(kf,{duration:ms,easing:'ease-out',fill:k==='down'?'forwards':'none'});a.id='kbeat'};
+  /* frame time from the tool loops: slow frames (older phones) → half the particles */
+  K.tick=t=>{if(K.lt){const dt=t-K.lt;if(dt>0&&dt<250)K.ema=K.ema*.9+dt*.1}K.lt=t;K.cap=K.ema>34?Math.round(PART.max/2):PART.max};
+  K.clear=()=>{box.innerHTML='';K.lt=0};
+  K.stats=()=>{const n=performance.now(),ages=[...box.children].map(e=>n-(+e.dataset.t||n));return{now:box.childElementCount,max:K.max,cap:K.cap,limit:PART.max,fadeMs:PART.fadeMs,spawned:K.spawned,oldest:ages.length?Math.round(Math.max(...ages)):0,last:K.last}};
+  /* motion.cooking.serve: the customer takes the food in both hands, sniffs twice, takes one big bite, cheeks puff up and chew.
+     o: {cust, kind, food (svg html), draw(mood), later(fn,ms), done, log, grow, origin} — the customer comes up big meanwhile (whileActing) */
+  K.eat=o=>{
+    const c=o.cust,kd=A.KINDS[o.kind]||{},ov=document.createElement('div');ov.className=pre+'-eat';ov.style.cssText='position:absolute;inset:0;pointer-events:none;z-index:2';
+    const ck=s=>`<div class="ek" style="position:absolute;left:${s<0?13:63}%;top:43.5%;width:24%;aspect-ratio:1;opacity:0"><svg viewBox="-20 -20 40 40" style="width:100%;height:100%;display:block;overflow:visible"><circle r="16.5" fill="${kd.body||'#FFF6EC'}" stroke="${OL}" stroke-width="2.8"/><circle cx="${s*2}" cy="3" r="9" fill="${kd.cheek||'#FF9AA8'}" opacity=".7"/><ellipse cx="${-s*5}" cy="-8" rx="4" ry="2.6" fill="#fff" opacity=".85"/></svg></div>`;
+    ov.innerHTML=ck(-1)+ck(1)+`<div class="ef" style="position:absolute;left:28%;top:57%;width:44%;aspect-ratio:1">${o.food}</div>`;
+    const fd=ov.querySelector('.ef'),cks=[...ov.querySelectorAll('.ek')],put=m=>{o.draw(m);c.appendChild(ov)},log=x=>{if(o.log)o.log(x)},hx=()=>{const r=c.getBoundingClientRect(),h=host.getBoundingClientRect();return[r.left-h.left,r.top-h.top,r.width,r.height]};
+    const GS=o.grow||1.16;c.style.transformOrigin=o.origin||'50% 45%';let grow=null;try{grow=c.animate([{transform:'scale(1)'},{transform:`scale(${GS})`}],{duration:450,easing:'ease-out',fill:'forwards'})}catch(_){}
+    put('happy');c.classList.add(pre+'-hold');log('eat:take');
+    try{fd.animate([{transform:'scale(.3)',opacity:0},{transform:'scale(1.15,.85)',opacity:1,offset:.45},{transform:'scale(.94,1.06)',offset:.75},{transform:'scale(1)'}],{duration:450,easing:'ease-out'})}catch(_){}
+    /* 킁킁: the food comes up to the nose twice, the head tips up, scent curls rise */
+    o.later(()=>{log('eat:sniff');try{fd.animate([{transform:'none'},{transform:'translateY(-26%) scale(1.04)',offset:.4},{transform:'translateY(-18%)',offset:.6},{transform:'translateY(-26%) scale(1.04)',offset:.8},{transform:'none'}],{duration:1100,easing:'ease-in-out'});
+      c.animate([{transform:'none'},{transform:'translateY(-3%) rotate(-3deg)',offset:.4},{transform:'translateY(-1%)',offset:.6},{transform:'translateY(-3%) rotate(-3deg)',offset:.8},{transform:'none'}],{duration:1100,easing:'ease-in-out',composite:'add'})}catch(_){}
+      [0,440].forEach(w=>o.later(()=>{const [x,y,ww,hh]=hx();for(let k=0;k<3;k++)K.spawn(`<path d="M0 12Q-6 6 0 0Q6 -6 0 -12" stroke="#F3C6A0" stroke-width="3.6" fill="none" stroke-linecap="round"/>`,x+ww*(.38+k*.12),y+hh*.66,{sz:26,dx:(.5-k*.5)*10,dy:-hh*.16,s0:.7,s1:1.2,op:.8,fadeIn:true,ms:700});
+        noise(.09,{freq:2600,q:1.4,vol:.06});noise(.09,{freq:2900,q:1.4,vol:.05,when:.13})},w))},500);
+    /* 한 입 크게: mouth opens, the customer leans in (ready → bite → after), the food loses a big round piece, crumbs fall */
+    o.later(()=>{put('wow');log('eat:bite');try{c.animate([{transform:'none'},{transform:'translateY(1.5%) scale(1,.96)',offset:.2},{transform:'translate(-2%,4%) rotate(-5deg) scale(1.07)',offset:.45},{transform:'translateY(1%) scale(1.02)',offset:.72},{transform:'none'}],{duration:760,easing:'ease-out',composite:'add'});
+        fd.animate([{transform:'none'},{transform:'translateY(-30%) scale(1.06)',offset:.45},{transform:'none'}],{duration:760,easing:'ease-out'})}catch(_){}
+      o.later(()=>{fd.innerHTML=bitten(o.food);SFX.chomp();put('yum');const [x,y,ww,hh]=hx();K.crumbs(x+ww*.55,y+hh*.62,5,o.crumb||'#E7B46A',{sp:36})},340)},1700);
+    /* 볼 볼록: both cheeks puff out and chew three times, then go down */
+    o.later(()=>{log('eat:cheeks');cks.forEach((e,i)=>{try{e.animate([{transform:'scale(.2)',opacity:0},{transform:'scale(1.3)',opacity:1,offset:.4},{transform:'scale(.95)',opacity:1,offset:.7},{transform:'scale(1)',opacity:1}],{duration:460,easing:'ease-out',fill:'forwards'});
+        o.later(()=>{try{e.animate([{transform:'scale(1)',opacity:1},{transform:`scale(${i?1.14:.9},${i?.9:1.14})`,opacity:1},{transform:'scale(1)',opacity:1}],{duration:640,iterations:3,easing:'ease-in-out',fill:'forwards'})}catch(_){}},460)}catch(_){}});
+      [0,640,1280].forEach(w=>o.later(()=>tone(190+w/16,.07,'sine',.07),460+w))},2150);
+    o.later(()=>{cks.forEach(e=>{try{e.animate([{transform:'scale(1)',opacity:1},{transform:'scale(.2)',opacity:0}],{duration:320,fill:'forwards'})}catch(_){}});try{fd.animate([{opacity:1},{opacity:0,transform:'translateY(10%) scale(.8)'}],{duration:400,fill:'forwards'})}catch(_){}
+      c.classList.remove(pre+'-hold');try{if(grow){grow.cancel();c.animate([{transform:`scale(${GS})`},{transform:'scale(1)'}],{duration:400,easing:'ease-out'})}}catch(_){}},4500);
+    o.later(()=>{ov.remove();log('eat:done');if(o.done)o.done()},4950);
+  };
+  /* the same food with a big round bite out of it (two overlapping circles cut by a mask) */
+  let bid=0;function bitten(html){const m=html.match(/viewBox="([^"]+)"/);if(!m)return html;const [x,y,w,h]=m[1].split(/[\s,]+/).map(Number),id=pre+'bt'+(++bid);
+    return `<svg viewBox="${m[1]}" style="width:100%;height:100%;display:block;overflow:visible"><defs><mask id="${id}" maskUnits="userSpaceOnUse" x="${x-w}" y="${y-h}" width="${w*3}" height="${h*3}"><rect x="${x-w}" y="${y-h}" width="${w*3}" height="${h*3}" fill="#fff"/><circle cx="${x+w*.64}" cy="${y+h*.12}" r="${w*.22}" fill="#000"/><circle cx="${x+w*.4}" cy="${y+h*.08}" r="${w*.18}" fill="#000"/></mask></defs><g mask="url(#${id})">${html.replace(/^<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'')}</g></svg>`}
+  return K;
+}
+const K=motionKit(stage,'dk'),TAP_MS=450;   // motion.tapAlso has no number: one tap plays one stroke of about half a second (as in salon.js)
 const DATA=Object.assign({level:1,served:0,last:''},store.get('mallang_dishes2',{}));
 const save=()=>store.set('mallang_dishes2',DATA);
 const PRG=()=>M.Progress&&typeof M.Progress.get==='function'?M.Progress:null;
@@ -296,6 +384,8 @@ function rubTool(o){
   tool=P.makeTool(stage,{tool:o.icon,effect:o.effect||'foam',anchor:o.anchor,gapScale:o.gap,cells:cells.map(c=>[c.fx,c.fy]),target:()=>sinkEl.getBoundingClientRect(),rub:o.rub,
     cfg:()=>({offsetAboveFingerRatio:.55,coverage:Object.assign({},COV,{grid:[gc,gr],radiusRatio:o.rad||.1},o.cov||{})}),
     fx:o.fx,onMiss:miss,sound:o.hold?()=>P.holdSound(o.hold):null,
+    tapAnim:TAP_MS,tilt:true,   // P18: motion.tapAlso + motion.toolFeel (play2.js options)
+    onFrame:(F,t,W)=>{K.tick(t);if(o.frame&&F&&W&&t-(o._f||0)>(o.every||130)){o._f=t;o.frame(F,t,W)}},onTap:(F,W)=>{LOG.push('tap:'+o.log);if(o.frame&&F&&W){o.frame(F,performance.now(),W);o.frame(F,performance.now(),W)}},
     onTouch:()=>{G.touch();if(o.stopIntro)o.stopIntro();LOG.push('press:'+o.log)},onRelease:()=>G.release(),
     onCell:(i,v)=>{const c=cells[i];o.cell(c.d,c.i,v);rd()},
     onProgress:(p,ratio,why)=>{if(!o.hold&&(why==='move'||why==='hold')){const n=performance.now();if(n-(o._s||0)>150){o._s=n;(o.sound||SFX.scrub)()}}},
@@ -325,7 +415,8 @@ const STEP={
     kind='tap';S.collected=0;toolTray(stepIcon('collect'));say('그릇을 콕 누르면 싱크대로 가요!','Tap a dish to put it in the sink!',true);
     AIM=()=>{const d=S.dishes.find(x=>!x.collected);return d?dishCenterClient(d):[0,0]};
     H={down:e=>{const d=dishAt(e);if(!d||d.collected)return false;if(busy||!tapOk())return;
-      d.collected=true;d.ci=S.collected++;LOG.push('collect');sfx.pop();layoutDishes();const k=S.collected;say(M.CNT_KO[k-1]+'!',cap(M.CNT_EN[k-1])+'!');alMood('wow',600);
+      d.collected=true;d.ci=S.collected++;LOG.push('collect');sfx.pop();layoutDishes();const k=S.collected;
+      {const g=gen;L.later(()=>{if(g!==gen)return;K.squash(d.el,.18,380,'50% 90%');tone(1250,.05,'triangle',.08);tone(1500,.05,'triangle',.06,.08)},500)}   // 달그락, 착say(M.CNT_KO[k-1]+'!',cap(M.CNT_EN[k-1])+'!');alMood('wow',600);
       if(k>=S.dishes.length){H={};G.stop();kind='wait';const g=gen;L.later(()=>{if(g!==gen)return;SFX.sparkle();say('그릇을 다 모았어요!','All the dishes are in!');finish(()=>{setView('sink')})},900)}}};
     guideAt(AIM,'tap','그릇을 콕 눌러 봐!','Tap a dish!');
   },
@@ -348,21 +439,25 @@ const STEP={
       const d=S.dishes[S.squeezed],k=S.squeezed+1;S.squeezed=k;LOG.push('squeeze');bottleEl.classList.add('squeeze');sfx.pop();noise(.25,{type:'lowpass',freq:700,vol:.12});
       const dc=dishCenterClient(d),sr=stR(),[x,y]=stXY(dc[0],dc[1]-d.el.getBoundingClientRect().height*.1),drop=document.createElement('div');drop.className='dk-drop';
       Object.assign(drop.style,{left:(x-13)+'px',top:(y-13)+'px',background:S.soap.hex,border:`2.5px solid ${OL}`});fxEl.appendChild(drop);void sr;
-      const g=gen;L.later(()=>{if(g!==gen)return;bottleEl.classList.remove('squeeze');d.soap=S.soap;drop.remove();tone(880,.08,'sine',.14);draw();say(M.CNT_KO[k-1]+'!',cap(M.CNT_EN[k-1])+'!');busy=false;
+      {const b=bottleEl.getBoundingClientRect(),s=stR(),nx=b.left-s.left+b.width*.68,ny=b.top-s.top+b.height*.14,st=document.createElement('div'),hh=Math.max(20,y-ny);
+        st.style.cssText=`position:absolute;z-index:21;pointer-events:none;left:${nx-5}px;top:${ny}px;width:10px;height:${hh}px;transform-origin:50% 0;border-radius:5px;background:${S.soap.hex};border:2px solid rgba(91,58,41,.35);opacity:0`;
+        st.style.transform=`rotate(${(-Math.atan2(x-nx,hh)*180/Math.PI).toFixed(0)}deg)`;st.style.height=Math.hypot(x-nx,hh)+'px';fxEl.appendChild(st);
+        try{st.animate([{transform:st.style.transform+' scaleY(0)',opacity:1},{transform:st.style.transform+' scaleY(1)',opacity:1,offset:.4},{transform:st.style.transform+' scaleY(1)',opacity:0}],{duration:480,easing:'ease-out'})}catch(_){}setTimeout(()=>st.remove(),500)}   // 세제가 줄기로 쭉
+      const g=gen;L.later(()=>{if(g!==gen)return;bottleEl.classList.remove('squeeze');d.soap=S.soap;drop.remove();tone(880,.08,'sine',.14);draw();K.bubbles(x+13,y+13,4,{edge:S.soap.hex,sz:14,up:34});K.squash(d.el,.08,320,'50% 80%');say(M.CNT_KO[k-1]+'!',cap(M.CNT_EN[k-1])+'!');busy=false;
         if(k>=S.dishes.length){H={};G.stop();kind='wait';L.later(()=>{if(g===gen){SFX.sparkle();say('세제 준비 끝!','Soap is ready!');finish()}},500)}},520)}};
     guideAt(AIM,'tap','병을 콕 눌러 봐!','Tap the bottle!');
   },
   /* 거품: 수세미로 쓱쓱 (닿은 곳만 얼룩이 지워지고 거품이 남음) */
   scrub(){
     kind='rub';alMood('ticklish');const stopI=intro(ICON.sponge,'수세미!','Sponge!');say('수세미로 쓱쓱 문질러 거품을 내요!','Rub with the sponge to make bubbles!',true);
-    rubTool({icon:ICON.sponge,anchor:[.5,.78],gap:.4,log:'scrub',stopIntro:stopI,cell:(d,i,v)=>{d.sv[i]=v},
+    rubTool({icon:ICON.sponge,anchor:[.5,.78],gap:.4,log:'scrub',stopIntro:stopI,cell:(d,i,v)=>{d.sv[i]=v},frame:(F,t,W)=>K.bubbles(W.wx,W.wy,2,{edge:S.soap?S.soap.hex:'#A7CFE8',sz:12,up:30,spread:40}),
       done:()=>{S.dishes.forEach(d=>d.sv.fill(1));draw();SFX.sparkle();say('뽀글뽀글! 거품이 가득!','Bubbles everywhere!');alMood('happy',1200);finish()}});
     guideAt(()=>ctr(sinkEl),'scrub','쓱쓱 문질러 봐!','Rub rub!');
   },
   /* 탄 자국: 냄비만, 철수세제로 더 오래 */
   burnt(){
     kind='rub';const stopI=intro(ICON.scourer,'철수세미!','Scrubber!');say('냄비의 탄 자국은 오래오래 쓱쓱 문질러요!','Burnt spots need extra scrubbing!',true);
-    rubTool({icon:ICON.scourer,anchor:[.5,.74],gap:.4,log:'burnt',stopIntro:stopI,filter:(d)=>d.burnt,rad:.075,rub:{needStageWidths:4},cell:(d,i,v)=>{d.bv[i]=v},
+    rubTool({icon:ICON.scourer,anchor:[.5,.74],gap:.4,log:'burnt',stopIntro:stopI,filter:(d)=>d.burnt,rad:.075,rub:{needStageWidths:4},cell:(d,i,v)=>{d.bv[i]=v},every:200,frame:(F,t,W)=>K.crumbs(W.wx,W.wy,2,'#6B5448',{sp:34}),
       done:()=>{S.dishes.forEach(d=>d.bv.fill(1));draw();SFX.sparkle();say('탄 자국이 없어졌어요!','The burnt spots are gone!');finish()}});
     guideAt(()=>{const d=S.dishes.find(x=>x.burnt);return d?dishCenterClient(d):ctr(sinkEl)},'scrub','쓱쓱 문질러 봐!','Rub rub!');
   },
@@ -373,7 +468,7 @@ const STEP={
     H={down:e=>{if(!inRect(e,faucetEl.getBoundingClientRect(),8))return false;if(busy||!tapOk())return;busy=true;H={};G.stop();
       waterEl.classList.add('on');noise(.8,{type:'lowpass',freq:1600,vol:.18,sweep:-600});LOG.push('faucet');say('쏴아~','Splash!');
       const g=gen;L.later(()=>{if(g!==gen)return;busy=false;kind='rub';AIM=null;const stopI=intro(ICON.sprayer,'샤워기!','Sprayer!');say('물줄기로 거품을 씻어 내요!','Rinse off the bubbles!',true);
-        rubTool({icon:ICON.sprayer,effect:'water',anchor:[.5,.68],gap:.5,log:'rinse',stopIntro:stopI,hold:'shower',cell:(d,i,v)=>{d.rv[i]=v},
+        rubTool({icon:ICON.sprayer,effect:'water',anchor:[.5,.68],gap:.5,log:'rinse',stopIntro:stopI,hold:'shower',cell:(d,i,v)=>{d.rv[i]=v},every:160,frame:(F,t,W)=>{K.drops(F.x,F.y,3,'#CFE5F4',{edge:'#8FC3E6',sp:44,sz:12,ms:550})},
           done:()=>{S.dishes.forEach(d=>{d.rv.fill(1);if(!lv.dry){d.dv.fill(1);d.clean=true}});draw();waterEl.classList.remove('on');SFX.sparkle();say('깨끗해!','All clean!');alMood('wow',900);finish()}});
         guideAt(()=>ctr(sinkEl),'scrub','쓱쓱 헹궈 봐!','Rinse it off!')},800)}};
     guideAt(AIM,'tap','수도꼭지를 콕 눌러 봐!','Tap the faucet!');
@@ -382,7 +477,7 @@ const STEP={
   dry(){
     kind='rub';custEl.classList.add('dk-rub');alMood('happy');const stopI=intro(ICON.towel,'행주!','Towel!');say('행주로 닦아서 반짝반짝 만들어요!','Dry with the towel until it shines!',true);
     const nDone=S.dishes.map(()=>0),total=CELLS.length;
-    rubTool({icon:ICON.towel,anchor:[.5,.6],gap:.4,effect:'rub',fx:({x,y})=>`<circle cx="${x}" cy="${y}" r="26" fill="#fff" opacity=".35"/>`,log:'dry',stopIntro:stopI,sound:()=>sweepTone(240,180,.1,'sine',.1),
+    rubTool({icon:ICON.towel,anchor:[.5,.6],gap:.4,effect:'rub',fx:({x,y})=>`<circle cx="${x}" cy="${y}" r="26" fill="#fff" opacity=".35"/>`,log:'dry',stopIntro:stopI,sound:()=>sweepTone(240,180,.1,'sine',.1),every:260,frame:(F,t,W)=>K.drops(F.x,F.y,2,'#E3F0F8',{edge:'#A7CFE8',sp:30,sz:10,g:60,ms:500}),
       cell:(d,i,v)=>{d.dv[i]=v;if(v>=1){const di=S.dishes.indexOf(d);nDone[di]++;if(nDone[di]>=total-1&&!d.clean){d.clean=true;LOG.push('shine');sfx.pop();const c=dishCenterClient(d);spark(...stXY(c[0],c[1]),2);alPlay('hop')}}},
       done:()=>{S.dishes.forEach(d=>{d.dv.fill(1);d.clean=true});draw();custEl.classList.remove('dk-rub');SFX.sparkle();say('반짝반짝! 그릇에 토토 얼굴이 보여요!','So shiny! I can see Toto!');alMood('wow',1200);finish()}});
     guideAt(()=>ctr(sinkEl),'scrub','쓱쓱 닦아 봐!','Wipe wipe!');
@@ -400,7 +495,7 @@ const STEP={
         say(`이건 ${KO[d.kind]}이야! 다른 칸에 넣어 보자!`,`This is a ${EN[d.kind]}! Try another spot!`);return}
       busy=true;const q=rackEl.getBoundingClientRect(),i=SLOTS.indexOf(t),from=dishCenterClient(d),to=[q.left+q.width*(.19+i*.31),q.top+q.height*.55];const sz=d.el.getBoundingClientRect().width;
       d.el.classList.remove('sel');d.el.style.opacity='0';S.sel=null;LOG.push('shelve:'+d.kind);
-      fly(miniSVG(d.kind,d.rim),from,to,sz*.7,q.width*.18,600,()=>{d.shelved=true;layoutDishes();rackDraw();busy=false;sfx.pop();alPlay('hop');
+      fly(miniSVG(d.kind,d.rim),from,to,sz*.7,q.width*.18,600,()=>{d.shelved=true;layoutDishes();rackDraw();busy=false;sfx.pop();alPlay('hop');K.squash(rackEl,.05,320,'50% 100%');tone(1400,.05,'triangle',.07);
         const k=S.dishes.filter(x=>x.shelved).length;say(M.CNT_KO[k-1]+'!',cap(M.CNT_EN[k-1])+'!');
         if(k>=S.dishes.length){H={};tray.onpointerdown=null;G.stop();kind='wait';const g=gen;L.later(()=>{if(g!==gen)return;SFX.sparkle();say('선반이 가득 찼어요!','The shelf is full!');finish()},600)}})};
     H={down:e=>{const d=dishAt(e);if(!d)return false;if(busy||!tapOk())return;select(S.sel===d?null:d)}};
@@ -463,7 +558,7 @@ function makeDishes(n_lv){
       soap:null,clean:false,collected:!n_lv.collect,ci:-1,shelved:false,el:null}});
 }
 function newRound(){
-  L.begin();gen++;H={};act=null;killTool();G.stop();fxEl.innerHTML='';tray.innerHTML='';tray.onpointerdown=null;busy=false;flying=0;custEl.classList.remove('dk-rub');waterEl.classList.remove('on');
+  L.begin();gen++;H={};act=null;killTool();G.stop();fxEl.innerHTML='';K.clear();tray.innerHTML='';tray.onpointerdown=null;busy=false;flying=0;custEl.classList.remove('dk-rub');waterEl.classList.remove('on');
   lv=levelInfo(levelNo());const dishes=makeDishes(lv);
   const types=[...new Set(dishes.map(d=>SLOT_OF[d.kind]))];while(types.length<2)types.push(pick(SLOTS.filter(t=>!types.includes(t))));
   S={view:lv.collect?'table':'sink',dishes,soap:null,slotTypes:SLOTS.filter(t=>types.includes(t)),sel:null,collected:0,squeezed:0};
@@ -489,12 +584,12 @@ M.__dish=()=>{
     cards:[...tray.querySelectorAll('.dk-card')].map(b=>b.dataset.t||b.dataset.i),slotTypes:S&&S.slotTypes,sel:S&&S.sel?S.dishes.indexOf(S.sel):-1,wrongShelf:S&&S.wrongShelf||0,
     washed:S?S.dishes.filter(d=>d.clean).length:0,shelvedCount:S?S.dishes.filter(d=>d.shelved).length:0,rackItems:S?S.dishes.filter(d=>d.shelved).length:0,
     cellPts:tool?tool.cellPts():[],toolOn:!!tool,soap:S&&S.soap&&S.soap.en,squeezed:S?S.squeezed:0,collected:S?S.collected:0,
-    alive:al?al.state():null,misses,guide:G.state(),served:DATA.served,log:LOG.slice(),waterOn:waterEl.classList.contains('on')};
+    alive:al?al.state():null,misses,guide:G.state(),served:DATA.served,log:LOG.slice(),waterOn:waterEl.classList.contains('on'),parts:K.stats()};
 };
 M.__dishDepth=()=>LV.map((l,i)=>{const v=levelInfo(i+1),p=planFor(v).filter(k=>k!=='serve'),H2={choose:'choose',collect:'tap',scrape:'rub',soap:'tap',scrub:'rub',burnt:'rub',rinse:'rub',dry:'rub',shelve:'tap'};
   return{level:i+1,processes:new Set(p).size,hands:[...new Set(p.map(k=>H2[k]))],someone:!!M.Alive,choice:true,ending:true}});
 games[id]={enter:()=>{requestAnimationFrame(()=>{if(cur()===id)newRound()})},
-  exit:()=>{L.begin();gen++;H={};act=null;killTool();G.stop();fxEl.innerHTML='';tray.onpointerdown=null;if(al){al.detach();al=null}phase='';kind='wait'},resize:size};
+  exit:()=>{L.begin();gen++;H={};act=null;killTool();G.stop();fxEl.innerHTML='';K.clear();tray.onpointerdown=null;if(al){al.detach();al=null}phase='';kind='wait'},resize:size};
 window.addEventListener('resize',()=>{if(cur()===id)size()});
 /* tile picture on the home screen */
 document.querySelectorAll('.tile[data-go="dishes2"] .ic').forEach(ic=>{

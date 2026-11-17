@@ -176,7 +176,7 @@ function motionKit(host,pre){
   const MO=(M.CFG||{}).motion||{},PART=Object.assign({max:40,fadeMs:800},MO.particles||{}),BEAT={ready:150,after:400};
   const box=document.createElement('div');box.className=pre+'-pfx';box.style.cssText='position:absolute;inset:0;z-index:19;pointer-events:none;overflow:hidden';host.appendChild(box);
   const K={PART,BEAT,box,max:0,spawned:0,cap:PART.max,ema:16,lt:0,last:0};
-  const ks=document.createElement('style');ks.textContent=`.alive.${pre}-hold .al-arm-l{animation:${pre}hl .35s ease-out forwards}.alive.${pre}-hold .al-arm-r{animation:${pre}hr .35s ease-out forwards}
+  const ks=document.createElement('style');ks.textContent=`.alive.${pre}-hold .al-arm-l{animation:${pre}hl .6s ease-out forwards}.alive.${pre}-hold .al-arm-r{animation:${pre}hr .6s ease-out forwards}
 @keyframes ${pre}hl{to{transform:rotate(-50deg)}}@keyframes ${pre}hr{to{transform:rotate(50deg)}}`;document.head.appendChild(ks);
   /* one particle: a small svg that moves (transform) and fades (opacity); removed when its fadeMs is over */
   K.spawn=(svg,x,y,o={})=>{
@@ -251,7 +251,7 @@ function motionKit(host,pre){
   };
   /* the same food with a big round bite out of it (two overlapping circles cut by a mask) */
   let bid=0;function bitten(html){const m=html.match(/viewBox="([^"]+)"/);if(!m)return html;const [x,y,w,h]=m[1].split(/[\s,]+/).map(Number),id=pre+'bt'+(++bid);
-    return `<svg viewBox="${m[1]}" style="width:100%;height:100%;display:block;overflow:visible"><defs><mask id="${id}" maskUnits="userSpaceOnUse" x="${x-w}" y="${y-h}" width="${w*3}" height="${h*3}"><rect x="${x-w}" y="${y-h}" width="${w*3}" height="${h*3}" fill="#fff"/><circle cx="${x+w*.62}" cy="${y+h*.06}" r="${w*.2}" fill="#000"/><circle cx="${x+w*.4}" cy="${y+h*.02}" r="${w*.17}" fill="#000"/></mask></defs><g mask="url(#${id})">${html.replace(/^<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'')}</g></svg>`}
+    return `<svg viewBox="${m[1]}" style="width:100%;height:100%;display:block;overflow:visible"><defs><mask id="${id}" maskUnits="userSpaceOnUse" x="${x-w}" y="${y-h}" width="${w*3}" height="${h*3}"><rect x="${x-w}" y="${y-h}" width="${w*3}" height="${h*3}" fill="#fff"/><circle cx="${x+w*.64}" cy="${y+h*.12}" r="${w*.22}" fill="#000"/><circle cx="${x+w*.4}" cy="${y+h*.08}" r="${w*.18}" fill="#000"/></mask></defs><g mask="url(#${id})">${html.replace(/^<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'')}</g></svg>`}
   return K;
 }
 const K=motionKit(stage,'pz'),TAP_MS=450;   // motion.tapAlso has no number: one tap plays one stroke of about half a second (as in salon.js)
@@ -638,7 +638,7 @@ function run(){
 const BITE=`<svg viewBox="0 0 60 70"><path d="M8 8L52 8L30 64Z" fill="#F0C27A" stroke="${OL}" stroke-width="2.5" stroke-linejoin="round"/><path d="M13 13L47 13L30 56Z" fill="#D2412A"/><path d="M15 15L45 15L30 50Z" fill="#FFE07A" opacity=".85"/><circle cx="26" cy="22" r="5" fill="#E8412F"/><circle cx="35" cy="31" r="4" fill="#E8412F"/></svg>`;
 function give(){
   phase='eat';kind='wait';LOG.push('serve');const g=gen;
-  if(al)al.setMood('');bubEl.hidden=true;
+  if(al)al.setMood('');bubEl.hidden=true;mainEl.style.transition='opacity .4s';mainEl.style.opacity='0';
   /* cooking.serve: one slice flies to the customer's hands → 킁킁 → 한 입 크게 → 볼 볼록 */
   const later=(fn,ms)=>L.later(()=>{if(g===gen)fn()},ms),r=mainRect(),cr=custEl.getBoundingClientRect();
   fly(BITE,[r.left+r.width*.5,r.top+r.height*.35],[cr.left+cr.width*.5,cr.top+cr.height*.7],r.width*.3,cr.width*.3,600,()=>{if(g!==gen)return;say('킁킁, 냄새 좋다!','Sniff sniff, smells good!');
@@ -666,7 +666,7 @@ function newCustomer(){
   S={main:'none',pz:{r:lv.dough?0:PZR,sauce:false,cheese:[],tops:[],baked:false,flour:!lv.dough},plate:[],want:want&&want.length?want:null,spin:Math.random()*6.28,lines:null,sauceV:null};
   if(fixed)fixed.forEach(t=>{counts[t]={made:0,placed:0}});
   plan=planFor(lv,fixed);pi=0;phase='enter';kind='wait';LOG.push('level:'+lv.level,'customer:'+cust.kind);
-  plateEl.hidden=true;renderPlate();mainEl.innerHTML='';mainEl.classList.remove('out');
+  plateEl.hidden=true;renderPlate();mainEl.innerHTML='';mainEl.classList.remove('out');mainEl.style.opacity='';
   if(lv.dough){S.main='bowl';S.bowl={flour:0,water:0,swirl:0,ball:false}}else S.main='pizza';
   size();draw();strip();shelf();
   if(al){al.detach();al=null}drawCust('idle');

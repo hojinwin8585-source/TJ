@@ -168,7 +168,7 @@ function motionKit(host,pre){
   const MO=(M.CFG||{}).motion||{},PART=Object.assign({max:40,fadeMs:800},MO.particles||{}),BEAT={ready:150,after:400};
   const box=document.createElement('div');box.className=pre+'-pfx';box.style.cssText='position:absolute;inset:0;z-index:19;pointer-events:none;overflow:hidden';host.appendChild(box);
   const K={PART,BEAT,box,max:0,spawned:0,cap:PART.max,ema:16,lt:0,last:0};
-  const ks=document.createElement('style');ks.textContent=`.alive.${pre}-hold .al-arm-l{animation:${pre}hl .35s ease-out forwards}.alive.${pre}-hold .al-arm-r{animation:${pre}hr .35s ease-out forwards}
+  const ks=document.createElement('style');ks.textContent=`.alive.${pre}-hold .al-arm-l{animation:${pre}hl .6s ease-out forwards}.alive.${pre}-hold .al-arm-r{animation:${pre}hr .6s ease-out forwards}
 @keyframes ${pre}hl{to{transform:rotate(-50deg)}}@keyframes ${pre}hr{to{transform:rotate(50deg)}}`;document.head.appendChild(ks);
   /* one particle: a small svg that moves (transform) and fades (opacity); removed when its fadeMs is over */
   K.spawn=(svg,x,y,o={})=>{
@@ -243,7 +243,7 @@ function motionKit(host,pre){
   };
   /* the same food with a big round bite out of it (two overlapping circles cut by a mask) */
   let bid=0;function bitten(html){const m=html.match(/viewBox="([^"]+)"/);if(!m)return html;const [x,y,w,h]=m[1].split(/[\s,]+/).map(Number),id=pre+'bt'+(++bid);
-    return `<svg viewBox="${m[1]}" style="width:100%;height:100%;display:block;overflow:visible"><defs><mask id="${id}" maskUnits="userSpaceOnUse" x="${x-w}" y="${y-h}" width="${w*3}" height="${h*3}"><rect x="${x-w}" y="${y-h}" width="${w*3}" height="${h*3}" fill="#fff"/><circle cx="${x+w*.62}" cy="${y+h*.06}" r="${w*.2}" fill="#000"/><circle cx="${x+w*.4}" cy="${y+h*.02}" r="${w*.17}" fill="#000"/></mask></defs><g mask="url(#${id})">${html.replace(/^<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'')}</g></svg>`}
+    return `<svg viewBox="${m[1]}" style="width:100%;height:100%;display:block;overflow:visible"><defs><mask id="${id}" maskUnits="userSpaceOnUse" x="${x-w}" y="${y-h}" width="${w*3}" height="${h*3}"><rect x="${x-w}" y="${y-h}" width="${w*3}" height="${h*3}" fill="#fff"/><circle cx="${x+w*.64}" cy="${y+h*.12}" r="${w*.22}" fill="#000"/><circle cx="${x+w*.4}" cy="${y+h*.08}" r="${w*.18}" fill="#000"/></mask></defs><g mask="url(#${id})">${html.replace(/^<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'')}</g></svg>`}
   return K;
 }
 const K=motionKit(stage,'bk'),TAP_MS=450;   // motion.tapAlso has no number: one tap plays one stroke of about half a second (as in salon.js)
@@ -577,13 +577,13 @@ const STEP={
       const m=S.bowl.mix||0;lA.style.opacity=(1-m).toFixed(2);lB.style.opacity=(.25+.6*m).toFixed(2);
       const w=o.el&&o.el.querySelector('.wk-w');if(w)w.style.transform=`scaleX(${(.45+.55*Math.abs(Math.cos(sw.a*Math.PI/90))).toFixed(3)})`};
     const loop=t=>{sw.raf=0;if(!tool||phase!=='stir')return;const dt=sw.lt?Math.min(.05,(t-sw.lt)/1000):.016;sw.lt=t;const d=sw.drive;sw.drive=0;
-      if(sw.on&&d){sw.a+=d;sw.v=sw.v*.7+(d/Math.max(dt,.008))*.3}else{sw.a+=sw.v*dt;sw.v*=Math.exp(-dt*5)}
+      if(sw.on&&Math.abs(d)>.05){sw.a+=d;sw.v=sw.v*.7+(d/Math.max(dt,.008))*.3}else{sw.a+=sw.v*dt;sw.v*=Math.exp(-dt*5)}
       sw.acc+=Math.abs(sw.a-(sw.pa==null?sw.a:sw.pa));sw.pa=sw.a;while(sw.acc>=180){sw.acc-=180;noise(.05,{freq:2200,q:3,vol:.06});tone(330+(S.bowl.mix||0)*180,.05,'sine',.04)}   // motion.soundSync
       paint();if(sw.on||Math.abs(sw.v)>4)sw.raf=requestAnimationFrame(loop);else sw.lt=0};
     const go=()=>{if(!sw.raf)sw.raf=requestAnimationFrame(loop)};
     o.touch=()=>{sw.on=true;sw.last=null;go();K.beat(E.bowl,'down')};o.release=()=>{sw.on=false;go();K.beat(E.bowl,'up')};
-    o.frame=(F,t,W)=>{const [cx,cy]=cen(),ang=Math.atan2((W.wy-cy)/.4,W.wx-cx);
-      if(sw.last!=null){let d=ang-sw.last;if(d>Math.PI)d-=2*Math.PI;if(d<-Math.PI)d+=2*Math.PI;if(Math.abs(d)<1.4)sw.drive+=d*180/Math.PI}sw.last=ang;go();
+    o.frame=(F,t,W)=>{const [cx,cy]=cen(),ang=Math.atan2((W.wy-cy)/.4,W.wx-cx),moved=F.x!==sw.fx||F.y!==sw.fy;sw.fx=F.x;sw.fy=F.y;
+      if(sw.last!=null&&moved&&Math.hypot(W.wx-cx,(W.wy-cy)/.4)>12){let d=ang-sw.last;if(d>Math.PI)d-=2*Math.PI;if(d<-Math.PI)d+=2*Math.PI;if(Math.abs(d)<1.4)sw.drive+=d*180/Math.PI}sw.last=ang;go();
       if(Math.abs(sw.v)>240&&t-sw.drop>120){sw.drop=t;const sg=Math.sign(sw.v);K.drops(W.wx,W.wy,2,DOUGH,{sp:58,dir:sg*(Math.cos(ang)>0?.9:-.9),fan:.7,sz:14})}
       if((S.bowl.mix||0)>.35&&t-sw.bub>420){sw.bub=t;K.bubbles(cx+(Math.random()-.5)*60,cy,1,{edge:'#E2C79A',sz:12,up:26})}};
     /* one tap = one turn of the whisk: it draws a circle and the batter turns once */
