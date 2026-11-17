@@ -3,7 +3,9 @@
    모든 재료에 준비 과정(칼 콕 / 병에서 톡 / 옥수수 쓱쓱 / 강판 쓱쓱 / 국자) · 세 구역(위 과정 그림 줄, 가운데 무대, 아래 도구 칸).
    동작은 콕과 쓱쓱(손가락을 따라오는 도구, ML.P2.makeTool), 카드 고르기뿐. 손님은 ML.Alive.
    숫자는 MLCFG.games.pizza(levels), rules, shell, touch(tool, trace, rub, tapLockMs), voice, calm 에서 읽습니다.
-   단계: ML.Progress가 없으면 1단계 고정, 어른 설정의 '피자가게 단계'로 바꿈. */
+   단계: ML.Progress가 없으면 1단계 고정, 어른 설정의 '피자가게 단계'로 바꿈.
+   P18-나(motion.cooking): 컵이 기울며 가루 줄기와 가루 구름 · 물 튀김 · 반죽이 눌렸다 돌아옴 · 소스 결 · 치즈 가닥이 떨어짐 · 칼이 들렸다 톡 내려오면 조각이 튀어 접시로 ·
+   토핑이 피자에 착 · 화덕에서 부풀며 노릇해지고 꺼내면 김 · 손님이 두 손으로 받아 킁킁, 한 입, 볼 볼록. 쓱쓱 도구는 모두 콕으로도(motion.tapAlso). */
 (()=>{
 'use strict';
 const M=window.ML,P=M&&M.P2,A=window.ART;if(!P||!A||!M.Guide||!P.makeTool)return;
@@ -123,8 +125,12 @@ const css=`
 .pz-plate>svg{position:absolute;inset:0;width:100%;height:100%}
 .pz-pc{position:absolute;transition:transform .2s}
 .pz-pc svg{width:100%;height:100%;display:block;overflow:visible}
-.pz-pc.new{animation:pzpc .35s ease-out}
-@keyframes pzpc{from{transform:scale(.4)}}
+.pz-pc.new{animation:pzpc .42s ease-out}
+@keyframes pzpc{0%{transform:scale(.5)}40%{transform:scale(1.25,.75)}70%{transform:scale(.92,1.08)}100%{transform:scale(1)}}
+.pz-stream{position:absolute;pointer-events:none;z-index:20;transform-origin:50% 0}
+.pz-stream svg{width:100%;height:100%;display:block;overflow:visible}
+.pz-peel .bk2{position:absolute;inset:0;opacity:0;transition:opacity 2.6s ease-in}
+.pz-peel.baking .bk2{opacity:1}
 .pz-pc.lift{opacity:0}
 .pz-fx{inset:0;z-index:20;pointer-events:none;overflow:hidden}
 .pz-float{position:absolute;pointer-events:none;will-change:transform}
@@ -163,6 +169,93 @@ document.getElementById('app').appendChild(sec);M.NAMES[id]='피자가게';
 const $=s=>sec.querySelector(s);
 const stage=$('#pzStage'),stripEl=$('#pzStrip'),custEl=$('#pzCust'),bubEl=$('#pzBub'),mainEl=$('#pzMain'),plateEl=$('#pzPlate'),fxEl=$('#pzFx'),tray=$('#pzTray'),shelfEl=$('#pzShelf');
 const G=M.Guide.make(stage,{say});
+/* ---------- P18-나 motion kit (the salon.js pattern copied here, not shared): particle pool, three beats, squash, the customer eating ----------
+   motion.particles: at most max at once, each one gone within fadeMs, calm colours · motion.threeBeats: ready 0.15 s → act → after 0.4 s ·
+   motion.squash · motion.performance: only CSS transform and opacity move; when frames get slow the particle cap halves first. */
+function motionKit(host,pre){
+  const MO=(M.CFG||{}).motion||{},PART=Object.assign({max:40,fadeMs:800},MO.particles||{}),BEAT={ready:150,after:400};
+  const box=document.createElement('div');box.className=pre+'-pfx';box.style.cssText='position:absolute;inset:0;z-index:19;pointer-events:none;overflow:hidden';host.appendChild(box);
+  const K={PART,BEAT,box,max:0,spawned:0,cap:PART.max,ema:16,lt:0,last:0};
+  const ks=document.createElement('style');ks.textContent=`.alive.${pre}-hold .al-arm-l{animation:${pre}hl .35s ease-out forwards}.alive.${pre}-hold .al-arm-r{animation:${pre}hr .35s ease-out forwards}
+@keyframes ${pre}hl{to{transform:rotate(-50deg)}}@keyframes ${pre}hr{to{transform:rotate(50deg)}}`;document.head.appendChild(ks);
+  /* one particle: a small svg that moves (transform) and fades (opacity); removed when its fadeMs is over */
+  K.spawn=(svg,x,y,o={})=>{
+    if(box.childElementCount>=K.cap)return null;
+    const sz=o.sz||24,ms=Math.min(PART.fadeMs,o.ms||PART.fadeMs),e=document.createElement('i'),now=performance.now();
+    e.style.cssText=`position:absolute;left:${(x-sz/2).toFixed(1)}px;top:${(y-sz/2).toFixed(1)}px;width:${sz.toFixed(1)}px;height:${sz.toFixed(1)}px`;
+    e.innerHTML=`<svg viewBox="${o.vb||'-15 -15 30 30'}" style="width:100%;height:100%;display:block;overflow:visible">${svg}</svg>`;
+    e.dataset.t=now;box.appendChild(e);K.spawned++;K.last=now;if(box.childElementCount>K.max)K.max=box.childElementCount;
+    const dx=o.dx||0,dy=o.dy||0,g=o.g||0,s0=o.s0==null?1:o.s0,s1=o.s1==null?1:o.s1,r0=o.r0||0,r=o.rot||0,op=o.op==null?1:o.op;
+    const kf=[0,.3,.65,1].map((t,i)=>({offset:t,opacity:i===0?(o.fadeIn?0:op):i===3?0:i===2?op*.7:op,
+      transform:`translate(${(dx*t).toFixed(1)}px,${(dy*t+g*t*t).toFixed(1)}px) rotate(${(r0+r*t).toFixed(0)}deg) scale(${(s0+(s1-s0)*t).toFixed(2)})`}));
+    let gone=false;const rm=()=>{if(gone)return;gone=true;e.remove()};
+    try{const a=e.animate(kf,{duration:ms,easing:o.ease||'cubic-bezier(.25,.6,.45,1)',fill:'forwards'});a.onfinish=rm}catch(_){}
+    setTimeout(rm,ms);return e;
+  };
+  /* a puff of flour / dust: soft round clouds that rise, grow and fade */
+  K.cloud=(x,y,n,col,o={})=>{const sp=o.spread||46;for(let k=0;k<n;k++){const a=(k/n)*Math.PI*2+Math.random()*.7;
+    K.spawn(`<circle r="11" fill="${col}" stroke="${o.edge||'#E6DCCB'}" stroke-width="1.4"/><circle cx="-3.5" cy="-3.5" r="3.6" fill="#fff" opacity=".8"/>`,x+Math.cos(a)*sp*.22,y+Math.sin(a)*sp*.1,
+      {sz:(o.sz||24)+Math.random()*12,dx:Math.cos(a)*sp,dy:-(o.up||40)-Math.random()*18+Math.sin(a)*sp*.25,s0:.45,s1:1.55,op:o.op||.9})}};
+  /* drops / bits thrown up that fall back (gravity) */
+  K.drops=(x,y,n,col,o={})=>{const sp=o.sp||52;for(let k=0;k<n;k++){const a=((k+.5)/n-.5)*(o.fan||2.4)+(o.dir||0);
+    K.spawn(o.svg||`<ellipse rx="5" ry="6.4" fill="${col}" stroke="${o.edge||'rgba(91,58,41,.4)'}" stroke-width="1.3"/><circle cx="-1.6" cy="-2.2" r="1.6" fill="#fff" opacity=".85"/>`,x,y,
+      {sz:o.sz||16,dx:Math.sin(a)*sp,dy:-Math.cos(a)*sp*(o.lift||.9),g:o.g==null?95:o.g,rot:a*70,ms:o.ms||650})}};
+  /* the grain a spatula / knife / ladle leaves: a glossy stroke that slowly spreads out and melts away */
+  K.streak=(x,y,col,ang,o={})=>K.spawn(`<path d="M-13 1Q0 -5 13 1" stroke="${o.edge||'rgba(91,58,41,.25)'}" stroke-width="9" fill="none" stroke-linecap="round"/><path d="M-13 1Q0 -5 13 1" stroke="${col}" stroke-width="6.5" fill="none" stroke-linecap="round"/><path d="M-8 -1.2Q0 -4 8 -1.2" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" opacity=".75"/>`,x,y,{sz:o.sz||40,r0:ang||0,s0:1,s1:1.7,op:.95});
+  /* steam wisps rising softly */
+  K.steam=(x,y,n,o={})=>{for(let k=0;k<n;k++)K.spawn(`<path d="M0 13Q-7 6 0 0Q7 -6 0 -13" stroke="${o.col||'#fff'}" stroke-width="4.6" fill="none" stroke-linecap="round"/>`,x+(k-(n-1)/2)*(o.gap||18),y,
+    {sz:o.sz||36,dy:-(o.up||48),dx:(Math.random()-.5)*12,s0:.7,s1:1.35,op:o.op||.85,fadeIn:true,ease:'ease-out'})};
+  /* bubbles rising and growing */
+  K.bubbles=(x,y,n,o={})=>{for(let k=0;k<n;k++)K.spawn(`<circle r="9" fill="#fff" fill-opacity=".55" stroke="${o.edge||'#A7CFE8'}" stroke-width="1.8"/><circle cx="-3" cy="-3" r="2.4" fill="#fff"/>`,x+(Math.random()-.5)*(o.spread||30),y,
+    {sz:(o.sz||16)+Math.random()*10,dx:(Math.random()-.5)*30,dy:-(o.up||40)-Math.random()*24,s0:.5,s1:1.25,op:.95})};
+  K.crumbs=(x,y,n,col,o={})=>K.drops(x,y,n,col,Object.assign({sz:12,sp:44,g:110,svg:`<circle r="5" fill="${col}" stroke="rgba(91,58,41,.45)" stroke-width="1.3"/>`},o));
+  /* motion.squash: flat → tall → settles */
+  K.squash=(el,a=.16,ms=420,org='50% 100%')=>{if(!el||!el.animate)return;el.style.transformOrigin=org;
+    try{el.animate([{transform:'scale(1,1)'},{transform:`scale(${1+a},${1-a})`,offset:.28},{transform:`scale(${1-a*.45},${1+a*.5})`,offset:.62},{transform:`scale(${1+a*.12},${1-a*.12})`,offset:.84},{transform:'scale(1,1)'}],{duration:ms,easing:'ease-out'})}catch(_){}};
+  /* motion.threeBeats on the thing being worked on: down (a little squash while the finger is on), up (a bounce that settles), tap (both) */
+  K.beat=(el,k)=>{if(!el||!el.animate)return;let kf,ms;
+    if(k==='down'){kf=[{transform:'scale(1,1)'},{transform:'scale(1.04,.95)'},{transform:'scale(1.02,.98)'}];ms=BEAT.ready+120}
+    else if(k==='up'){kf=[{transform:'scale(1.02,.98)'},{transform:'scale(.98,1.035) translateY(-1.5%)'},{transform:'scale(1.01,.99)'},{transform:'scale(1,1)'}];ms=BEAT.after}
+    else{kf=[{transform:'scale(1,1)'},{transform:'scale(1.045,.94)',offset:.25},{transform:'scale(.97,1.04) translateY(-2%)',offset:.55},{transform:'scale(1.015,.985)',offset:.8},{transform:'scale(1,1)'}];ms=BEAT.ready+BEAT.after+150}
+    el.style.transformOrigin='50% 90%';el.getAnimations().filter(a=>a.id==='kbeat').forEach(a=>a.cancel());const a=el.animate(kf,{duration:ms,easing:'ease-out',fill:k==='down'?'forwards':'none'});a.id='kbeat'};
+  /* frame time from the tool loops: slow frames (older phones) → half the particles */
+  K.tick=t=>{if(K.lt){const dt=t-K.lt;if(dt>0&&dt<250)K.ema=K.ema*.9+dt*.1}K.lt=t;K.cap=K.ema>34?Math.round(PART.max/2):PART.max};
+  K.clear=()=>{box.innerHTML='';K.lt=0};
+  K.stats=()=>{const n=performance.now(),ages=[...box.children].map(e=>n-(+e.dataset.t||n));return{now:box.childElementCount,max:K.max,cap:K.cap,limit:PART.max,fadeMs:PART.fadeMs,spawned:K.spawned,oldest:ages.length?Math.round(Math.max(...ages)):0,last:K.last}};
+  /* motion.cooking.serve: the customer takes the food in both hands, sniffs twice, takes one big bite, cheeks puff up and chew.
+     o: {cust, kind, food (svg html), draw(mood), later(fn,ms), done, log, grow, origin} — the customer comes up big meanwhile (whileActing) */
+  K.eat=o=>{
+    const c=o.cust,kd=A.KINDS[o.kind]||{},ov=document.createElement('div');ov.className=pre+'-eat';ov.style.cssText='position:absolute;inset:0;pointer-events:none;z-index:2';
+    const ck=s=>`<div class="ek" style="position:absolute;left:${s<0?13:63}%;top:43.5%;width:24%;aspect-ratio:1;opacity:0"><svg viewBox="-20 -20 40 40" style="width:100%;height:100%;display:block;overflow:visible"><circle r="16.5" fill="${kd.body||'#FFF6EC'}" stroke="${OL}" stroke-width="2.8"/><circle cx="${s*2}" cy="3" r="9" fill="${kd.cheek||'#FF9AA8'}" opacity=".7"/><ellipse cx="${-s*5}" cy="-8" rx="4" ry="2.6" fill="#fff" opacity=".85"/></svg></div>`;
+    ov.innerHTML=ck(-1)+ck(1)+`<div class="ef" style="position:absolute;left:28%;top:57%;width:44%;aspect-ratio:1">${o.food}</div>`;
+    const fd=ov.querySelector('.ef'),cks=[...ov.querySelectorAll('.ek')],put=m=>{o.draw(m);c.appendChild(ov)},log=x=>{if(o.log)o.log(x)},hx=()=>{const r=c.getBoundingClientRect(),h=host.getBoundingClientRect();return[r.left-h.left,r.top-h.top,r.width,r.height]};
+    const GS=o.grow||1.16;c.style.transformOrigin=o.origin||'50% 45%';let grow=null;try{grow=c.animate([{transform:'scale(1)'},{transform:`scale(${GS})`}],{duration:450,easing:'ease-out',fill:'forwards'})}catch(_){}
+    put('happy');c.classList.add(pre+'-hold');log('eat:take');
+    try{fd.animate([{transform:'scale(.3)',opacity:0},{transform:'scale(1.15,.85)',opacity:1,offset:.45},{transform:'scale(.94,1.06)',offset:.75},{transform:'scale(1)'}],{duration:450,easing:'ease-out'})}catch(_){}
+    /* 킁킁: the food comes up to the nose twice, the head tips up, scent curls rise */
+    o.later(()=>{log('eat:sniff');try{fd.animate([{transform:'none'},{transform:'translateY(-26%) scale(1.04)',offset:.4},{transform:'translateY(-18%)',offset:.6},{transform:'translateY(-26%) scale(1.04)',offset:.8},{transform:'none'}],{duration:1100,easing:'ease-in-out'});
+      c.animate([{transform:'none'},{transform:'translateY(-3%) rotate(-3deg)',offset:.4},{transform:'translateY(-1%)',offset:.6},{transform:'translateY(-3%) rotate(-3deg)',offset:.8},{transform:'none'}],{duration:1100,easing:'ease-in-out',composite:'add'})}catch(_){}
+      [0,440].forEach(w=>o.later(()=>{const [x,y,ww,hh]=hx();for(let k=0;k<3;k++)K.spawn(`<path d="M0 12Q-6 6 0 0Q6 -6 0 -12" stroke="#F3C6A0" stroke-width="3.6" fill="none" stroke-linecap="round"/>`,x+ww*(.38+k*.12),y+hh*.66,{sz:26,dx:(.5-k*.5)*10,dy:-hh*.16,s0:.7,s1:1.2,op:.8,fadeIn:true,ms:700});
+        noise(.09,{freq:2600,q:1.4,vol:.06});noise(.09,{freq:2900,q:1.4,vol:.05,when:.13})},w))},500);
+    /* 한 입 크게: mouth opens, the customer leans in (ready → bite → after), the food loses a big round piece, crumbs fall */
+    o.later(()=>{put('wow');log('eat:bite');try{c.animate([{transform:'none'},{transform:'translateY(1.5%) scale(1,.96)',offset:.2},{transform:'translate(-2%,4%) rotate(-5deg) scale(1.07)',offset:.45},{transform:'translateY(1%) scale(1.02)',offset:.72},{transform:'none'}],{duration:760,easing:'ease-out',composite:'add'});
+        fd.animate([{transform:'none'},{transform:'translateY(-30%) scale(1.06)',offset:.45},{transform:'none'}],{duration:760,easing:'ease-out'})}catch(_){}
+      o.later(()=>{fd.innerHTML=bitten(o.food);SFX.chomp();put('yum');const [x,y,ww,hh]=hx();K.crumbs(x+ww*.55,y+hh*.62,5,o.crumb||'#E7B46A',{sp:36})},340)},1700);
+    /* 볼 볼록: both cheeks puff out and chew three times, then go down */
+    o.later(()=>{log('eat:cheeks');cks.forEach((e,i)=>{try{e.animate([{transform:'scale(.2)',opacity:0},{transform:'scale(1.3)',opacity:1,offset:.4},{transform:'scale(.95)',opacity:1,offset:.7},{transform:'scale(1)',opacity:1}],{duration:460,easing:'ease-out',fill:'forwards'});
+        o.later(()=>{try{e.animate([{transform:'scale(1)',opacity:1},{transform:`scale(${i?1.14:.9},${i?.9:1.14})`,opacity:1},{transform:'scale(1)',opacity:1}],{duration:640,iterations:3,easing:'ease-in-out',fill:'forwards'})}catch(_){}},460)}catch(_){}});
+      [0,640,1280].forEach(w=>o.later(()=>tone(190+w/16,.07,'sine',.07),460+w))},2150);
+    o.later(()=>{cks.forEach(e=>{try{e.animate([{transform:'scale(1)',opacity:1},{transform:'scale(.2)',opacity:0}],{duration:320,fill:'forwards'})}catch(_){}});try{fd.animate([{opacity:1},{opacity:0,transform:'translateY(10%) scale(.8)'}],{duration:400,fill:'forwards'})}catch(_){}
+      c.classList.remove(pre+'-hold');try{if(grow){grow.cancel();c.animate([{transform:`scale(${GS})`},{transform:'scale(1)'}],{duration:400,easing:'ease-out'})}}catch(_){}},4500);
+    o.later(()=>{ov.remove();log('eat:done');if(o.done)o.done()},4950);
+  };
+  /* the same food with a big round bite out of it (two overlapping circles cut by a mask) */
+  let bid=0;function bitten(html){const m=html.match(/viewBox="([^"]+)"/);if(!m)return html;const [x,y,w,h]=m[1].split(/[\s,]+/).map(Number),id=pre+'bt'+(++bid);
+    return `<svg viewBox="${m[1]}" style="width:100%;height:100%;display:block;overflow:visible"><defs><mask id="${id}" maskUnits="userSpaceOnUse" x="${x-w}" y="${y-h}" width="${w*3}" height="${h*3}"><rect x="${x-w}" y="${y-h}" width="${w*3}" height="${h*3}" fill="#fff"/><circle cx="${x+w*.62}" cy="${y+h*.06}" r="${w*.2}" fill="#000"/><circle cx="${x+w*.4}" cy="${y+h*.02}" r="${w*.17}" fill="#000"/></mask></defs><g mask="url(#${id})">${html.replace(/^<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'')}</g></svg>`}
+  return K;
+}
+const K=motionKit(stage,'pz'),TAP_MS=450;   // motion.tapAlso has no number: one tap plays one stroke of about half a second (as in salon.js)
+const TOPC={tomato:'#E5533D',mushroom:'#C9A27E',pepper:'#6DB35A',pepperoni:'#C8473A',pineapple:'#F2C94C',olive:'#4A4452',corn:'#FFD23F'};   // juice / bits colour per topping (not in config)
 const DATA=Object.assign({level:1,served:0},store.get('mallang_pizza',{}));
 const save=()=>store.set('mallang_pizza',DATA);
 
@@ -306,14 +399,32 @@ function rubTool(o){
   killTool();
   tool=P.makeTool(stage,{tool:o.icon,effect:o.effect||'foam',anchor:o.anchor,gapScale:o.gap,cells:o.cells.map(frac),target:mainRect,rub:o.rub,radius:o.radius,
     cfg:()=>({offsetAboveFingerRatio:.55,coverage:Object.assign({},COV,{grid:o.grid||[7,7]},o.cov||{})}),
-    fx:o.fx,onMiss:miss,
-    onTouch:()=>{G.touch();if(o.stopIntro)o.stopIntro();LOG.push('press:'+o.log)},onRelease:()=>G.release(),
+    fx:o.fx,onMiss:miss,tapAnim:TAP_MS,tilt:true,   // P18: motion.tapAlso + motion.toolFeel (play2.js options)
+    onFrame:(F,t,W)=>{K.tick(t);if(o.frame&&F&&W)o.frame(F,t,W)},onTap:(F,W)=>{LOG.push('tap:'+o.log);K.beat(mainEl.firstElementChild,'tap');if(o.tapFx&&F&&W)o.tapFx(F,W)},
+    onTouch:()=>{G.touch();if(o.stopIntro)o.stopIntro();LOG.push('press:'+o.log);K.beat(mainEl.firstElementChild,'down')},onRelease:()=>{G.release();K.beat(mainEl.firstElementChild,'up')},
     onCell:(i,v,pv,why)=>{o.cell(i,v,pv,why);rd()},
     onProgress:(p,ratio,why)=>{if(why==='move'||why==='hold'){const n=performance.now();if(n-(o._s||0)>150){o._s=n;(o.sound||SFX.scrub)()}}if(o.progress)o.progress(p,ratio)},
     onDone:()=>{killTool();G.stop();o.done()}});
   L.onEnd(killTool);
 }
 const tapOk=()=>{const n=performance.now();if(n-lastTap<260)return false;lastTap=n;return true};
+
+/* ============================== P18 motions ============================== */
+const SHRED=`<path d="M-8 0q4 -4 8 0t8 0" stroke="#E2BE55" stroke-width="4.5" fill="none" stroke-linecap="round"/>`;
+/* cooking.pour: a stream falls from the tipping cup; flour puffs up as a cloud, water splashes (cup: x,y centre in the stage, sz its size) */
+function pourFx(what,x,y,sz,g){
+  const r=mainRect(),s=stage.getBoundingClientRect(),flour=what==='flour',mx=x-sz*.22,my=y+sz*.12,by=r.top-s.top+r.height*.36,st=document.createElement('div');st.className='pz-stream';
+  const w=flour?24:16,col=flour?'#FFFDF6':'#BFE3FF',edge=flour?'#E6DCCB':'#8FC3E6';
+  st.innerHTML=`<svg viewBox="0 0 20 100" preserveAspectRatio="none"><path d="M4 0Q2 50 6 100H14Q18 50 16 0Z" fill="${col}" stroke="${edge}" stroke-width="1.4" vector-effect="non-scaling-stroke"/></svg>`;
+  Object.assign(st.style,{left:(mx-w/2)+'px',top:my+'px',width:w+'px',height:Math.max(20,by-my)+'px',opacity:'0'});fxEl.appendChild(st);
+  try{st.animate([{transform:'scaleY(0)',opacity:1},{transform:'scaleY(1)',opacity:1,offset:.3},{transform:'scaleY(1)',opacity:1,offset:.7},{transform:'translateY(100%) scaleY(0)',opacity:.6}],{duration:380,delay:520,easing:'ease-in'})}catch(_){}
+  setTimeout(()=>st.remove(),1000);
+  L.later(()=>{if(g!==gen)return;const cx=r.left-s.left+r.width*.5;if(flour)K.cloud(cx,by,10,'#FFFDF6',{spread:64,up:50});else K.drops(cx,by,6,'#BFE3FF',{edge:'#8FC3E6',sp:50,sz:14});K.squash(mainEl.firstElementChild,.04,360,'50% 80%')},640);
+}
+/* while a tool moves: a little flour dust / cheese shreds at the working point (throttled) */
+function dust(col,every,how){let lt=0;return(F,t,W)=>{if(t-lt<every)return;lt=t;if(how==='shred')K.spawn(SHRED,W.wx+(Math.random()-.5)*24,W.wy,{sz:20,dy:40,g:20,rot:120,ms:600});else K.cloud(W.wx,W.wy+10,1,col,{sz:14,spread:24,up:14})}}
+/* cooking.spread: the sauce leaves grain where the ladle passes, then it melts in */
+function grain(col){let lx=null,ly=null;return(F,t,W)=>{if(lx==null){lx=W.wx;ly=W.wy;return}const d=Math.hypot(W.wx-lx,W.wy-ly);if(d<18)return;K.streak(W.wx,W.wy,col,Math.atan2(W.wy-ly,W.wx-lx)*180/Math.PI);lx=W.wx;ly=W.wy}}
 
 /* ============================== processes ============================== */
 const STEP={
@@ -323,7 +434,8 @@ const STEP={
     const stopI=intro(ICON.flourCup,'밀가루!','Flour!');say('밀가루를 넣어요! 그릇을 콕 누르면 한 컵!','Tap the bowl for a cup of flour!',true);
     const pour=()=>{if(busy)return;busy=true;stopI();const r=mainRect(),sz=Math.max(120,r.width*.5),[x,y]=stXY(r.left+r.width*.62,r.top+r.height*.02);
       const c=document.createElement('div');c.className='pz-cup';c.innerHTML=what==='flour'?ICON.flourCup:ICON.waterCup;Object.assign(c.style,{width:sz+'px',height:sz+'px',left:(x-sz/2)+'px',top:(y-sz/2)+'px'});fxEl.appendChild(c);
-      const g=gen;L.later(()=>{if(g!==gen)return;S.bowl[what]++;LOG.push('cup:'+what);const k=S.bowl[what];noise(.45,{type:what==='flour'?'bandpass':'lowpass',freq:what==='flour'?2600:900,vol:.12});draw();
+      const g=gen;pourFx(what,x,y,sz,g);
+      L.later(()=>{if(g!==gen)return;S.bowl[what]++;LOG.push('cup:'+what);const k=S.bowl[what];noise(.45,{type:what==='flour'?'bandpass':'lowpass',freq:what==='flour'?2600:900,vol:.12});draw();
         say(`${P.CNT_KO_UNIT(k)} 컵!`,`${cap(CNT_EN[k-1])} cup!`)},550);
       L.later(()=>{c.remove();busy=false;if(g!==gen)return;
         if(what==='flour'&&S.bowl.flour>=CUPS.flour){what='water';toolTray(ICON.waterCup);say('이번엔 물! 콕 누르면 한 컵!','Now water! Tap for a cup!',true)}
@@ -336,6 +448,7 @@ const STEP={
     S.main='dough';S.dough={p:0,v:DOUGH_PTS.map(()=>0)};draw();size();kind='rub';
     const stopI=intro(A.TOOL.hands,'손으로 쓱쓱!','Use your hands!');say('반죽을 손으로 쓱쓱 문질러서 넓게 펴요!','Rub the dough flat with your hands!',true);
     rubTool({icon:A.TOOL.hands,anchor:[.5,.6],gap:.3,effect:'rub',fx:()=>'',cells:DOUGH_PTS,grid:[6,6],log:'knead',stopIntro:stopI,sound:()=>sweepTone(200,150,.1,'sine',.12),
+      frame:dust('#FFFDF6',260,'cloud'),tapFx:(F,W)=>{K.cloud(W.wx,W.wy,3,'#FFFDF6',{sz:14,spread:34,up:18})},
       cell:(i,v)=>{S.dough.v[i]=v},progress:p=>{S.dough.p=p},done:()=>{S.dough.p=1;draw();SFX.sparkle();say('넓적하게 펴졌어요!','Nice and flat!');finish()}});
     guideRub();
   },
@@ -345,6 +458,7 @@ const STEP={
     const stopI=intro(A.TOOL.ladle,'국자!','Ladle!');say('국자로 소스를 떠서 쓱쓱 발라요!','Scoop the sauce and rub it on!',true);
     rubTool({icon:A.TOOL.ladle,anchor:[.38,.72],gap:.45,cells:SAUCE_PTS,grid:[7,7],log:'sauce',stopIntro:stopI,
       fx:({wx,wy,x,y})=>`<circle cx="${x}" cy="${y}" r="16" fill="#D2412A" opacity=".25"/>${[0,1].map(k=>`<circle cx="${(wx+(k?6:-4)).toFixed(1)}" cy="${(wy+(y-wy)*((performance.now()/500+k*.5)%1)).toFixed(1)}" r="5" fill="#D2412A"/>`).join('')}`,
+      frame:grain('#D2412A'),tapFx:(F,W)=>{[-1,1].forEach(q=>K.streak(W.wx+q*12,W.wy+q*4,'#D2412A',q*14))},
       cell:(i,v)=>{S.sauceV[i]=v},done:()=>{S.pz.sauce=true;S.sauceV=null;draw();SFX.sparkle();say('소스 완성! 빨갛게 됐어요!','Sauce is on!');alMood('happy',1200);finish()}});
     guideRub();
   },
@@ -355,6 +469,7 @@ const STEP={
     const shred=(i,n)=>{const [x,y]=CHEESE_PTS[i];for(let k=0;k<n;k++)S.pz.cheese.push([+(x+(Math.random()-.5)*26).toFixed(1),+(y+(Math.random()-.5)*26).toFixed(1),rand(180)]);added+=n};
     rubTool({icon:ICON.grater,anchor:[.5,.92],gap:.5,cells:CHEESE_PTS,grid:[7,7],log:'cheese',stopIntro:stopI,
       fx:({wx,wy,y})=>Array.from({length:4},(_,k)=>{const t=(performance.now()/600+k/4)%1;return `<path transform="translate(${(wx-14+k*9).toFixed(1)} ${(wy+(y-wy)*t).toFixed(1)}) rotate(${k*40})" d="M-6 0q3 -3 6 0t6 0" stroke="#E2BE55" stroke-width="4" fill="none" stroke-linecap="round"/>`}).join(''),
+      frame:dust('#F2D06B',150,'shred'),tapFx:(F,W)=>{for(let k=0;k<4;k++)K.spawn(SHRED,W.wx+(k-1.5)*10,W.wy,{sz:20,dy:36+k*6,g:20,rot:90+k*40,ms:600})},
       cell:(i,v,pv)=>{const a=Math.floor(pv*3),b=Math.floor(v*3);if(b>a)shred(i,b-a)},
       done:()=>{SFX.sparkle();say('치즈 듬뿍!','Lots of cheese!');alMood('happy',1200);finish()}});
     guideRub();
@@ -389,16 +504,20 @@ const STEP={
     if(how==='knife'){
       kind='tap';const stopI=intro(A.TOOL.knife,'칼!','Knife!');say(`${eul(T(t).ko)} 썰어요! 콕 누르면 한 조각!`,`Slice the ${T(t).en}! Tap for one piece!`,true);
       H={down:e=>{if(!inRect(e,mainRect(),8))return false;if(busy||counts[t].made>=N||!tapOk())return;busy=true;stopI();
-        const r=mainRect(),sz=toolPx(),kn=document.createElement('div');kn.className='pz-knife chop';kn.innerHTML=A.TOOL.knife;const [x,y]=stXY(e.clientX,e.clientY);
-        Object.assign(kn.style,{width:sz+'px',height:sz+'px',left:(x-sz*.25)+'px',top:Math.max(0,y-sz*.85)+'px'});fxEl.appendChild(kn);noise(.07,{freq:2600,vol:.25});
+        const r=mainRect(),sz=toolPx(),kn=document.createElement('div');kn.className='pz-knife';kn.innerHTML=A.TOOL.knife;const [x,y]=stXY(e.clientX,e.clientY);
+        Object.assign(kn.style,{width:sz+'px',height:sz+'px',left:(x-sz*.25)+'px',top:Math.max(0,y-sz*.85)+'px'});fxEl.appendChild(kn);
+        /* cooking.chop + threeBeats: the knife lifts (ready), comes down (톡), bounces back */
+        try{kn.animate([{transform:'none'},{transform:'translateY(-14%) rotate(-14deg)',offset:.28},{transform:'translateY(16%) rotate(-3deg)',offset:.46},{transform:'translateY(10%) rotate(-5deg)',offset:.62},{transform:'none'}],{duration:620,easing:'ease-in-out'})}catch(_){}
         const g=gen,edge=-60+120*((N-counts[t].made)/N);
-        L.later(()=>{if(g!==gen)return;sfx.pop();const [cx,cy]=toClient(-6+1.5*edge-10,4);add([Math.min(cx,r.right-20),cy])},220);
-        L.later(()=>{kn.remove();busy=false},480)}};
+        L.later(()=>{if(g!==gen)return;noise(.07,{freq:2600,vol:.25});sfx.pop();K.squash(mainEl.firstElementChild,.04,300,'50% 70%');const [cx,cy]=toClient(-6+1.5*edge-10,4),px=Math.min(cx,r.right-20);
+          const [sx,sy]=stXY(px,cy);K.drops(sx,sy,3,TOPC[t]||'#E5533D',{sp:44,sz:13});add([px,cy])},285);
+        L.later(()=>{kn.remove();busy=false},640)}};
       guideTap(0,0,'콕! 한 번씩 눌러서 썰어 봐!','Tap to slice, one at a time!');
     }else if(how==='jar'){
       kind='tap';say('병에서 올리브를 꺼내요! 콕 누르면 한 알!','Tap the jar for one olive!',true);toolTray(wholeIcon('olive'));
       H={down:e=>{if(!inRect(e,mainRect(),8))return false;if(busy||counts[t].made>=N||!tapOk())return;busy=true;
         const left=N-counts[t].made-1,x=-20+(left%3)*20,y=40-Math.floor(left/3)*22;tone(900,.08,'sine',.15);
+        {const sv=mainEl.firstElementChild;if(sv)try{sv.style.transformOrigin='50% 80%';sv.animate([{transform:'none'},{transform:'rotate(-7deg)',offset:.3},{transform:'rotate(5deg)',offset:.6},{transform:'none'}],{duration:380})}catch(_){}}   // the jar wobbles, an olive hops out
         const [cx,cy]=toClient(x*1.55,y*1.55);add([cx,cy]);const g=gen;L.later(()=>{if(g===gen)busy=false},380)}};
       guideTap(0,10,'병을 콕 눌러 봐!','Tap the jar!');
     }else{
@@ -406,7 +525,7 @@ const STEP={
       kind='rub';const rows=N,cells=[],grp=[];for(let r=0;r<rows;r++)for(let c=-1;c<=1;c++){cells.push([c*14*1.62,(-42+r*84/(rows-1))*1.62+2]);grp.push(r)}
       const v=cells.map(()=>0),rowDone=Array(rows).fill(false);
       const stopI=intro(A.TOOL.hands,'옥수수!','Corn!');say('옥수수를 쓱쓱 문질러서 알을 떼요!','Rub the corn to get the kernels off!',true);LOG.push('prep:corn:rub');
-      const check=r=>{if(rowDone[r])return;if(cells.every((_,i)=>grp[i]!==r||v[i]>=1)){rowDone[r]=true;S.board.gone[r]=true;const y=(-42+r*84/(rows-1))*1.62+2,[cx,cy]=toClient(0,y);add([cx,cy])}};
+      const check=r=>{if(rowDone[r])return;if(cells.every((_,i)=>grp[i]!==r||v[i]>=1)){rowDone[r]=true;S.board.gone[r]=true;const y=(-42+r*84/(rows-1))*1.62+2,[cx,cy]=toClient(0,y);const [sx,sy]=stXY(cx,cy);K.drops(sx,sy,4,'#FFD23F',{edge:'#C98A14',sp:40,sz:13});tone(800,.05,'sine',.08);add([cx,cy])}};
       rubTool({icon:A.TOOL.hands,anchor:[.5,.6],gap:.3,effect:'rub',fx:()=>'',cells,grid:[9,9],log:'corn',stopIntro:stopI,cov:{radiusRatio:.11},
         cell:(i,val)=>{v[i]=val;check(grp[i])},done:()=>{for(let r=0;r<rows;r++){cells.forEach((_,i)=>{if(grp[i]===r)v[i]=1});check(r)}}});
       guideRub();
@@ -421,6 +540,7 @@ const STEP={
       const i=S.plate.indexOf(pc);if(i<0)return;S.plate.splice(i,1);renderPlate();flying++;counts[t].launched=(counts[t].launched||0)+1;
       const at=svgAt||nextSpot(t),to=toClient(at[0],at[1]),szTo=mainRect().width*(2*(PR[t]||18)+4)/240,g=gen,rot=rand(360);
       fly(pieceIcon(t),from,to,szTo*1.2,szTo,520,()=>{flying--;if(g!==gen)return;S.pz.tops.push([t,+at[0].toFixed(1),+at[1].toFixed(1),rot]);counts[t].placed++;LOG.push('put:'+t);draw();sfx.pop();
+        {const tp=mainEl.querySelectorAll('.pz-top'),el=tp[tp.length-1];if(el){el.style.transformBox='fill-box';K.squash(el,.26,380,'50% 50%')}}   // motion.squash: 착
         const k=counts[t].placed;say(CNT_KO[k-1]+'!',cap(CNT_EN[k-1])+'!');alMood('wow',700);   // 토핑을 올릴 때마다 눈이 커짐
         if(!S.plate.length&&!flying){H={};G.stop();const g2=gen;L.later(()=>{if(g2!==gen)return;SFX.sparkle();alPlay('clap');say('다 올렸어요! 접시가 비었네!','All on! The plate is empty!');finish(()=>{plateEl.hidden=true;size()})},500)}});
     };
@@ -443,14 +563,18 @@ const STEP={
   /* 굽기: 콕 → 화덕에 쏙 → 지글지글 → 띵 → 콕 → 꺼냄 */
   bake(){
     S.main='oven';plateEl.hidden=true;size();kind='tap';rub(true);
-    mainEl.innerHTML=`<div class="pz-oven">${A.oven(false)}</div><div class="pz-peel"><svg viewBox="-120 -120 240 240">${pizzaSVG()}</svg></div>`;
+    mainEl.innerHTML=`<div class="pz-oven">${A.oven(false)}</div><div class="pz-peel"><svg viewBox="-120 -120 240 240">${pizzaSVG()}</svg><div class="bk2"></div></div>`;
     const stopI=intro(A.TOOL.peel,'화덕!','Oven!');say('뜨거운 화덕에 넣어요! 콕!','Tap to put it in the hot oven!',true);let stg=0;
     const peel=()=>mainEl.querySelector('.pz-peel');
     const takeOut=()=>{if(stg!==2)return;stg=3;G.stop();const p=peel();if(p)p.classList.remove('in');
-      for(let k=0;k<3;k++){const s=document.createElement('div');s.className='pz-steam';s.innerHTML=ICON.steam;const r=mainRect(),[x,y]=stXY(r.left+r.width*(.4+k*.1),r.top+r.height*.5);s.style.left=x+'px';s.style.top=y+'px';s.style.animationDelay=(k*.15)+'s';fxEl.appendChild(s);setTimeout(()=>s.remove(),2000)}
+      {const g0=gen;[0,500,1000].forEach(w=>L.later(()=>{if(g0!==gen)return;const r=mainRect(),[x,y]=stXY(r.left+r.width*.5,r.top+r.height*.55);K.steam(x,y,3,{gap:30,sz:40,up:60})},w))}   // 꺼내면 김이 모락모락
       const g=gen;L.later(()=>{if(g!==gen)return;rub(false);alMood('wow',1400);alPlay('hop');say('음~ 고소한 냄새!','Mmm, smells great!');finish()},900)};
     const putIn=()=>{if(stg!==0)return;stg=1;G.stop();stopI();const p=peel();if(p)p.classList.add('in');sweepTone(300,200,.4,'sine',.1);
       const g=gen;L.later(()=>{if(g!==gen)return;mainEl.querySelector('.pz-oven').innerHTML=A.oven(true);noise(2.6,{type:'bandpass',freq:3000,q:.5,vol:.06});say('지글지글…','Sizzle sizzle…');
+        /* cooking.bake: in the oven it puffs up and turns golden (the baked picture fades in over it) */
+        {const pe=peel();if(pe){const b2=pe.querySelector('.bk2');S.pz.baked=true;b2.innerHTML=`<svg viewBox="-120 -120 240 240">${pizzaSVG()}</svg>`;S.pz.baked=false;void b2.offsetWidth;pe.classList.add('baking');
+          try{pe.animate([{transform:'translate(-50%,0) scale(1)'},{transform:'translate(-50%,0) scale(1.08,1.1)',offset:.7},{transform:'translate(-50%,0) scale(1.03)'}],{duration:2600,easing:'ease-in-out'})}catch(_){}}}
+        [700,1600,2500].forEach(w=>L.later(()=>{if(g!==gen)return;const r=mainRect(),[x,y]=stXY(r.left+r.width*.5,r.top+r.height*.62);K.spawn(`<circle r="4" fill="#FFE9A8"/>`,x+(Math.random()-.5)*50,y,{sz:10,dy:-20,ms:500})},w));
         [0,1,2].forEach(j=>L.later(()=>{if(g!==gen)return;say(['셋','둘','하나'][j],['three','two','one'][j]);tone(700,.08,'sine',.06)},900+j*900));
         L.later(()=>{if(g!==gen)return;S.pz.baked=true;const p2=peel();if(p2)p2.innerHTML=`<svg viewBox="-120 -120 240 240">${pizzaSVG()}</svg>`;SFX.ding();
           say('띵! 다 구워졌어요! 콕 눌러서 꺼내요.','Ding! Tap to take it out!');stg=2;guideTap(0,30,'콕 눌러서 꺼내 봐!','Tap to take it out!')},3800)},1100)};
@@ -466,7 +590,7 @@ const STEP={
       radius:(h,t)=>t.width*(TRACE.pathWidthRatio||.18)*(1+(TRACE.countsWithinRatio||.4)),
       rub:{tapChunk:TRACE.tapAlsoAdvances==null?.12:TRACE.tapAlsoAdvances,holdProgressPerSec:TRACE.creepWhileTouchingPerSec==null?.05:TRACE.creepWhileTouchingPerSec},
       cov:{doneAt:TRACE.autoFinishAt||.9},sound:()=>noise(.08,{freq:1800,q:.8,vol:.08}),
-      cell:(i,val)=>{v[i]=val;const li=LINE_PTS[i].li;if(!S.lines[li]&&LINE_PTS.every((p,j)=>p.li!==li||v[j]>=1)){S.lines[li]=true;cut++;sweepTone(500,300,.25,'triangle',.08);say(`${P.CNT_KO_UNIT(cut*2)} 조각!`,`${cap(CNT_EN[cut*2-1])} slices!`)}},
+      cell:(i,val)=>{v[i]=val;const li=LINE_PTS[i].li;if(!S.lines[li]&&LINE_PTS.every((p,j)=>p.li!==li||v[j]>=1)){S.lines[li]=true;cut++;sweepTone(500,300,.25,'triangle',.08);{const [cx,cy]=toClient(0,0),[sx,sy]=stXY(cx,cy);K.crumbs(sx,sy,4,'#F0C27A')}say(`${P.CNT_KO_UNIT(cut*2)} 조각!`,`${cap(CNT_EN[cut*2-1])} slices!`)}},
       done:()=>{S.lines=[true,true,true];draw();SFX.sparkle();say('여섯 조각 완성!','Six slices!');finish()}});
     G.start({type:'swipe',at:()=>{const r=mainRect();return stXY(r.left+r.width/2,r.top+r.height/2)},span:70,ko:'피자 칼을 쭉 움직여 봐!',en:'Move the cutter across!'});
   },
@@ -514,12 +638,15 @@ function run(){
 const BITE=`<svg viewBox="0 0 60 70"><path d="M8 8L52 8L30 64Z" fill="#F0C27A" stroke="${OL}" stroke-width="2.5" stroke-linejoin="round"/><path d="M13 13L47 13L30 56Z" fill="#D2412A"/><path d="M15 15L45 15L30 50Z" fill="#FFE07A" opacity=".85"/><circle cx="26" cy="22" r="5" fill="#E8412F"/><circle cx="35" cy="31" r="4" fill="#E8412F"/></svg>`;
 function give(){
   phase='eat';kind='wait';LOG.push('serve');const g=gen;
-  drawCust('yum');if(al)al.setMood('');alPlay('hop');say('냠냠냠! 맛있어!','Nom nom! Yummy!');
-  const bite=()=>{if(g!==gen)return;const r=mainRect(),cr=custEl.getBoundingClientRect();fly(BITE,[r.left+r.width*.5,r.top+r.height*.35],[cr.left+cr.width*.5,cr.top+cr.height*.62],r.width*.3,cr.width*.22,700,()=>{if(g===gen)SFX.chomp()})};
-  bite();L.later(bite,1000);L.later(bite,2000);
-  L.later(()=>{if(g!==gen)return;const got=!S.want||S.want.every(t=>S.pz.tops.some(x=>x[0]===t));drawCust('happy');alPlay('dance');
+  if(al)al.setMood('');bubEl.hidden=true;
+  /* cooking.serve: one slice flies to the customer's hands → 킁킁 → 한 입 크게 → 볼 볼록 */
+  const later=(fn,ms)=>L.later(()=>{if(g===gen)fn()},ms),r=mainRect(),cr=custEl.getBoundingClientRect();
+  fly(BITE,[r.left+r.width*.5,r.top+r.height*.35],[cr.left+cr.width*.5,cr.top+cr.height*.7],r.width*.3,cr.width*.3,600,()=>{if(g!==gen)return;say('킁킁, 냄새 좋다!','Sniff sniff, smells good!');
+    later(()=>say('냠냠냠! 맛있어!','Nom nom! Yummy!'),1900);
+    K.eat({cust:custEl,kind:cust.kind,grow:1.8,origin:'100% 0%',food:BITE,draw:m=>drawCust(m),later,log:x=>LOG.push(x),crumb:'#F0C27A',done:()=>{if(g===gen)afterEat()}})});
+  const afterEat=()=>{const got=!S.want||S.want.every(t=>S.pz.tops.some(x=>x[0]===t));drawCust('happy');alPlay('dance');
     say(got&&S.want?'내가 주문한 피자야! 고마워!':'음~ 정말 맛있어! 고마워!',got&&S.want?'Just what I ordered! Thank you!':'Mmm, so yummy! Thank you!');
-    L.later(()=>{if(g!==gen)return;heart()},2500)},3000);
+    L.later(()=>{if(g!==gen)return;heart()},2500)};
 }
 function heart(){
   const cr=custEl.getBoundingClientRect(),sr=shelfEl.getBoundingClientRect(),g=gen,n=Math.min(5,DATA.served+1)-1;
@@ -531,7 +658,7 @@ function heart(){
 
 /* ---------- a customer comes in ---------- */
 function newCustomer(){
-  L.begin();gen++;H={};act=null;killTool();G.stop();fxEl.innerHTML='';tray.innerHTML='';tray.onpointerdown=null;busy=false;flying=0;rub(false);
+  L.begin();gen++;H={};act=null;killTool();G.stop();fxEl.innerHTML='';K.clear();custEl.classList.remove('pz-hold');custEl.getAnimations().forEach(a=>a.cancel());tray.innerHTML='';tray.onpointerdown=null;busy=false;flying=0;rub(false);
   lv=levelInfo(levelNo());Object.keys(counts).forEach(k=>delete counts[k]);
   const prev=cust&&cust.kind,k=pick(KINDS.filter(x=>x.id!==prev).length?KINDS.filter(x=>x.id!==prev):KINDS);cust={kind:k.id,name:k.name||k.ko,en:k.en};
   const fixed=lv.choose?null:lv.pool.slice(0,lv.count);
@@ -579,9 +706,9 @@ M.__pz=()=>{
     plate:S?S.plate.length:0,plateShown:!plateEl.hidden,flying,tops:S?S.pz.tops.length:0,topsBy:S?S.pz.tops.reduce((o,x)=>(o[x[0]]=(o[x[0]]||0)+1,o),{}):{},
     counts:JSON.parse(JSON.stringify(counts)),want:S&&S.want,chosen:S&&S.chosen,cards:[...tray.querySelectorAll('.pz-card')].map(b=>b.dataset.t),
     cust:cust&&cust.kind,alive:al?al.state():null,served:DATA.served,misses,guide:G.state(),log:LOG.slice(),
-    sauce:S?S.pz.sauce:false,cheese:S?S.pz.cheese.length:0,baked:S?S.pz.baked:false,lines:S&&S.lines,toolOn:!!tool,rubbing:custEl.classList.contains('pz-rub')};
+    sauce:S?S.pz.sauce:false,cheese:S?S.pz.cheese.length:0,baked:S?S.pz.baked:false,lines:S&&S.lines,toolOn:!!tool,rubbing:custEl.classList.contains('pz-rub'),parts:K.stats()};
 };
 games[id]={enter:()=>{requestAnimationFrame(()=>{if(cur()===id)newCustomer()})},
-  exit:()=>{L.begin();gen++;H={};act=null;killTool();G.stop();fxEl.innerHTML='';tray.onpointerdown=null;if(al){al.detach();al=null}phase='';kind='wait'},resize:size};
+  exit:()=>{L.begin();gen++;H={};act=null;killTool();G.stop();fxEl.innerHTML='';K.clear();tray.onpointerdown=null;if(al){al.detach();al=null}phase='';kind='wait'},resize:size};
 window.addEventListener('resize',()=>{if(cur()===id)size()});
 })();
