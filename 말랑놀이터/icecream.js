@@ -165,11 +165,10 @@ const css=`
 .ic-callme{filter:drop-shadow(0 0 12px ${PAL.butter||'#F0D58A'})}
 `;
 const stEl=document.createElement('style');stEl.textContent=css;document.head.appendChild(stEl);
-const sec=document.createElement('section');sec.id=id;sec.className='screen';sec.hidden=true;
-sec.innerHTML=`<div class="bar ic-head"><button class="round ic-back" data-go="home" aria-label="뒤로">${ICON.back}</button><div class="ic-strip" id="icStrip"></div></div><div class="ic-stage" id="icStage">
+/* P16: the screen and its header come from the common shell (ML.Shell.screen): same back picture, size and place on every screen */
+const sec=M.Shell.screen(id,{title:'아이스크림 가게',headClass:'ic-head',backClass:'ic-back',stripClass:'ic-strip',stripId:'icStrip',body:`<div class="ic-stage" id="icStage">
 <div class="ic-lobby" id="icLobby" hidden><div class="ic-lbg">${LOBBY_BG}</div></div><div class="ic-wall" id="icWall">${WALL}</div><div class="ic-counter" id="icCounter"></div>
-<div class="ic-cust" id="icCust"></div><div class="ic-cfx" id="icCfx"></div><div class="ic-bub" id="icBub" hidden></div><div class="ic-work" id="icWork"></div><div class="ic-fx" id="icFx"></div></div><div class="ic-tray" id="icTray"></div>`;
-document.getElementById('app').appendChild(sec);M.NAMES[id]='아이스크림 가게';
+<div class="ic-cust" id="icCust"></div><div class="ic-cfx" id="icCfx"></div><div class="ic-bub" id="icBub" hidden></div><div class="ic-work" id="icWork"></div><div class="ic-fx" id="icFx"></div></div><div class="ic-tray" id="icTray"></div>`}).sec;
 const $=s=>sec.querySelector(s);
 const stage=$('#icStage'),stripEl=$('#icStrip'),tray=$('#icTray'),lobbyEl=$('#icLobby'),wallEl=$('#icWall'),counterEl=$('#icCounter'),custEl=$('#icCust'),cfxEl=$('#icCfx'),bubEl=$('#icBub'),work=$('#icWork'),fxEl=$('#icFx');
 cfxEl.innerHTML=`<svg viewBox="0 0 200 230"><circle class="ck" cx="62" cy="130" r="17" fill="#FF9DB0"/><circle class="ck" cx="138" cy="130" r="17" fill="#FF9DB0"/>

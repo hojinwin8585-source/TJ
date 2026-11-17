@@ -275,11 +275,10 @@ const css=`
 .rs-callme{filter:drop-shadow(0 0 12px ${PAL.butter||'#F0D58A'})}
 `;
 const stEl=document.createElement('style');stEl.textContent=css;document.head.appendChild(stEl);
-const sec=document.createElement('section');sec.id=id;sec.className='screen';sec.hidden=true;
-sec.innerHTML=`<div class="bar rs-head"><button class="round rs-back" data-go="home" aria-label="뒤로">${ICON.back}</button><div class="rs-strip" id="rsStrip"></div></div><div class="rs-stage" id="rsStage">
+/* P16: the screen and its header come from the common shell (ML.Shell.screen): same back picture, size and place on every screen */
+const sec=M.Shell.screen(id,{title:'식당',headClass:'rs-head',backClass:'rs-back',stripClass:'rs-strip',stripId:'rsStrip',body:`<div class="rs-stage" id="rsStage">
 <div class="rs-lobby" id="rsLobby" hidden><div class="rs-lbg">${LOBBY_BG}</div></div><div class="rs-wall" id="rsWall">${WALL}</div><div class="rs-counter" id="rsCounter"></div>
-<div class="rs-cust" id="rsCust"></div><div class="rs-cfx" id="rsCfx"></div><div class="rs-bub" id="rsBub" hidden></div><div class="rs-work" id="rsWork"></div><div class="rs-fx" id="rsFx"></div></div><div class="rs-tray" id="rsTray"></div>`;
-document.getElementById('app').appendChild(sec);M.NAMES[id]='식당';
+<div class="rs-cust" id="rsCust"></div><div class="rs-cfx" id="rsCfx"></div><div class="rs-bub" id="rsBub" hidden></div><div class="rs-work" id="rsWork"></div><div class="rs-fx" id="rsFx"></div></div><div class="rs-tray" id="rsTray"></div>`}).sec;
 const $=s=>sec.querySelector(s);
 const stage=$('#rsStage'),stripEl=$('#rsStrip'),tray=$('#rsTray'),lobbyEl=$('#rsLobby'),wallEl=$('#rsWall'),counterEl=$('#rsCounter'),custEl=$('#rsCust'),cfxEl=$('#rsCfx'),bubEl=$('#rsBub'),work=$('#rsWork'),fxEl=$('#rsFx');
 /* the customer's face effects: puffed cheeks, sniff lines, a smudge on the nose (in the animal's 200 x 230 picture units) */

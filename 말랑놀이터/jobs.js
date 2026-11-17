@@ -422,11 +422,9 @@ const css=`
 `;
 const stEl=document.createElement('style');stEl.textContent=css;document.head.appendChild(stEl);
 
-const sec=document.createElement('section');sec.id=id;sec.className='screen';sec.hidden=true;
-sec.innerHTML=`${PAPER_DEFS}<div class="bar jb-headbar"><button class="round jb-back" id="jbHome" data-go="home" aria-label="뒤로">${ICON.back}</button><button class="round jb-back" id="jbBack" aria-label="직업 고르기로" hidden>${ICON.back}</button><div class="jb-strip" id="jbStrip"></div><div class="jb-stars" id="jbStars"></div></div>
-<div class="jb-stage" id="jbStage"><div class="jb-bg" id="jbBg"></div><div class="jb-world" id="jbWorld"></div><div class="jb-mirror" id="jbMirror">${MIRROR}<div class="jb-refl"></div></div><div class="jb-doll" id="jbDoll"></div><div class="jb-car" id="jbCar"></div><div class="jb-fx" id="jbFx"></div><div class="jb-photo" id="jbPhoto" hidden></div></div>
-<div class="jb-tray" id="jbTray"></div>`;
-document.getElementById('app').appendChild(sec);M.NAMES[id]='직업 놀이';
+/* P16: the screen and its header come from the common shell (ML.Shell.screen): same back picture, size and place on every screen */
+const sec=M.Shell.screen(id,{title:'직업 놀이',pre:PAPER_DEFS,headClass:'jb-headbar',backClass:'jb-back',backId:'jbHome',backs:[{id:'jbBack',label:'직업 고르기로'}],stripClass:'jb-strip',stripId:'jbStrip',after:`<div class="jb-stars" id="jbStars"></div>`,body:`<div class="jb-stage" id="jbStage"><div class="jb-bg" id="jbBg"></div><div class="jb-world" id="jbWorld"></div><div class="jb-mirror" id="jbMirror">${MIRROR}<div class="jb-refl"></div></div><div class="jb-doll" id="jbDoll"></div><div class="jb-car" id="jbCar"></div><div class="jb-fx" id="jbFx"></div><div class="jb-photo" id="jbPhoto" hidden></div></div>
+<div class="jb-tray" id="jbTray"></div>`}).sec;
 const $=s=>sec.querySelector(s);
 const stage=$('#jbStage'),bgEl=$('#jbBg'),world=$('#jbWorld'),mirrorEl=$('#jbMirror'),dollEl=$('#jbDoll'),carEl=$('#jbCar'),fxEl=$('#jbFx'),photoEl=$('#jbPhoto'),tray=$('#jbTray'),stripEl=$('#jbStrip'),homeBtn=$('#jbHome'),backBtn=$('#jbBack');
 const G=M.Guide.make(sec,{say});
