@@ -758,7 +758,7 @@ function give(fromEl,html){
     /* cooking.serve: 두 손으로 받아 들고 킁킁 → 한 입 크게 → 볼 볼록 */
     const later=(fn,ms)=>L.later(()=>{if(g===gen)fn()},ms);say('킁킁, 냄새 좋다!','Sniff sniff, smells good!');
     later(()=>{const p=pick(VO.praise||[{ko:'맛있다!',en:'Yummy!'}]);say('냠냠! '+p.ko,'Yum yum! '+p.en)},2000);
-    work.style.transition='opacity .4s';work.style.opacity='0';
+    work.style.transition='opacity .4s';work.style.opacity='0';bubEl.hidden=true;
     K.eat({cust:custEl,kind:S.kind,grow:1.9,origin:'100% 0%',food:S.order==='cake'?cakeSliceSVG(S.fruit):breadFood(),draw:m=>drawCust(m),later,log:x=>LOG.push(x),crumb:S.order==='cake'?SPONGE:CRUST_L,
       done:()=>{drawCust('happy');alPlay('dance');SFX.sparkle();later(heart,1800)}})});
 }
