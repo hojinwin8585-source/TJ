@@ -165,9 +165,9 @@ const TOL=.01;   // measuring tolerance on the height ratios
       const hd=scr.querySelector(':scope > .sh-head');if(hd)o.head=Math.round(hd.getBoundingClientRect().height);
       const bk=[...scr.querySelectorAll(':scope > .sh-head .sh-back')].find(vis);if(bk){const b=bk.getBoundingClientRect();o.back=[Math.round(b.left),Math.round(b.top),Math.round(b.width),Math.round(b.height)];o.backSvg=!!bk.querySelector('svg')&&!(bk.textContent||'').trim()}
       if(hd)o.right=[...hd.querySelectorAll('.sh-right button')].filter(vis).length;
-      const sw=innerWidth,top=innerHeight*.2;
-      /* text toggles: a segmented control, or a button with letters, in the top right */
-      [...scr.querySelectorAll('.seg, button')].filter(vis).forEach(e=>{const r=e.getBoundingClientRect();if(r.top>top||r.left+r.width/2<sw*.4)return;
+      const sw=innerWidth,top=(hd?hd.getBoundingClientRect().bottom:90)+4;
+      /* text toggles: a segmented control anywhere, or a button with letters in the top right (the header band, where the old toggles sat) */
+      [...scr.querySelectorAll('.seg, button')].filter(vis).forEach(e=>{const r=e.getBoundingClientRect();if(!e.matches('.seg')&&(r.top>top||r.left+r.width/2<sw*.4))return;
         if(e.matches('.seg')||(e.matches('button')&&/[가-힣A-Za-z0-9~]/.test(e.textContent||'')&&!e.closest('.seg')))o.toggles.push((e.id?'#'+e.id:e.className||e.tagName)+' "'+(e.textContent||'').trim().slice(0,12)+'"')});
       /* level tabs: buttons inside a dot row, or buttons named as a level */
       [...scr.querySelectorAll('.dots button, button[aria-label*="단계"], .seg button')].filter(vis).forEach(e=>{if(e.closest('.sh-head')||/단계/.test(e.getAttribute('aria-label')||'')||/^\d/.test((e.textContent||'').trim()))o.tabs.push((e.closest('[id]')||{}).id+' '+(e.getAttribute('aria-label')||e.textContent||'').trim().slice(0,10))});
