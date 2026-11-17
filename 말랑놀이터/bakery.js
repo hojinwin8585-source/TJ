@@ -215,13 +215,13 @@ function motionKit(host,pre){
   K.clear=()=>{box.innerHTML='';K.lt=0};
   K.stats=()=>{const n=performance.now(),ages=[...box.children].map(e=>n-(+e.dataset.t||n));return{now:box.childElementCount,max:K.max,cap:K.cap,limit:PART.max,fadeMs:PART.fadeMs,spawned:K.spawned,oldest:ages.length?Math.round(Math.max(...ages)):0,last:K.last}};
   /* motion.cooking.serve: the customer takes the food in both hands, sniffs twice, takes one big bite, cheeks puff up and chew.
-     o: {cust, kind, food (svg html), draw(mood), later(fn,ms), done, log} — the customer grows a little meanwhile (whileActing) */
+     o: {cust, kind, food (svg html), draw(mood), later(fn,ms), done, log, grow, origin} — the customer comes up big meanwhile (whileActing) */
   K.eat=o=>{
     const c=o.cust,kd=A.KINDS[o.kind]||{},ov=document.createElement('div');ov.className=pre+'-eat';ov.style.cssText='position:absolute;inset:0;pointer-events:none;z-index:2';
     const ck=s=>`<div class="ek" style="position:absolute;left:${s<0?13:63}%;top:43.5%;width:24%;aspect-ratio:1;opacity:0"><svg viewBox="-20 -20 40 40" style="width:100%;height:100%;display:block;overflow:visible"><circle r="16.5" fill="${kd.body||'#FFF6EC'}" stroke="${OL}" stroke-width="2.8"/><circle cx="${s*2}" cy="3" r="9" fill="${kd.cheek||'#FF9AA8'}" opacity=".7"/><ellipse cx="${-s*5}" cy="-8" rx="4" ry="2.6" fill="#fff" opacity=".85"/></svg></div>`;
     ov.innerHTML=ck(-1)+ck(1)+`<div class="ef" style="position:absolute;left:28%;top:57%;width:44%;aspect-ratio:1">${o.food}</div>`;
     const fd=ov.querySelector('.ef'),cks=[...ov.querySelectorAll('.ek')],put=m=>{o.draw(m);c.appendChild(ov)},log=x=>{if(o.log)o.log(x)},hx=()=>{const r=c.getBoundingClientRect(),h=host.getBoundingClientRect();return[r.left-h.left,r.top-h.top,r.width,r.height]};
-    c.style.transformOrigin='50% 45%';let grow=null;try{grow=c.animate([{transform:'scale(1)'},{transform:'scale(1.16)'}],{duration:450,easing:'ease-out',fill:'forwards'})}catch(_){}
+    const GS=o.grow||1.16;c.style.transformOrigin=o.origin||'50% 45%';let grow=null;try{grow=c.animate([{transform:'scale(1)'},{transform:`scale(${GS})`}],{duration:450,easing:'ease-out',fill:'forwards'})}catch(_){}
     put('happy');c.classList.add(pre+'-hold');log('eat:take');
     try{fd.animate([{transform:'scale(.3)',opacity:0},{transform:'scale(1.15,.85)',opacity:1,offset:.45},{transform:'scale(.94,1.06)',offset:.75},{transform:'scale(1)'}],{duration:450,easing:'ease-out'})}catch(_){}
     /* 킁킁: the food comes up to the nose twice, the head tips up, scent curls rise */
@@ -238,7 +238,7 @@ function motionKit(host,pre){
         o.later(()=>{try{e.animate([{transform:'scale(1)',opacity:1},{transform:`scale(${i?1.14:.9},${i?.9:1.14})`,opacity:1},{transform:'scale(1)',opacity:1}],{duration:640,iterations:3,easing:'ease-in-out',fill:'forwards'})}catch(_){}},460)}catch(_){}});
       [0,640,1280].forEach(w=>o.later(()=>tone(190+w/16,.07,'sine',.07),460+w))},2150);
     o.later(()=>{cks.forEach(e=>{try{e.animate([{transform:'scale(1)',opacity:1},{transform:'scale(.2)',opacity:0}],{duration:320,fill:'forwards'})}catch(_){}});try{fd.animate([{opacity:1},{opacity:0,transform:'translateY(10%) scale(.8)'}],{duration:400,fill:'forwards'})}catch(_){}
-      c.classList.remove(pre+'-hold');try{if(grow){grow.cancel();c.animate([{transform:'scale(1.16)'},{transform:'scale(1)'}],{duration:400,easing:'ease-out'})}}catch(_){}},4500);
+      c.classList.remove(pre+'-hold');try{if(grow){grow.cancel();c.animate([{transform:`scale(${GS})`},{transform:'scale(1)'}],{duration:400,easing:'ease-out'})}}catch(_){}},4500);
     o.later(()=>{ov.remove();log('eat:done');if(o.done)o.done()},4950);
   };
   /* the same food with a big round bite out of it (two overlapping circles cut by a mask) */
@@ -304,6 +304,7 @@ const FR={strawberry:{ko:'딸기',en:'strawberry',
   whole:`<svg viewBox="0 0 100 100"><circle cx="50" cy="54" r="38" fill="#F5A53C" ${S3}/><path d="M50 16Q60 6 70 12Q62 22 50 16Z" fill="#6DAE5A" ${S2}/><ellipse cx="36" cy="42" rx="8" ry="5" fill="#fff" opacity=".4"/></svg>`,
   slice:`<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill="#F5A53C" ${S3}/><circle cx="50" cy="50" r="31" fill="#FFD27A"/><g stroke="#F5A53C" stroke-width="3" stroke-linecap="round"><path d="M50 50V22M50 50L72 34M50 50L74 56M50 50L56 76M50 50L34 70M50 50L26 52M50 50L30 32"/></g></svg>`}};
 const FKEYS=['strawberry','kiwi','orange'];
+const FRC={strawberry:'#F08A8E',kiwi:'#A9D67C',orange:'#FFC867'};   // juice drops (not in config)
 const shapeInner=(k,c,h)=>k==='loaf'?`<path d="M12 46Q12 22 34 26Q50 14 66 26Q88 22 88 46V76Q88 86 78 86H22Q12 86 12 76Z" fill="${c}" ${S3}/><path d="M24 42Q36 34 48 42M52 42Q64 34 76 42" fill="none" stroke="${h}" stroke-width="5" stroke-linecap="round"/>`
  :k==='croissant'?`<path d="M8 68Q10 30 50 24Q90 30 92 68Q82 56 72 62Q64 42 50 42Q36 42 28 62Q18 56 8 68Z" fill="${c}" ${S3}/><path d="M36 30L40 44M50 26V42M64 30L60 44" stroke="${h}" stroke-width="4" stroke-linecap="round"/>`
  :k==='bun'?`<ellipse cx="50" cy="58" rx="40" ry="32" fill="${c}" ${S3}/><path d="M28 50Q50 36 72 50" fill="none" stroke="${h}" stroke-width="5" stroke-linecap="round"/><path d="M34 66Q50 74 66 66" fill="none" stroke="${h}" stroke-width="4" stroke-linecap="round" opacity=".8"/>`
@@ -482,6 +483,72 @@ function layout(){
   layoutLobby();lay();
 }
 
+/* ============================== P18 motions ============================== */
+const ICON_SPARK=`<path d="M0 -10Q1.2 -1.2 10 0Q1.2 1.2 0 10Q-1.2 1.2 -10 0Q-1.2 -1.2 0 -10Z" fill="#FFE7A0" stroke="#E0B85A" stroke-width="1.2"/>`;
+/* cooking.pour: the bag / carton tips over the bowl (ready → tip → pour → back), a stream falls, flour puffs up or milk splashes. returns ms until the bowl fills */
+function pourIt(k,g){
+  const sv=E.src.firstElementChild,b=rectOf('bowl'),s=stR(),src=E.src.getBoundingClientRect(),sz=src.width,flour=k==='flour';
+  if(sv)try{sv.style.transformOrigin='50% 60%';sv.getAnimations().forEach(a=>a.cancel());sv.animate([{transform:'none'},{transform:'scale(1.06,.92)',offset:.14},{transform:'translate(-26%,14%) rotate(118deg)',offset:.36},{transform:'translate(-24%,18%) rotate(126deg)',offset:.5},{transform:'translate(-26%,14%) rotate(118deg)',offset:.66},{transform:'rotate(-8deg)',offset:.86},{transform:'none'}],{duration:1050,easing:'ease-in-out'})}catch(_){}
+  const mx=src.left-s.left+sz*.52,my=src.top-s.top+sz*.82,by=b.top-s.top+b.height*.4,st=document.createElement('div');st.className='bk-stream';
+  const w=flour?26:18,col=flour?'#FFFDF6':'#F4F9FC',edge=flour?'#E6DCCB':'#A7CFE8';
+  st.innerHTML=`<svg viewBox="0 0 20 100" preserveAspectRatio="none"><path d="M4 0Q2 50 6 100H14Q18 50 16 0Z" fill="${col}" stroke="${edge}" stroke-width="1.4" vector-effect="non-scaling-stroke"/>${flour?'<circle cx="8" cy="30" r="1.6" fill="#EFE6D6"/><circle cx="12" cy="62" r="1.4" fill="#EFE6D6"/>':'<path d="M9 8V90" stroke="#fff" stroke-width="2" opacity=".8"/>'}</svg>`;
+  Object.assign(st.style,{left:(mx-w/2)+'px',top:my+'px',width:w+'px',height:Math.max(20,by-my)+'px',opacity:'0'});fxEl.appendChild(st);
+  try{st.animate([{transform:'scaleY(0)',opacity:1,offset:0},{transform:'scaleY(1)',opacity:1,offset:.25},{transform:'scaleY(1)',opacity:1,offset:.7},{transform:'translateY(100%) scaleY(0)',opacity:.6}],{duration:420,delay:380,easing:'ease-in'})}catch(_){}
+  setTimeout(()=>st.remove(),900);
+  if(flour)noise(.35,{type:'highpass',freq:1800,vol:.06,when:.38});else noise(.45,{type:'lowpass',freq:900,vol:.1,when:.38});
+  L.later(()=>{if(g!==gen)return;const cx=b.left-s.left+b.width/2;
+    if(flour){K.cloud(cx,by,10,'#FFFDF6',{spread:60,up:46});noise(.2,{type:'bandpass',freq:700,vol:.07})}   // 가루 구름이 폭
+    else{K.drops(cx,by,6,'#F4F9FC',{edge:'#8FC3E6',sp:46,sz:14});tone(900,.05,'sine',.06)}
+    K.squash(E.bowl,.04,360)},500);
+  return 640;
+}
+/* cooking.crack: the egg knocks twice on the rim (a crack grows), opens wide, the yolk drops in and wobbles */
+function crackEgg(g){
+  const s=stR(),src=E.src.getBoundingClientRect(),b=rectOf('bowl'),sz=src.width,x0=src.left-s.left,y0=src.top-s.top,rimY=b.top-s.top+b.height*.08-sz*.78;
+  const k=S.bowl.e,yx=b.left-s.left+b.width*(80+k*40)/200,yy=b.top-s.top+b.height*(66+k*2)/150;
+  E.src.style.opacity='0';const act=document.createElement('div');act.className='bk-actor';Object.assign(act.style,{left:x0+'px',top:y0+'px',width:sz+'px',height:sz+'px'});
+  const egg=svgInner(eggSVG),crack=`<path class="ck" d="M18 56L28 48L36 58L46 47L54 58L63 48L72 57L82 50" fill="none" stroke="${OL}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/>`;
+  act.innerHTML=`<div class="bot" style="position:absolute;inset:0;clip-path:polygon(0 52%,18% 56%,28% 48%,36% 58%,46% 47%,54% 58%,63% 48%,72% 57%,82% 50%,100% 52%,100% 100%,0 100%)"><svg viewBox="0 0 100 100">${egg}${crack}</svg></div><div class="top" style="position:absolute;inset:0;clip-path:polygon(0 0,100% 0,100% 52%,82% 50%,72% 57%,63% 48%,54% 58%,46% 47%,36% 58%,28% 48%,18% 56%,0 52%)"><svg viewBox="0 0 100 100">${egg}${crack}</svg></div>`;
+  fxEl.appendChild(act);const top=act.querySelector('.top'),bot=act.querySelector('.bot'),cks=[...act.querySelectorAll('.ck')],dy=rimY-y0;
+  try{
+    act.animate([{transform:'none'},{transform:'scale(1.05,.94)',offset:.12},{transform:`translate(0,${dy}px)`,offset:.3},{transform:`translate(0,${dy-12}px)`,offset:.38},{transform:`translate(0,${dy}px)`,offset:.46},{transform:`translate(0,${dy-8}px)`,offset:.54},{transform:`translate(0,${dy}px)`,offset:.62},{transform:`translate(0,${dy}px)`}],{duration:1000,fill:'forwards',easing:'ease-in-out'});
+    cks.forEach(c=>c.animate([{strokeDashoffset:1},{strokeDashoffset:.55,offset:.3},{strokeDashoffset:.55,offset:.5},{strokeDashoffset:0,offset:.62},{strokeDashoffset:0}],{duration:1000,fill:'forwards'}));
+    top.animate([{transform:'none',opacity:1},{transform:'none',offset:.62},{transform:'translate(-20%,-14%) rotate(-38deg)',opacity:1,offset:.78},{transform:'translate(-28%,-10%) rotate(-48deg)',opacity:0}],{duration:1300,fill:'forwards',easing:'ease-out'});
+    bot.animate([{transform:'none',opacity:1},{transform:'none',offset:.62},{transform:'translate(18%,6%) rotate(34deg)',opacity:1,offset:.78},{transform:'translate(26%,10%) rotate(44deg)',opacity:0}],{duration:1300,fill:'forwards',easing:'ease-out'});
+  }catch(_){}
+  tone(1500,.04,'triangle',.1,.3);tone(1500,.04,'triangle',.08,.46);noise(.08,{freq:3000,q:2,vol:.1,when:.6});   // 톡 · 톡 · 쩍
+  L.later(()=>{if(g!==gen)return;const yk=document.createElement('div');yk.className='bk-actor';const ys=sz*.44;
+    yk.innerHTML=`<svg viewBox="-20 -20 40 40"><path d="M-17 4Q-16 -9 0 -10Q16 -9 17 4Q12 12 0 12Q-12 12 -17 4Z" fill="#FFF8EC" stroke="#E6DCCB" stroke-width="1.4"/><circle r="9" fill="#F5B83D" stroke="#E09A1E" stroke-width="1.8"/><ellipse cx="-3" cy="-3.5" rx="3" ry="2" fill="#fff" opacity=".8"/></svg>`;
+    Object.assign(yk.style,{left:(x0+sz/2-ys/2)+'px',top:(rimY+sz*.55-ys/2)+'px',width:ys+'px',height:ys+'px'});fxEl.appendChild(yk);
+    const ddx=yx-(x0+sz/2),ddy=yy-(rimY+sz*.55);
+    try{yk.animate([{transform:'translate(0,0) scale(.8,1.1)'},{transform:`translate(${ddx}px,${ddy}px) scale(.9,1.1)`,offset:.32},{transform:`translate(${ddx}px,${ddy}px) scale(1.4,.66)`,offset:.44},{transform:`translate(${ddx}px,${ddy}px) scale(.86,1.16)`,offset:.6},{transform:`translate(${ddx}px,${ddy}px) scale(1.12,.92)`,offset:.76},{transform:`translate(${ddx}px,${ddy}px) scale(1)`,opacity:1,offset:.9},{transform:`translate(${ddx}px,${ddy}px) scale(1)`,opacity:0}],{duration:800,fill:'forwards',easing:'ease-in'})}catch(_){}   // 통 떨어져 출렁
+    sweepTone(520,200,.14,'sine',.1,.25);L.later(()=>{if(g===gen)K.drops(yx,yy,3,'#FFF8EC',{edge:'#E6DCCB',sp:30,sz:11})},260);
+    setTimeout(()=>yk.remove(),850)},620);
+  setTimeout(()=>{act.remove();E.src.style.opacity=''},1350);
+  return 900;
+}
+/* cooking.knead: pressed flat as far as the finger goes (ready → press → springs back soft), a dent and a little flour */
+function kneadFx(e,k){
+  const el=E.lump,r=el.getBoundingClientRect(),s=stR(),st=k%2?{p:'scale(1.24,.74)',b:'scale(.9,1.13)'}:{p:'scale(1.36,.84)',b:'scale(.86,1.1)'};
+  el.style.transformOrigin='50% 88%';try{el.getAnimations().forEach(a=>a.cancel());el.animate([{transform:'scale(1)'},{transform:'scale(.96,1.05)',offset:.18},{transform:st.p,offset:.38},{transform:st.p,offset:.48},{transform:st.b,offset:.68},{transform:'scale(1.04,.97)',offset:.85},{transform:'scale(1)'}],{duration:820,easing:'ease-out'})}catch(_){}
+  tone(170+k*12,.14,'sine',.22,.3);noise(.12,{type:'lowpass',freq:500,vol:.12,when:.3});
+  const g=gen;L.later(()=>{if(g!==gen)return;const x=e.clientX-s.left,y=Math.min(e.clientY,r.bottom-r.height*.25)-s.top;
+    K.spawn(`<ellipse rx="11" ry="7" fill="#C9A468" opacity=".45"/><ellipse cx="-2" cy="-2" rx="6" ry="3" fill="#B98A4E" opacity=".35"/>`,x,y,{sz:44,s0:1.1,s1:.8,ms:800});
+    K.cloud(r.left-s.left+r.width*.12,r.bottom-s.top-r.height*.18,2,'#FFFDF6',{sz:12,spread:26,up:14});K.cloud(r.right-s.left-r.width*.12,r.bottom-s.top-r.height*.18,2,'#FFFDF6',{sz:12,spread:26,up:14})},300);
+}
+/* cooking.spread: where the knife or spatula passes, a glossy grain stays a moment and melts in */
+function grainer(col,edge){let lx=null,ly=null;
+  return{frame:(F,t,W)=>{if(lx==null){lx=W.wx;ly=W.wy;return}const d=Math.hypot(W.wx-lx,W.wy-ly);if(d<18)return;K.streak(W.wx,W.wy,col(),Math.atan2(W.wy-ly,W.wx-lx)*180/Math.PI,{edge});lx=W.wx;ly=W.wy;if(Math.random()<.3)noise(.08,{freq:900,q:.8,vol:.05})},
+    tap:(F,W)=>{[-1,1].forEach(q=>K.streak(W.wx+q*12,W.wy+q*4,col(),q*12,{edge}));lx=null}}}
+/* cooking.chop: the knife lifts (ready), comes down (톡), bounces back; then() at the moment it lands */
+function chop(target,then){
+  const r=target.getBoundingClientRect(),s=stR(),sz=Math.max(120,r.width*1.1),kn=document.createElement('div');kn.className='bk-actor';kn.innerHTML=knifeSVG;
+  Object.assign(kn.style,{width:sz+'px',height:sz+'px',left:(r.left-s.left+r.width*.5-sz*.45)+'px',top:(r.top-s.top-sz*.55)+'px',transformOrigin:'80% 20%'});fxEl.appendChild(kn);
+  try{kn.animate([{transform:'translateY(-6%) rotate(0)',opacity:0},{transform:'translateY(-18%) rotate(-14deg)',opacity:1,offset:.3},{transform:'translateY(14%) rotate(4deg)',opacity:1,offset:.46},{transform:'translateY(6%) rotate(-2deg)',opacity:1,offset:.66},{transform:'translateY(-6%) rotate(0)',opacity:0}],{duration:620,easing:'ease-in-out',fill:'forwards'})}catch(_){}
+  setTimeout(()=>kn.remove(),660);
+  L.later(()=>{noise(.06,{freq:2600,vol:.22});tone(700,.05,'triangle',.1);then()},285);
+}
+
 /* ============================== processes ============================== */
 const hit=(e,n,m=6)=>{const r=rectOf(n);return!!r&&!E[n].classList.contains('hide')&&inRect(e,r,m)};
 const STEP={
@@ -492,26 +559,46 @@ const STEP={
     E.src.innerHTML=SRC.flour;intro(SRC.flour,'밀가루!','Flour!');say('밀가루를 콕 눌러 그릇에 넣어요!','Tap the flour into the bowl!',true);
     AIM=()=>ctr(E.src);HOT=()=>[E.src];
     H={down:e=>{if(!hit(e,'src',8))return false;if(busy||!tapOk())return;busy=true;G.stop();const k=seq[S.addN],n=++S.addN;S.cnt.add++;LOG.push('add:'+k);
-      E.src.firstElementChild.style.transform='rotate(-32deg) translateY(10px)';sfx.pop();
-      const b=rectOf('bowl'),s=ctr(E.src);fly(k==='egg'?`<svg viewBox="-10 -10 20 20"><circle r="8" fill="#F5B83D" stroke="${OL}" stroke-width="2"/></svg>`:`<svg viewBox="-10 -10 20 20"><circle r="8" fill="${k==='milk'?'#EAF3F8':'#fff'}" stroke="${OL}" stroke-width="2"/></svg>`,[s[0],s[1]+30],[b.left+b.width/2,b.top+b.height*.4],26,20,500);
-      if(k==='flour')noise(.3,{type:'highpass',freq:1800,vol:.06});else if(k==='milk')noise(.5,{type:'lowpass',freq:900,vol:.1});else tone(520,.06,'square',.12);
-      const g=gen;L.later(()=>{if(g!==gen)return;E.src.firstElementChild.style.transform='';if(k==='flour')S.bowl.f++;else if(k==='milk')S.bowl.m=1;else S.bowl.e++;draw();
+      const g=gen,AT=k==='egg'?crackEgg(g):pourIt(k,g);
+      L.later(()=>{if(g!==gen)return;if(k==='flour')S.bowl.f++;else if(k==='milk')S.bowl.m=1;else S.bowl.e++;draw();
         const same=S.addN<seq.length&&seq[S.addN]===k;say(k==='flour'?CNTK(S.bowl.f):k==='egg'?CNTK(S.bowl.e):NAME.milk[0]+'!',k==='flour'?CNTE(S.bowl.f):k==='egg'?CNTE(S.bowl.e):'Milk!');
         if(S.addN>=seq.length){H={};kind='wait';L.later(()=>{if(g===gen){SFX.sparkle();say('재료가 다 들어갔어요!','All in the bowl!');finish()}},600);busy=false;return}
         if(!same){const nk=seq[S.addN];E.src.innerHTML=SRC[nk];toolTray(SRC[nk]);E.src.classList.remove('bk-squish');void E.src.offsetWidth;E.src.classList.add('bk-squish');say(NAME[nk][2],NAME[nk][3])}
-        busy=false;G.start({type:'tap',at:()=>stXY(...ctr(E.src)),ko:'콕 눌러 봐!',en:'Tap!'})},560)}};
+        busy=false;G.start({type:'tap',at:()=>stXY(...ctr(E.src)),ko:'콕 눌러 봐!',en:'Tap!'})},AT)}};
     guideAt(AIM,'tap','콕 눌러 봐!','Tap!');
   },
   stir(){
-    kind='rub';S.bowl.stir=true;draw();const stopI=intro(spatulaSVG,'주걱!','Spatula!');say('주걱으로 빙글빙글 저어요!','Stir round and round!',true);HOT=()=>[];
-    rubTool({icon:spatulaSVG,anchor:[.36,.58],gap:.35,log:'stir',stopIntro:stopI,effect:'rub',fx:()=>'',cells:BCELL.map(c=>[c[0]/200,c[1]/150]),grid:[4,2],rad:.12,target:()=>rectOf('bowl'),
-      cell:(i,v)=>{S.bowl.cells[i]=v},done:()=>{S.bowl.cells.fill(1);draw();SFX.sparkle();say('말랑말랑 반죽이 됐어요!','The dough is ready!');alMood('wow',900);finish()}});
+    kind='rub';S.bowl.stir=true;S.bowl.mix=0;draw();const stopI=intro(whiskSVG,'거품기!','Whisk!');say('거품기로 빙글빙글 저어요!','Whisk round and round!',true);HOT=()=>[];
+    /* cooking.whisk: the whisk follows the finger round and round, the batter swirls with it (angle of the whisk around the bowl centre), drops fly, '착착' on every half turn */
+    const sw=S.sw={a:0,v:0,drive:0,acc:0,last:null,lt:0,drop:0,bub:0,on:false,raf:0,spin:0},o={icon:whiskSVG,anchor:[.5,.9],gap:.3,log:'stir',stopIntro:stopI,effect:'rub',fx:()=>'',cells:BCELL.map(c=>[c[0]/200,c[1]/150]),grid:[4,2],rad:.12,target:()=>rectOf('bowl')};
+    const inner=E.swirl.querySelector('.sw-in'),lA=E.swirl.querySelector('.sw-a'),lB=E.swirl.querySelector('.sw-b');E.swirl.style.opacity='1';
+    const cen=()=>{const r=rectOf('bowl'),s=stR();return[r.left-s.left+r.width/2,r.top-s.top+r.height*64/150]};
+    const paint=()=>{const r=E.swirl.getBoundingClientRect(),q=r.width?r.height/r.width:.37;inner.style.transform=`translateY(-50%) scaleY(${q.toFixed(3)}) rotate(${sw.a.toFixed(1)}deg)`;
+      const m=S.bowl.mix||0;lA.style.opacity=(1-m).toFixed(2);lB.style.opacity=(.25+.6*m).toFixed(2);
+      const w=o.el&&o.el.querySelector('.wk-w');if(w)w.style.transform=`scaleX(${(.45+.55*Math.abs(Math.cos(sw.a*Math.PI/90))).toFixed(3)})`};
+    const loop=t=>{sw.raf=0;if(!tool||phase!=='stir')return;const dt=sw.lt?Math.min(.05,(t-sw.lt)/1000):.016;sw.lt=t;const d=sw.drive;sw.drive=0;
+      if(sw.on&&d){sw.a+=d;sw.v=sw.v*.7+(d/Math.max(dt,.008))*.3}else{sw.a+=sw.v*dt;sw.v*=Math.exp(-dt*5)}
+      sw.acc+=Math.abs(sw.a-(sw.pa==null?sw.a:sw.pa));sw.pa=sw.a;while(sw.acc>=180){sw.acc-=180;noise(.05,{freq:2200,q:3,vol:.06});tone(330+(S.bowl.mix||0)*180,.05,'sine',.04)}   // motion.soundSync
+      paint();if(sw.on||Math.abs(sw.v)>4)sw.raf=requestAnimationFrame(loop);else sw.lt=0};
+    const go=()=>{if(!sw.raf)sw.raf=requestAnimationFrame(loop)};
+    o.touch=()=>{sw.on=true;sw.last=null;go();K.beat(E.bowl,'down')};o.release=()=>{sw.on=false;go();K.beat(E.bowl,'up')};
+    o.frame=(F,t,W)=>{const [cx,cy]=cen(),ang=Math.atan2((W.wy-cy)/.4,W.wx-cx);
+      if(sw.last!=null){let d=ang-sw.last;if(d>Math.PI)d-=2*Math.PI;if(d<-Math.PI)d+=2*Math.PI;if(Math.abs(d)<1.4)sw.drive+=d*180/Math.PI}sw.last=ang;go();
+      if(Math.abs(sw.v)>240&&t-sw.drop>120){sw.drop=t;const sg=Math.sign(sw.v);K.drops(W.wx,W.wy,2,DOUGH,{sp:58,dir:sg*(Math.cos(ang)>0?.9:-.9),fan:.7,sz:14})}
+      if((S.bowl.mix||0)>.35&&t-sw.bub>420){sw.bub=t;K.bubbles(cx+(Math.random()-.5)*60,cy,1,{edge:'#E2C79A',sz:12,up:26})}};
+    /* one tap = one turn of the whisk: it draws a circle and the batter turns once */
+    o.tapFx=(F,W)=>{sw.v+=(sw.v<0?-1:1)*1800;go();K.beat(E.bowl,'tap');const sv=o.el&&o.el.querySelector('svg');
+      if(sv)try{sv.animate(Array.from({length:9},(_,i)=>{const a=i/8*Math.PI*2;return{transform:`translate(${(14*Math.sin(a)).toFixed(1)}%,${(5-5*Math.cos(a)).toFixed(1)}%)`}}),{duration:TAP_MS,easing:'linear'})}catch(_){}
+      const [cx,cy]=cen();K.drops(cx,cy,3,DOUGH,{sp:50,sz:14})};
+    o.progress=p=>{S.bowl.mix=p};
+    o.cell=(i,v)=>{S.bowl.cells[i]=v};o.done=()=>{S.bowl.cells.fill(1);S.bowl.mix=1;paint();draw();SFX.sparkle();say('말랑말랑 반죽이 됐어요!','The dough is ready!');alMood('wow',900);finish()};
+    rubTool(o);paint();
     guideAt(()=>ctr(E.bowl),'scrub','빙글빙글 저어 봐!','Stir stir!');
   },
   knead(){
     kind='tap';S.kn=0;E.lump.innerHTML=lumpSVG(0);toolTray(lumpSVG(.5));say('반죽을 꾹꾹 눌러요! 콕콕!','Press the dough! Tap tap!',true);AIM=()=>ctr(E.lump);HOT=()=>[E.lump];
     H={down:e=>{if(!hit(e,'lump',8))return false;if(busy||!tapOk())return;const k=++S.kn;S.cnt.knead++;LOG.push('knead');
-      E.lump.classList.remove('bk-squish');void E.lump.offsetWidth;E.lump.classList.add('bk-squish');tone(170+k*12,.14,'sine',.22);sfx.pop();E.lump.innerHTML=lumpSVG(k/N_KNEAD);say(CNTK(k),CNTE(k));alMood('ticklish',500);
+      kneadFx(e,k);E.lump.innerHTML=lumpSVG(k/N_KNEAD);say(CNTK(k),CNTE(k));alMood('ticklish',500);
       if(k>=N_KNEAD){H={};G.stop();kind='wait';const g=gen;L.later(()=>{if(g===gen){SFX.sparkle();say('부들부들 말랑해졌어요!','Soft and squishy!');finish()}},600)}}};
     guideAt(AIM,'tap','콕콕 눌러 봐!','Tap tap!');
   },
@@ -521,6 +608,7 @@ const STEP={
       const lq=[G0.W/2,70,50,50];S.pcOn[k]=true;const p=E['pc'+k];p.innerHTML=pieceHTML('ball');jump(p,lq);lay();E.lump.classList.remove('bk-squish');void E.lump.offsetWidth;E.lump.classList.add('bk-squish');
       E.lump.style.opacity=String(Math.max(.25,1-.15*S.pl));tone(300+k*60,.12,'triangle',.2);sfx.pop();const g=gen;
       L.later(()=>{if(g!==gen)return;S.cnt.placed++;LOG.push('placed');say(CNTK(k+1),CNTE(k+1));alPlay('hop');busy=false;
+        K.squash(p,.24,420,'50% 90%');tone(150,.1,'sine',.14);const [px,py]=stXY(...ctr(p));K.cloud(px,py+p.offsetHeight*.3,3,'#FFFDF6',{sz:12,spread:34,up:14});   // motion.squash: 빵이 판에 폭
         if(S.pl>=S.nb){H={};G.stop();kind='wait';E.lump.classList.add('hide');L.later(()=>{if(g===gen){SFX.sparkle();say('동글동글 '+S.nb+'개를 다 놓았어요!','All '+S.nb+' balls are on the tray!');finish()}},500)}},560)}};
     guideAt(AIM,'tap','반죽을 콕 눌러 봐!','Tap the dough!');
   },
@@ -534,7 +622,11 @@ const STEP={
     kind='tap';toolTray(ovenMini);say('오븐에 쏙! 오븐을 콕 눌러요!','Into the oven! Tap the oven!',true);AIM=()=>ctr(E.oven);HOT=()=>[E.oven];
     H={down:e=>{if(!hit(e,'oven',6)&&!hit(e,'sheet',6))return false;if(busy||!tapOk())return;busy=true;H={};G.stop();kind='wait';LOG.push('bake');
       S.inOven=true;lay();E.sheet.classList.add('hide');E.oven.classList.add('on');sweepTone(300,500,.5,'sine',.12);say('쏙!','In!');const g=gen;
-      L.later(()=>{if(g!==gen)return;for(let i=0;i<S.nb;i++)E['pc'+i].classList.add('baked');say('부풀어요! 노릇노릇!','Puffing up! Golden!')},900);
+      L.later(()=>{if(g!==gen)return;for(let i=0;i<S.nb;i++){const pc=E['pc'+i];pc.classList.add('baked');const sv=pc.querySelector('svg');
+          /* cooking.bake: 부풀어 오르고 노릇해짐 (rises past its size, settles) */
+          if(sv)try{sv.style.transformOrigin='50% 85%';sv.animate([{transform:'scale(1)'},{transform:'scale(1.05,.96)',offset:.1},{transform:'scale(1.26,1.3)',offset:.72},{transform:'scale(1.1,1.12)',offset:.86},{transform:'scale(1.14)'}],{duration:3400,easing:'ease-in-out',fill:'forwards',delay:i*90})}catch(_){}}
+        say('부풀어요! 노릇노릇!','Puffing up! Golden!');
+        [900,2000].forEach(w=>L.later(()=>{if(g!==gen)return;const r=rectOf('oven'),s=stR();K.steam(r.left-s.left+r.width*.5,r.top-s.top+r.height*.55,2,{col:'#FFE6C2',op:.55,sz:26,up:26,gap:30})},w))},900);
       L.later(()=>{if(g!==gen)return;S.cnt.baked=S.nb;tone(1318,.5,'sine',.16);tone(1318,.5,'sine',.12,.35);say('땡! 다 구워졌어요!','Ding! All baked!');alMood('wow',900);finish()},900+3700)}};
     guideAt(AIM,'tap','오븐을 콕 눌러 봐!','Tap the oven!');
   },
@@ -542,7 +634,10 @@ const STEP={
     kind='rub';S.openV=Array(6).fill(0);const stopI=intro(gloveSVG,'장갑!','Mitt!');say('장갑을 끼고 쓱쓱! 뜨거운 빵을 꺼내요!','Mitt on! Take out the hot bread!',true);HOT=()=>[];
     rubTool({icon:gloveSVG,anchor:[.5,.62],gap:.4,log:'out',stopIntro:stopI,effect:'rub',fx:()=>'',cells:[[.3,.55],[.5,.55],[.7,.55],[.3,.75],[.5,.75],[.7,.75]],grid:[3,2],rad:.12,target:()=>rectOf('oven'),
       cell:(i,v)=>{S.openV[i]=v;const a=S.openV.reduce((x,y)=>x+y,0)/6;E.oven.style.setProperty('--op',(1-.8*a).toFixed(2))},
-      done:()=>{E.oven.style.setProperty('--op','.2');S.out=true;E.oven.classList.remove('on');lay();SFX.sparkle();say('뜨끈뜨끈! 잘 꺼냈어요!','Nice and hot! Well done!');alMood('wow',900);spark(...stXY(...ctr(E.oven)),4);finish()}});
+      tapFx:()=>{K.beat(E.oven,'tap');tone(260,.08,'sine',.08)},
+      done:()=>{E.oven.style.setProperty('--op','.2');S.out=true;E.oven.classList.remove('on');lay();SFX.sparkle();say('뜨끈뜨끈! 잘 꺼냈어요!','Nice and hot! Well done!');alMood('wow',900);spark(...stXY(...ctr(E.oven)),2);
+        const g=gen;[300,800,1300].forEach(w=>L.later(()=>{if(g!==gen)return;for(let i=0;i<S.nb;i++){const [x,y]=stXY(...ctr(E['pc'+i]));K.steam(x,y-E['pc'+i].offsetHeight*.3,2,{gap:16,sz:30,up:44})}},w));   // cooking.bake: 꺼내면 김이 모락모락
+        finish()}});
     guideAt(()=>ctr(E.oven),'scrub','쓱쓱 문질러 봐!','Rub rub!');
   },
   jam(){
@@ -553,7 +648,8 @@ const STEP={
   spread(){
     kind='rub';const stopI=intro(knifeSVG,'버터칼!','Butter knife!');say('칼로 쓱쓱 발라요!','Spread it with the knife!',true);HOT=()=>[];
     const {SX}=G0,shX=2*SX+14,cells=[];for(let p=0;p<S.nb;p++){const q=slot(0,0,SX,p),o=SX*.2;[[-1,-1],[1,-1],[-1,1],[1,1]].forEach(d=>cells.push([.5+(q[0]+d[0]*o)/shX,.5+(q[1]+d[1]*o)/shX]))}
-    rubTool({icon:knifeSVG,anchor:[.28,.8],gap:.4,log:'spread',stopIntro:stopI,effect:'rub',fx:()=>'',cells,grid:[4,4],rad:.1,target:()=>rectOf('sheet'),
+    const gr=grainer(()=>S.jam?S.jam.vivid:'#E5434F');
+    rubTool({icon:knifeSVG,anchor:[.28,.8],gap:.4,log:'spread',stopIntro:stopI,effect:'rub',fx:()=>'',cells,grid:[4,4],rad:.1,target:()=>rectOf('sheet'),frame:gr.frame,tapFx:gr.tap,
       cell:(i,v)=>{const c=E['pc'+(i>>2)].querySelectorAll('.jam circle')[i&3];if(c)c.setAttribute('opacity',(v*.95).toFixed(2))},
       done:()=>{for(let p=0;p<S.nb;p++)E['pc'+p].querySelectorAll('.jam circle').forEach(c=>c.setAttribute('opacity','.95'));S.cnt.spread=S.nb;SFX.sparkle();say('맛있게 발랐어요!','Yummy!');alMood('wow',900);finish()}});
     guideAt(()=>ctr(E.sheet),'scrub','쓱쓱 발라 봐!','Spread spread!');
@@ -580,7 +676,8 @@ const STEP={
   /* 케이크 */
   cream(){
     kind='rub';const stopI=intro(spatulaSVG,'주걱!','Spatula!');say('주걱으로 쓱쓱! 하얀 크림을 발라요!','Spread the cream!',true);HOT=()=>[];
-    rubTool({icon:spatulaSVG,anchor:[.36,.58],gap:.35,log:'cream',stopIntro:stopI,effect:'rub',fx:()=>'',cells:CCELLS.map(c=>[c[0]/340,c[1]/270]),grid:[6,3],rad:.11,target:()=>rectOf('cake'),
+    const gr=grainer(()=>CREAM,'rgba(181,140,90,.35)');
+    rubTool({icon:spatulaSVG,anchor:[.36,.58],gap:.35,log:'cream',stopIntro:stopI,effect:'rub',fx:()=>'',cells:CCELLS.map(c=>[c[0]/340,c[1]/270]),grid:[6,3],rad:.11,target:()=>rectOf('cake'),frame:gr.frame,tapFx:gr.tap,
       cell:(i,v)=>{S.cakeS.cream[i]=v},done:()=>{S.cakeS.cream.fill(1);draw();SFX.sparkle();say('하얀 크림이 가득!','Fluffy white cream!');alMood('wow',900);finish()}});
     guideAt(()=>ctr(E.cake),'scrub','쓱쓱 발라 봐!','Spread spread!');
   },
@@ -592,10 +689,12 @@ const STEP={
   cut(){
     kind='tap';S.cutN=0;toolTray(knifeSVG);intro(knifeSVG,'칼!','Knife!');say('과일을 콕콕! 잘라요!','Tap to cut the fruit!',true);AIM=()=>ctr(E.fruit);HOT=()=>[E.fruit];lay();
     H={down:e=>{if(!hit(e,'fruit',8))return false;if(busy||!tapOk()||S.cutN>=N_CUT)return;busy=true;const k=S.cutN++;S.cnt.cut++;LOG.push('cut');
-      const fq=[G0.W/2,G0.Hc-8-G0.SL-3,50,50];S.sl[k]='board';const p=E['sl'+k];p.innerHTML=FR[S.fruit].slice;jump(p,fq);
-      E.fruit.firstElementChild.style.transform=`scale(${Math.max(.1,1-.2*S.cutN)})`;sweepTone(900,300,.12,'triangle',.18);const fc=ctr(E.fruit);
-      const sl=document.createElement('div');sl.className='bk-float';sl.innerHTML=`<svg viewBox="0 0 100 40"><path d="M6 30L94 8" stroke="#fff" stroke-width="7" stroke-linecap="round"/></svg>`;const [x,y]=stXY(fc[0],fc[1]);Object.assign(sl.style,{width:'120px',height:'48px',left:(x-60)+'px',top:(y-24)+'px'});fxEl.appendChild(sl);setTimeout(()=>sl.remove(),380);
-      lay();const g=gen;L.later(()=>{if(g!==gen)return;say(CNTK(k+1),CNTE(k+1));busy=false;
+      const g=gen;chop(E.fruit,()=>{if(g!==gen)return;   // cooking.chop: at the moment the knife lands
+        const fq=[G0.W/2,G0.Hc-8-G0.SL-3,50,50];S.sl[k]='board';const p=E['sl'+k];p.innerHTML=FR[S.fruit].slice;jump(p,fq);lay();
+        const sv=p.firstElementChild;if(sv)try{sv.animate([{transform:'translateY(-30%) rotate(-240deg) scale(.8)'},{transform:'translateY(-8%) rotate(-60deg)',offset:.6},{transform:'none'}],{duration:520,easing:'ease-out'})}catch(_){}
+        E.fruit.firstElementChild.style.transform=`scale(${Math.max(.1,1-.2*S.cutN)})`;K.squash(E.fruit,.1,320);
+        const [x,y]=stXY(...ctr(E.fruit));K.drops(x,y-10,3,FRC[S.fruit]||'#E0545C',{sp:46,sz:13})});
+      L.later(()=>{if(g!==gen)return;say(CNTK(k+1),CNTE(k+1));busy=false;
         if(S.cutN>=N_CUT){H={};G.stop();kind='wait';E.fruit.classList.add('hide');L.later(()=>{if(g===gen){SFX.sparkle();say('다 잘랐어요!','All cut!');finish()}},500)}},520)}};
     guideAt(AIM,'tap','과일을 콕 눌러 봐!','Tap the fruit!');
   },
@@ -605,7 +704,9 @@ const STEP={
     AIM=()=>{const k=nextS();return k<0?[0,0]:ctr(E['sl'+k])};HOT=()=>{const a=[];for(let k=0;k<N_CUT;k++)if(S.sl[k]==='board')a.push(E['sl'+k]);return a};
     H={down:e=>{let k=-1;for(let i=0;i<N_CUT;i++)if(S.sl[i]==='board'&&hit(e,'sl'+i,4))k=i;if(k<0)return false;if(busy||!tapOk())return;
       const i=S.tp++,sp=FSPOT[i],q=cakeRect('small'),pt=cpt(q,sp[0],sp[1]);S.sl[k]={cake:[pt[0],pt[1],36,36]};S.cnt.topped++;LOG.push('top');lay();sfx.pop();
-      const g=gen;L.later(()=>{if(g!==gen)return;S.cakeS.slices.push({f:S.fruit,x:sp[0],y:sp[1]});S.hidden.push('sl'+k);E['sl'+k].classList.add('hide');draw();say(CNTK(i+1),CNTE(i+1))},520);
+      const g=gen;L.later(()=>{if(g===gen){K.squash(E['sl'+k],.22,300,'50% 80%');tone(520,.05,'sine',.08)}},470);
+      L.later(()=>{if(g!==gen)return;S.cakeS.slices.push({f:S.fruit,x:sp[0],y:sp[1]});draw();say(CNTK(i+1),CNTE(i+1))},520);
+      L.later(()=>{if(g!==gen)return;S.hidden.push('sl'+k);E['sl'+k].classList.add('hide')},770);
       if(S.tp>=N_CUT){H={};G.stop();kind='wait';L.later(()=>{if(g===gen){SFX.sparkle();say('과일을 다 올렸어요!','All the fruit is on!');alMood('wow',900);finish()}},1200)}}};
     guideAt(AIM,'tap','과일을 콕 눌러 봐!','Tap a piece!');
   },
@@ -615,6 +716,7 @@ const STEP={
     H={down:e=>{if(!hit(e,'cake',4))return false;if(busy||!tapOk())return;const f=free();if(!f.length)return;const r=rectOf('cake'),tx=(e.clientX-r.left)/r.width*340,ty=(e.clientY-r.top)/r.height*270;
       f.sort((a,b)=>Math.hypot(ROSE[a][0]-tx,ROSE[a][1]-ty)-Math.hypot(ROSE[b][0]-tx,ROSE[b][1]-ty));const i=f[0];S.rosesAt[i]=true;S.cakeS.roses.push({x:ROSE[i][0],y:ROSE[i][1],col:S.pipeCol});S.cnt.rose++;LOG.push('rose');draw();
       noise(.18,{type:'lowpass',freq:800,vol:.1});tone(660+S.cnt.rose*30,.08,'sine',.15);say(CNTK(S.cnt.rose),CNTE(S.cnt.rose));
+      {const rr=rectOf('cake'),s=stR(),x=rr.left-s.left+ROSE[i][0]/340*rr.width,y=rr.top-s.top+ROSE[i][1]/270*rr.height;K.spawn(`<circle r="11" fill="${S.pipeCol}" stroke="${OL}" stroke-width="1.6"/><path d="M0 -6Q6 -6 6 0Q6 6 0 6Q-4 6 -4 1" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>`,x,y,{sz:34,s0:1.5,s1:.9,op:.9,ms:420,ease:'ease-out'})}   // motion.squash: 크림 꽃이 쭉
       if(S.cnt.rose>=N_ROSE){H={};G.stop();kind='wait';const g=gen;L.later(()=>{if(g===gen){SFX.sparkle();say('예쁜 크림 꽃이 활짝!','Pretty cream flowers!');alMood('wow',900);finish()}},700)}}};
     guideAt(AIM,'tap','케이크를 콕 눌러 봐!','Tap the cake!');
   },
@@ -630,7 +732,8 @@ const STEP={
     const union=()=>{const rs=S.cd.map((c,i)=>E['cd'+i].getBoundingClientRect());const l=Math.min(...rs.map(r=>r.left)),t=Math.min(...rs.map(r=>r.top)),rr=Math.max(...rs.map(r=>r.right)),b=Math.max(...rs.map(r=>r.bottom));return{left:l,top:t,width:rr-l,height:b-t,right:rr,bottom:b}};
     const cells=S.cd.map((c,i)=>{const r=E['cd'+i].getBoundingClientRect(),u=union();return[(r.left+r.width/2-u.left)/u.width,(r.top+r.height*.28-u.top)/u.height]});
     rubTool({icon:matchSVG,anchor:[.5,.05],gap:.5,log:'light',stopIntro:stopI,effect:'rub',fx:()=>'',cells,grid:[3,1],rad:.14,target:union,
-      cell:(i,v)=>{if(v>=.35&&!S.cd[i].lit){S.cd[i].lit=true;S.cnt.lit++;E['cd'+i].classList.add('lit');tone(700+i*120,.12,'sine',.16);LOG.push('lit')}},
+      tapFx:(F,W)=>{K.spawn(ICON_SPARK,W.wx,W.wy,{sz:22,dy:-26,s0:.6,s1:1.1,ms:500})},
+      cell:(i,v)=>{if(v>=.35&&!S.cd[i].lit){S.cd[i].lit=true;S.cnt.lit++;E['cd'+i].classList.add('lit');tone(700+i*120,.12,'sine',.16);LOG.push('lit');const [x,y]=stXY(...ctr(E['cd'+i]));for(let q=0;q<3;q++)K.spawn(ICON_SPARK,x+(q-1)*14,y-E['cd'+i].offsetHeight*.42,{sz:18,dy:-30,dx:(q-1)*8,s0:.5,s1:1,ms:600})}},
       done:()=>{S.cd.forEach((c,i)=>{if(!c.lit){c.lit=true;S.cnt.lit++;E['cd'+i].classList.add('lit')}});SFX.sparkle();say('생일 축하 노래를 불러요!','Let\'s sing a birthday song!');alPlay('dance');
         [523,523,587,523,698,659].forEach((f,i)=>tone(f,.34,'triangle',.12,i*.42));const g=gen;L.later(()=>{if(g===gen)say('짝짝짝! 후~ 불어 봐요!','Clap clap! Now blow!')},2700);L.later(()=>{if(g===gen)finish()},3100)}});
     guideAt(()=>{const r=E.cd1?E.cd1.getBoundingClientRect():stR();return[r.left+r.width/2,r.top+r.height*.3]},'scrub','불씨를 초에 대 봐!','Touch the candles!');
@@ -651,8 +754,16 @@ let LAY_FRUIT=false;
 function give(fromEl,html){
   phase='serve';const g=gen,cr=custEl.getBoundingClientRect(),fr=fromEl.getBoundingClientRect();LOG.push('serve');
   fromEl.classList.add('hide');
-  fly(html,[fr.left+fr.width/2,fr.top+fr.height/2],[cr.left+cr.width/2,cr.top+cr.height*.7],Math.min(fr.width,140),50,900,()=>{if(g!==gen)return;drawCust('yum');alPlay('dance');const p=pick(VO.praise||[{ko:'맛있다!',en:'Yummy!'}]);say('냠냠! '+p.ko,'Yum yum! '+p.en);SFX.sparkle();L.later(()=>{if(g===gen)heart()},2400)});
+  fly(html,[fr.left+fr.width/2,fr.top+fr.height/2],[cr.left+cr.width/2,cr.top+cr.height*.7],Math.min(fr.width,140),50,900,()=>{if(g!==gen)return;
+    /* cooking.serve: 두 손으로 받아 들고 킁킁 → 한 입 크게 → 볼 볼록 */
+    const later=(fn,ms)=>L.later(()=>{if(g===gen)fn()},ms);say('킁킁, 냄새 좋다!','Sniff sniff, smells good!');
+    later(()=>{const p=pick(VO.praise||[{ko:'맛있다!',en:'Yummy!'}]);say('냠냠! '+p.ko,'Yum yum! '+p.en)},2000);
+    work.style.transition='opacity .4s';work.style.opacity='0';
+    K.eat({cust:custEl,kind:S.kind,grow:1.9,origin:'100% 0%',food:S.order==='cake'?cakeSliceSVG(S.fruit):breadFood(),draw:m=>drawCust(m),later,log:x=>LOG.push(x),crumb:S.order==='cake'?SPONGE:CRUST_L,
+      done:()=>{drawCust('happy');alPlay('dance');SFX.sparkle();later(heart,1800)}})});
 }
+const breadFood=()=>`<svg viewBox="0 0 100 100">${shapeInner(S.shape||'ball',CRUST,CRUST_L)}${S.jam&&S.cnt.spread?`<path d="M30 52Q50 40 70 52Q66 66 50 64Q34 66 30 52Z" fill="${S.jam.vivid}" opacity=".95"/>`:''}</svg>`;
+const cakeSliceSVG=f=>`<svg viewBox="0 0 100 100"><path d="M10 52L90 36V78L10 94Z" fill="${SPONGE}" ${S3}/><path d="M10 73L90 57" stroke="${CREAM}" stroke-width="7"/><path d="M10 52L90 36L76 26L4 42Z" fill="${CREAM}" ${S3}/>${f&&FR[f]?`<g transform="translate(30 14) scale(.32)">${svgInner(FR[f].slice)}</g>`:''}</svg>`;
 function heart(){
   const cr=custEl.getBoundingClientRect(),g=gen;
   fly(ICON.heart,[cr.left+cr.width*.3,cr.top+cr.height*.6],[cr.left+cr.width*.3,cr.top-60],50,40,1000,()=>{if(g!==gen)return;DATA.served++;save();SFX.sparkle()});
@@ -665,8 +776,8 @@ function heart(){
 /* ---------- a new round: the shop front first ---------- */
 function lobbyOff(){lobbyAl.forEach(h=>h.detach());lobbyAl=[];if(turns){turns.stop();turns=null}}
 function newRound(){
-  L.begin();gen++;H={};act=null;killTool();G.stop();fxEl.innerHTML='';tray.innerHTML='';tray.onpointerdown=null;busy=false;
-  if(al){al.detach();al=null}lobbyOff();custEl.classList.remove('leave','enter');
+  L.begin();gen++;H={};act=null;killTool();G.stop();fxEl.innerHTML='';K.clear();tray.innerHTML='';tray.onpointerdown=null;busy=false;
+  if(al){al.detach();al=null}lobbyOff();custEl.classList.remove('leave','enter','bk-hold');custEl.getAnimations().forEach(a=>a.cancel());
   lv=levelInfo(levelNo());const orders=makeOrders(lv),kinds=shuffle(KINDS.slice()).slice(0,3);
   S={view:'lobby',orders,kinds,order:null,kind:null,nb:N_BALL,hidden:[],pcOn:[],packed:[],sl:[],cd:CSPOT.map(()=>({on:false,lit:false})),rosesAt:[],pl:0,cutN:0,inOven:false,out:false,fruit:null,shape:null,jam:null,
     cnt:{add:0,knead:0,made:0,placed:0,baked:0,spread:0,packed:0,cut:0,topped:0,rose:0,cand:0,lit:0,blown:0},bowl:null,cakeS:null};
@@ -693,12 +804,12 @@ function startWork(){
   const g=gen;
   const pre=!lv.add;S.bowl={f:pre?N_FLOUR:0,m:pre?1:0,e:pre?N_EGG:0,cells:BCELL.map(()=>0),stir:false,pre};S.cakeS={cream:CCELLS.map(()=>0),slices:[],roses:[]};
   if(S.order==='bread'){
-    mkIt('board','','bk-board');mkIt('bowl','');mkIt('src','');mkIt('lump',lumpSVG(0));mkIt('oven',ovenSVG,'bk-oven');mkIt('sheet',sheetSVG);
+    mkIt('board','','bk-board');mkIt('bowl','');mkIt('swirl',`<div class="sw-in"><div class="sw-b">${SWIRL_B}</div><div class="sw-a">${SWIRL_A}</div></div>`,'bk-swirl');mkIt('src','');mkIt('lump',lumpSVG(0));mkIt('oven',ovenSVG,'bk-oven');mkIt('sheet',sheetSVG);
     for(let i=0;i<S.nb;i++)mkIt('pc'+i,pieceHTML('ball'),'bk-pc');mkIt('box',boxSVG(false));
   }else{
     mkIt('cake','');mkIt('fruit','');for(let k=0;k<N_CUT;k++)mkIt('sl'+k,'');S.sl=Array(N_CUT).fill(null);CSPOT.forEach((c,i)=>mkIt('cd'+i,candleSVG(pick(CC.length?CC:[{hex:'#8FC3E6'}]).hex),'bk-cd'));
   }
-  plan=planFor(S.order,lv);pi=0;showView('work');
+  plan=planFor(S.order,lv);pi=0;showView('work');work.style.opacity='';
   if(al){al.detach();al=null}drawCust('sad');
   if(M.Alive){al=M.Alive.attach(custEl,{kind:S.kind});const me=al;L.onEnd(()=>{me.detach();if(al===me)al=null})}
   custEl.classList.remove('leave','enter');void custEl.offsetWidth;custEl.classList.add('enter');
@@ -723,7 +834,9 @@ M.__bake=()=>{
     rect:{x:sr.left,y:sr.top,w:sr.width,h:sr.height},cellPts:tool?tool.cellPts():[],toolOn:!!tool,cards:[...tray.querySelectorAll('.bk-card')].length,hot,
     custPts:[...lobbyEl.querySelectorAll('.bk-lc')].map(b=>ctr(b)),cnt:S?Object.assign({},S.cnt):{},nb:S?S.nb:0,shape:S&&S.shape,fruit:S&&S.fruit,
     pieces:S&&S.order==='bread'?Array.from({length:S.nb},(_,i)=>({baked:E['pc'+i]&&E['pc'+i].classList.contains('baked')})):[],slices:S&&S.cakeS?S.cakeS.slices.length:0,roses:S&&S.cakeS?S.cakeS.roses.length:0,
-    alive:al?al.state():null,lobbyAlive:lobbyAl.length,misses,guide:G.state(),served:DATA.served,log:LOG.slice()};
+    alive:al?al.state():null,lobbyAlive:lobbyAl.length,misses,guide:G.state(),served:DATA.served,log:LOG.slice(),
+    parts:K.stats(),mix:S&&S.bowl?+(S.bowl.mix||0).toFixed(3):0,swirl:S&&S.sw?{a:+S.sw.a.toFixed(1),v:Math.round(S.sw.v)}:null,
+    toolBox:(()=>{const t=[...stage.querySelectorAll('.tl-tool')].find(e=>e.style.display==='block');if(!t)return null;const q=t.getBoundingClientRect();return{x:q.left+q.width/2,y:q.top+q.height/2,w:q.width,whisk:!!t.querySelector('.wk-w'),tf:t.style.transform}})()};
 };
 M.__bakeDepth=()=>{
   const v=levelInfo(levelNo()),os=v.cake?['bread','cake']:['bread'];
@@ -732,7 +845,7 @@ M.__bakeDepth=()=>{
   return{level:levelNo(),processes:Math.min(...rows.map(r=>r.processes)),handActions:hands,customer:!!M.Alive,choice:true,ending:true,byOrder:rows};
 };
 games[id]={enter:()=>{requestAnimationFrame(()=>{if(cur()===id)newRound()})},
-  exit:()=>{L.begin();gen++;H={};act=null;killTool();G.stop();fxEl.innerHTML='';tray.onpointerdown=null;lobbyOff();if(al){al.detach();al=null}phase='';kind='wait'},resize:size};
+  exit:()=>{L.begin();gen++;H={};act=null;killTool();G.stop();fxEl.innerHTML='';K.clear();tray.onpointerdown=null;lobbyOff();if(al){al.detach();al=null}phase='';kind='wait'},resize:size};
 window.addEventListener('resize',()=>{if(cur()===id)size()});
 /* tile picture on the home screen */
 document.querySelectorAll('.tile[data-go="bakery"] .ic').forEach(ic=>{
