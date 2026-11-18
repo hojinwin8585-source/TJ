@@ -114,8 +114,8 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
   const maxPlays=await p.evaluate(()=>window.__maxPlays);
   ok('4. 큰 동작이 동시에 두 개 돌지 않음 (한 캐릭터에 한 번에 하나)',!overlap&&maxPlays<=1,'기록된 큰 동작 '+plays.length+'개 · 동시에 최대 '+maxPlays+'개 · 미용실 손님: '+s.log.filter(x=>/^play:/.test(x)).join(' '));
   ok('끝나면 춤 → 손 흔들기',s.log.includes('play:dance')&&s.log.includes('play:wave'));
-  /* 6: leave the screen → no timers */
-  await p.evaluate(()=>window.ML.go('home'));await W(400);
+  /* 6: leave the screen → no timers. P9: the home has its own living Toto now, so leave to a place screen without characters (노래 극장) */
+  await p.evaluate(()=>window.ML.go('zone-music'));await W(400);
   const st6=await p.evaluate(()=>window.ML.Alive.stats());
   ok('6. 미용실을 떠나면 타이머 0개 (캐릭터 0, rAF 0)',st6.instances===0&&st6.timers===0&&st6.raf===0,JSON.stringify(st6));
 
@@ -140,7 +140,7 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
     set(true);await new Promise(r=>setTimeout(r,300));const a=window.ML.Alive.stats(),paused=document.querySelectorAll('.alive.al-paused').length;
     set(false);await new Promise(r=>setTimeout(r,300));const b=window.ML.Alive.stats();delete document.hidden;return{a,b,paused}});
   ok('화면이 숨겨지면 캐릭터 타이머 0개 · 움직임 멈춤, 돌아오면 다시',hid.a.timers===0&&hid.a.instances>0&&hid.paused===hid.a.instances&&hid.b.timers>0,'숨김 '+JSON.stringify(hid.a)+' 멈춘 캐릭터 '+hid.paused+' → 다시 타이머 '+hid.b.timers+'개');
-  await p.evaluate(()=>window.ML.go('home'));await W(400);
+  await p.evaluate(()=>window.ML.go('zone-music'));await W(400);
   const st7=await p.evaluate(()=>window.ML.Alive.stats());
   ok('6. 네일숍을 떠나면 타이머 0개',st7.instances===0&&st7.timers===0&&st7.raf===0,JSON.stringify(st7));
 

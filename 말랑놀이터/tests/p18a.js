@@ -91,7 +91,8 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
   await shot('p18a_lobby_after');
 
   /* ---------- performance: one shared frame, stops on screen exit ---------- */
-  await p.evaluate(()=>window.ML.go('home'));await W(500);const al=await p.evaluate(()=>window.ML.Alive.stats());
+  /* P9: the home has its own living Toto now, so leave to a place screen without characters (노래 극장) */
+  await p.evaluate(()=>window.ML.go('zone-music'));await W(500);const al=await p.evaluate(()=>window.ML.Alive.stats());
   ok('화면을 떠나면 움직임 0 (캐릭터·타이머·rAF·바람 0)',al.instances===0&&al.timers===0&&al.raf===0&&al.simulating===0,JSON.stringify(al));
   ok('오류 없음',errs.length===0,JSON.stringify(errs.slice(0,5)));
   console.log(fails?'\n실패 '+fails+'개':'\n18-가 검사 모두 통과');
