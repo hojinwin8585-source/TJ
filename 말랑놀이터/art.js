@@ -914,5 +914,172 @@ const GIFTS=(()=>{
 })();
 const giftSVG=id=>{const g=GIFTS.find(x=>x.id===id);return g?g.svg():''};
 
-window.ART={vol:VOL,paper,OL,animal,animalOverlay,petCells:PET_CELLS,petLayer,petState,cellState,stateCells,fluffSet,fluffOf,HAIR,HAIR_STYLES,hairPlan,KINDS,F,TOPPING,WHOLE,wholeSVG,pieceSVG,pizza,TOOL,oven,BUILD,blob,rng,ACC,accSVG,face,FACE_ZONES,dress,lipstick,polish,star,twinkle,HAND,GIFTS,giftSVG};
+/* =========================== P7 크리스마스 집 (ART.XMAS) ===========================
+   차분한 거실의 그림 조각. 모두 이 앱을 위해 새로 그린 말랑 그림체(갈색 외곽선) + P19 입체감(VOL: 빛은 왼쪽 위, 림 라이트, 접지 그림자).
+   벽·바닥은 종이 공예(외곽선 없음, 겹마다 그림자 하나). 색은 themes.christmas.palette 를 씀.
+   좌표: tree()/fireplace()/window()/door() 는 자기 상자(왼쪽 위 0,0) 안에 그림 → 놀이 쪽에서 translate 로 놓음.
+         ornament()/star()/wreath() 는 가운데가 (0,0), stocking() 은 고리가 (0,0), gift() 는 바닥 가운데가 (0,0).
+   tree 상자 160 × 280: TREE.spots(방울 자리 = 공 가운데), TREE.star(꼭대기), TREE.strings(꼬마전구 줄 3개 [x0,y0,cx,cy,x1,y1]).
+   fireplace 상자 96 × 128: FIRE.hooks(양말 고리). window 상자 84 × 104. door 상자 72 × 220: DOOR.wreath(리스 자리). */
+const XMAS=(()=>{
+  const XP=(((window.MLCFG||{}).themes||{}).christmas||{}).palette||{};
+  const C={pine:XP.pine||'#6FA58A',berry:XP.berry||'#C96A63',snow:XP.snow||'#FBF8F2',gold:XP.gold||'#E3C46A',night:XP.night||'#C9D6EA',
+    wood:'#DDBB94',woodDk:'#C9A27C',trunk:'#B08A68',stone:'#E9DCCB',stoneLine:'#D6C3AC',soot:'#6E5D55',pot:'#D8A69C',potBand:'#EBCFC8',
+    wall:'#EFE5D8',wainscot:'#E7D9C7',rail:'#F5EDE2',floor:'#E3CDB1',plank:'#D6BD9C',rug:'#E8D6CB',rugIn:'#EFE2D9',curtain:'#D9BDB4',frame:'#F7F1E8'};
+  const f1=n=>+(+n).toFixed(1);
+  const S2=`stroke="${OL}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"`;
+  const lit=m=>VOL.litAll(m);
+  const tint=(c,t)=>hexMix(c,'#FFFFFF',t==null?.45:t);
+  const shade=(c,t)=>hexMix(c,'#3E2A20',t==null?.18:t);
+  const TREE={w:160,h:280,tiers:[[80,14,88,40,4],[80,60,162,56,5],[80,126,238,72,6]],star:[80,12],
+    spots:[[78,60],[60,124],[100,120],[46,206],[82,216],[116,202]],
+    strings:[[44,84,80,102,118,80],[26,156,80,180,134,152],[12,232,80,256,148,228]]};
+  const FIRE={w:96,h:128,hooks:[[22,14],[48,14],[74,14]]};
+  const DOOR={w:72,h:220,wreath:[36,62]};
+  const WIN={w:84,h:104};
+  const BULB=['#F2D06B','#E07A70','#8EC9F0','#FFF4DC'];
+
+  /* one tree tier: rounded top, plump sides, a scalloped hem (n bumps) */
+  function tierD(cx,top,base,hw,n){
+    const tl=top+6,w=2*hw/n,mid=top+(base-top)*.55;
+    let d=`M${cx-4} ${tl}Q${cx} ${top-2} ${cx+4} ${tl}Q${f1(cx+hw*.56)} ${f1(mid)} ${cx+hw} ${base-4}`;
+    for(let i=0;i<n;i++){const x0=cx+hw-i*w,x1=x0-w;d+=`Q${f1((x0+x1)/2)} ${base+8} ${f1(x1)} ${base-4}`}
+    return d+`Q${f1(cx-hw*.56)} ${f1(mid)} ${cx-4} ${tl}Z`;
+  }
+  function hemD(cx,base,hw,n){const w=2*hw/n;let d=`M${cx+hw} ${base-4}`;for(let i=0;i<n;i++){const x0=cx+hw-i*w,x1=x0-w;d+=`Q${f1((x0+x1)/2)} ${base+8} ${f1(x1)} ${base-4}`}return d}
+  function tier(t,i){
+    const [cx,top,base,hw,n]=t,d=tierD(cx,top,base,hw,n),dk=shade(C.pine,.3);
+    const shape=`<path d="${d}" fill="${C.pine}" ${S}/>`;
+    /* a few soft needle marks (not a pattern), the rim light down the right side, a heavier hem line, one soft highlight */
+    const nd=[[-.42,.62],[.18,.5],[.5,.78],[-.1,.84]].slice(0,2+i).map(([u,v])=>{const y=top+(base-top)*v,x=cx+hw*u*((y-top)/(base-top));return `<path d="M${f1(x-5)} ${f1(y-3)}Q${f1(x)} ${f1(y+3)} ${f1(x+5)} ${f1(y-3)}" fill="none" stroke="${dk}" stroke-width="2" stroke-linecap="round" opacity=".35"/>`}).join('');
+    const rim=VOL.off?'':`<path class="vol-rim" d="M${cx+8} ${top+12}Q${f1(cx+hw*.52)} ${f1(top+(base-top)*.55)} ${cx+hw-7} ${base-7}" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="2.6" stroke-linecap="round"/>`;
+    const low=VOL.off?'':`<path class="vol-low" d="${hemD(cx,base,hw,n)}" fill="none" stroke="${OL}" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>`;
+    return shape+VOL.lit(shape)+nd+rim+low+VOL.shine(f1(cx-hw*.3),f1(top+(base-top)*.5),f1(hw*.2),f1((base-top)*.13),-28);
+  }
+  /* the big tree (no decorations): pot, trunk, three tiers; each upper tier leaves a soft shadow on the one below */
+  function tree(){
+    const T=TREE.tiers,under=t=>VOL.under(`<path d="${tierD(...t)}" fill="#000"/>`,4);
+    let s=VOL.ground(80,277,50,6);
+    s+=lit(`<rect x="71" y="228" width="18" height="30" rx="3" fill="${C.trunk}" ${S}/>`);
+    s+=lit(`<path d="M50 250H110L103 276Q80 281 57 276Z" fill="${C.pot}" ${S}/>`)+`<path d="M52 257H108" stroke="${C.potBand}" stroke-width="5"/><path d="M50 250H110L103 276Q80 281 57 276Z" fill="none" ${S}/>`;
+    s+=lit(`<rect x="46" y="244" width="68" height="11" rx="4" fill="${tint(C.pot,.25)}" ${S}/>`);
+    s+=tier(T[2],2)+under(T[1])+tier(T[1],1)+under(T[0])+tier(T[0],0);
+    return `<g class="xm-tree-art">${s}</g>`;
+  }
+  /* a soft round glow behind the tree (shown when the room is done) */
+  function treeGlow(){return `<radialGradient id="xmGlowG"><stop offset="0" stop-color="#FFF3C9" stop-opacity=".95"/><stop offset=".55" stop-color="#FFE9B0" stop-opacity=".45"/><stop offset="1" stop-color="#FFE9B0" stop-opacity="0"/></radialGradient>`}
+  /* ornament ball, centre (0,0), radius 11. c = colour (calm hex on a card, vivid on the tree). band: a soft stripe */
+  function ornament(c,o={}){
+    const r=o.r||11,band=o.band!==false;
+    return `<g class="xm-orn"><path d="M0 ${-r-10}V${-r-3}" stroke="${OL}" stroke-width="1.8" stroke-linecap="round"/><circle cx="0" cy="${-r-11}" r="2.4" fill="none" stroke="${OL}" stroke-width="1.6"/>
+      ${lit(`<rect x="-4.6" y="${-r-4.5}" width="9.2" height="6" rx="1.6" fill="#E9D7A8" ${S2}/>`)}
+      <circle class="xm-ball" cx="0" cy="0" r="${r}" fill="${c}" ${S}/>${band?`<path d="M${f1(-r*.92)} ${f1(r*.18)}Q0 ${f1(r*.62)} ${f1(r*.92)} ${f1(r*.18)}" fill="none" stroke="#fff" stroke-width="${f1(r*.26)}" stroke-linecap="round" opacity=".38"/>`:''}
+      ${VOL.lit(`<circle cx="0" cy="0" r="${r}" fill="#000"/>`)}${VOL.rim(0,0,r,r,0,2)}${VOL.shine(f1(-r*.38),f1(-r*.4),f1(r*.36),f1(r*.26),-30)}</g>`;
+  }
+  /* the top star, centre (0,0) */
+  function topStar(c,o={}){
+    const r=o.r||18,body=star(0,0,r,c,S);
+    return `<g class="xm-star">${o.halo?`<circle r="${r*1.7}" fill="${C.gold}" opacity=".2"/>`:''}${body}${VOL.lit(star(0,0,r,'#000'))}${VOL.shine(f1(-r*.24),f1(-r*.3),f1(r*.22),f1(r*.15),-30)}</g>`;
+  }
+  /* one string of little lights along a tree tier (tree box units). Lit: the bulbs glow softly (no blinking) */
+  function lights(i){
+    const [x0,y0,cx,cy,x1,y1]=TREE.strings[i],n=5+i;
+    const at=t=>[(1-t)*(1-t)*x0+2*(1-t)*t*cx+t*t*x1,(1-t)*(1-t)*y0+2*(1-t)*t*cy+t*t*y1];
+    let s=`<path d="M${x0} ${y0}Q${cx} ${cy} ${x1} ${y1}" fill="none" stroke="#5E7D69" stroke-width="1.8" stroke-linecap="round"/>`,halo='',bulb='';
+    for(let k=0;k<n;k++){const [x,y]=at((k+.5)/n),c=BULB[(k+i)%BULB.length];
+      halo+=`<circle cx="${f1(x)}" cy="${f1(y+4)}" r="8.5" fill="${c}" opacity=".32"/>`;
+      bulb+=`<rect x="${f1(x-2)}" y="${f1(y-1)}" width="4" height="3.4" rx="1" fill="#8C7A6A"/><ellipse cx="${f1(x)}" cy="${f1(y+5)}" rx="3.6" ry="4.6" fill="${c}" stroke="${OL}" stroke-width="1.4"/><ellipse cx="${f1(x-1.1)}" cy="${f1(y+3.4)}" rx="1.1" ry="1.6" fill="#fff" opacity=".7"/>`}
+    return `<g class="xm-string" data-i="${i}"><g class="xm-halo">${halo}</g>${s}${bulb}</g>`;
+  }
+  /* stocking, the hook at (0,0) */
+  function stocking(c){
+    const body=`<path d="M-10 6H10V30Q10 34 14 35.5L22 38Q31 41 29 49Q27 57 16 55L-1 51Q-12 48 -11 37Z" fill="${c}" ${S}/>`;
+    return `<g class="xm-stock"><path d="M0 -6V4" stroke="${OL}" stroke-width="2" stroke-linecap="round"/>${body}${VOL.lit(body)}
+      <path d="M17 41Q27 41 28 49Q27 55 19 54Z" fill="#fff" opacity=".42"/><path d="M-11 38Q-9 47 0 49L1 41Q-6 40 -11 38Z" fill="#fff" opacity=".3"/>
+      ${lit(`<rect x="-13" y="1" width="26" height="12" rx="5" fill="${C.snow}" ${S}/>`)}<ellipse cx="-6" cy="5" rx="4" ry="2" fill="#fff" opacity=".8"/></g>`;
+  }
+  /* a present, bottom centre (0,0). rb = ribbon colour */
+  function gift(c,rb){
+    const r=rb||C.snow;
+    return `<g class="xm-gift">${VOL.ground(0,1,24,4)}${lit(`<rect x="-20" y="-30" width="40" height="30" rx="4" fill="${c}" ${S}/>`)}<rect x="-4.5" y="-30" width="9" height="30" fill="${r}"/><rect x="-20" y="-30" width="40" height="30" rx="4" fill="none" ${S}/>
+      ${lit(`<rect x="-23" y="-38" width="46" height="10" rx="3" fill="${c}" ${S}/>`)}<rect x="-4.5" y="-38" width="9" height="10" fill="${r}"/><rect x="-23" y="-38" width="46" height="10" rx="3" fill="none" ${S}/>
+      ${lit(`<path d="M0 -38Q-15 -52 -18 -43Q-19 -36 0 -38Z" fill="${r}" ${S}/><path d="M0 -38Q15 -52 18 -43Q19 -36 0 -38Z" fill="${r}" ${S}/>`)}<circle cx="0" cy="-38" r="3.6" fill="${r}" ${S2}/>
+      ${VOL.shine(-12,-23,5,3.4,-20)}</g>`;
+  }
+  /* wreath, centre (0,0), bow colour c */
+  function wreath(c){
+    const lf=[],g1=C.pine,g2=tint(C.pine,.22);
+    for(let k=0;k<14;k++){const a=k/14*Math.PI*2,x=Math.cos(a)*20,y=Math.sin(a)*20,deg=a*180/Math.PI+90;
+      lf.push(`<ellipse cx="${f1(x)}" cy="${f1(y)}" rx="8.5" ry="5.6" transform="rotate(${f1(deg+(k%2?18:-18))} ${f1(x)} ${f1(y)})" fill="${k%2?g2:g1}" ${S2}/>`)}
+    const berries=[[-17,-10],[-14,-14],[-11,-11],[16,-11],[13,-15],[18,-6],[-6,-21],[-1,-22]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="2.7" fill="${C.berry}" stroke="${OL}" stroke-width="1.2"/>`).join('');
+    const bow=`<path d="M0 18Q-15 6 -17 15Q-18 24 0 18Z" fill="${c}" ${S}/><path d="M0 18Q15 6 17 15Q18 24 0 18Z" fill="${c}" ${S}/><path d="M-2 19L-8 34L-2 31L1 35L2 19Z" fill="${c}" ${S}/><path d="M2 19L9 33L3 31Z" fill="${c}" ${S}/>`;
+    return `<g class="xm-wreath"><path d="M0 -33V-24" stroke="${OL}" stroke-width="2"/><circle cx="0" cy="-34" r="2.6" fill="${C.gold}" stroke="${OL}" stroke-width="1.4"/>
+      ${VOL.under(`<circle cx="0" cy="0" r="27" fill="#000"/>`,3)}${lit(lf.join(''))}${berries}${lit(bow)}<circle cx="0" cy="18" r="3.6" fill="${c}" ${S2}/></g>`;
+  }
+  /* fireplace (96 × 128): mantle, stones, fire, the three empty stocking hooks */
+  function fireplace(){
+    const stones=[[12,22,22,12],[38,20,26,13],[68,22,18,12],[10,40,16,12],[80,40,10,13],[10,60,8,16],[82,62,8,16],[10,84,8,18],[82,88,8,18],[10,106,8,14],[82,108,8,14]]
+      .map(([x,y,w,h])=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="none" stroke="${C.stoneLine}" stroke-width="1.6"/>`).join('');
+    const body=`<rect x="6" y="10" width="84" height="116" rx="3" fill="${C.stone}" ${S}/>`;
+    const hole=`<path d="M22 126V66Q22 50 38 50H58Q74 50 74 66V126Z" fill="${C.soot}" ${S}/>`;
+    const fire=`<g class="xm-fire"><path d="M48 120Q30 116 34 98Q38 104 42 100Q38 86 50 76Q50 90 58 92Q64 84 60 76Q72 92 66 108Q64 118 48 120Z" fill="#EFA982" ${S2}/><path d="M48 118Q39 114 42 104Q46 108 49 104Q48 96 54 92Q56 100 60 102Q60 114 48 118Z" fill="${C.gold}"/></g>`;
+    const logs=lit(`<rect x="30" y="116" width="38" height="8" rx="4" fill="#B98E6C" ${S2}/>`)+lit(`<rect x="34" y="110" width="30" height="7" rx="3.5" fill="#A87F60" ${S2}/>`);
+    const hooks=FIRE.hooks.map(([x,y])=>`<path d="M${x} ${y-2}V${y+3}Q${x} ${y+7} ${x+3.5} ${y+6}" fill="none" stroke="#B7954E" stroke-width="2.4" stroke-linecap="round"/>`).join('');
+    return `<g class="xm-fireplace">${VOL.ground(48,128,52,5)}${lit(body)}${stones}${hole}<ellipse cx="48" cy="104" rx="22" ry="20" fill="#F2B48C" opacity=".22"/>${fire}${logs}
+      ${lit(`<rect x="0" y="120" width="96" height="9" rx="3" fill="${C.stoneLine}" ${S}/>`)}${VOL.under(`<rect x="2" y="2" width="92" height="12" fill="#000"/>`,3)}${lit(`<rect x="-2" y="0" width="100" height="13" rx="3.5" fill="${C.wood}" ${S}/>`)}${hooks}</g>`;
+  }
+  /* window (84 × 104), snowy night outside. n = snow the child put on it (0..3): frost in the corners, flakes on the glass, a pile on the sill */
+  function windowArt(n){
+    n=n|0;const sky=C.night;
+    const flake=(x,y,r)=>`<g transform="translate(${x} ${y})" stroke="#fff" stroke-width="1.6" stroke-linecap="round">${[0,60,120].map(a=>`<path d="M${f1(Math.cos(a*Math.PI/180)*r)} ${f1(Math.sin(a*Math.PI/180)*r)}L${f1(-Math.cos(a*Math.PI/180)*r)} ${f1(-Math.sin(a*Math.PI/180)*r)}"/>`).join('')}</g>`;
+    const out=[[20,22],[30,40],[52,18],[64,44],[24,62],[58,64]].map(([x,y],k)=>`<circle cx="${x}" cy="${y}" r="${1.4+(k%2)}" fill="#fff" opacity=".9"/>`).join('');
+    const frost=n>=1?[[11,11,1,1],[73,11,-1,1],[11,81,1,-1],[73,81,-1,-1]].slice(0,n>=3?4:2).map(([x,y,sx,sy])=>`<path d="M${x} ${y}h${12*sx}q${-2*sx} ${5*sy} ${-6*sx} ${5*sy}q0 ${5*sy} ${-6*sx} ${7*sy}Z" fill="#fff" opacity=".75"/>`).join(''):'';
+    const flakes=n>=2?flake(26,30,4.5)+flake(58,28,3.6)+flake(30,62,3.6)+flake(60,66,4.5)+(n>=3?flake(44,48,3):''):'';
+    const pile=n>=1?`<path d="M2 88Q8 ${84-n*2} 18 ${85-n} Q30 ${80-n*2.5} 42 ${84-n} Q56 ${80-n*2.5} 66 ${84-n} Q78 ${82-n*2} 82 88Z" fill="${C.snow}" ${S2}/>`:'';
+    const curtain=`<path d="M-6 0H14Q9 44 18 98H-6Z" fill="${C.curtain}" ${S}/><path d="M90 0H70Q75 44 66 98H90Z" fill="${C.curtain}" ${S}/>`;
+    return `<g class="xm-window">${lit(`<rect x="4" y="4" width="76" height="84" rx="8" fill="${C.frame}" ${S}/>`)}<rect x="11" y="11" width="62" height="70" rx="4" fill="${sky}"/>
+      <circle cx="60" cy="25" r="7" fill="#F6EBC8"/><path d="M11 64Q30 54 46 62T73 58V81H11Z" fill="${C.snow}"/><path d="M22 66l5 -12 5 12z M52 64l4 -10 4 10z" fill="#9EB8AD"/>${out}${frost}${flakes}
+      <path d="M42 11V81M11 46H73" stroke="${C.frame}" stroke-width="4.5"/><rect x="11" y="11" width="62" height="70" rx="4" fill="none" stroke="${OL}" stroke-width="2"/>
+      ${lit(curtain)}${lit(`<rect x="-2" y="84" width="88" height="9" rx="3" fill="${C.wood}" ${S}/>`)}${pile}${lit(`<rect x="-10" y="-5" width="104" height="7" rx="3.5" fill="${C.woodDk}" ${S}/>`)}</g>`;
+  }
+  /* door (72 × 220) with a small nail for the wreath */
+  function door(){
+    const slab=`<rect x="7" y="7" width="58" height="213" rx="3" fill="${C.wood}" ${S}/>`;
+    return `<g class="xm-door">${lit(`<rect x="0" y="0" width="72" height="220" rx="6" fill="${C.woodDk}" ${S}/>`)}${lit(slab)}
+      <rect x="15" y="100" width="42" height="50" rx="5" fill="none" stroke="${OL}" stroke-width="2" opacity=".28"/><rect x="15" y="158" width="42" height="52" rx="5" fill="none" stroke="${OL}" stroke-width="2" opacity=".28"/>
+      <rect x="15" y="22" width="42" height="68" rx="5" fill="none" stroke="${OL}" stroke-width="2" opacity=".28"/>
+      ${lit(`<circle cx="56" cy="132" r="4.6" fill="${C.gold}" ${S2}/>`)}<circle cx="${DOOR.wreath[0]}" cy="${DOOR.wreath[1]-34}" r="2" fill="#9C8466"/></g>`;
+  }
+  /* the room behind everything (300 × 400): paper layers, no outline, one soft shadow each */
+  function room(){
+    const L=d=>`<g filter="url(#xmPaper)">${d}</g>`;
+    return `<defs><filter id="xmPaper" x="-5%" y="-5%" width="110%" height="120%"><feDropShadow dx="0" dy="1.5" stdDeviation="1.4" flood-color="#5B3A29" flood-opacity=".18"/></filter>${treeGlow()}</defs>
+      <rect width="300" height="400" fill="${C.wall}"/>${L(`<rect x="0" y="236" width="300" height="78" fill="${C.wainscot}"/>`)}${L(`<rect x="0" y="232" width="300" height="6" fill="${C.rail}"/>`)}
+      ${L(`<rect x="0" y="312" width="300" height="88" fill="${C.floor}"/>`)}<path d="M0 338H300M0 366H300" stroke="${C.plank}" stroke-width="1.2"/><path d="M60 312L52 338M180 338L186 366M110 366L104 400M250 312L246 338" stroke="${C.plank}" stroke-width="1.2"/>
+      ${L(`<rect x="0" y="308" width="300" height="7" fill="${C.rail}"/>`)}${L(`<ellipse cx="150" cy="342" rx="112" ry="25" fill="${C.rug}"/><ellipse cx="150" cy="342" rx="84" ry="17" fill="${C.rugIn}"/>`)}`;
+  }
+  /* Toto's red scarf, laid over ART.animal (viewBox 200 × 230) */
+  const scarf=`<svg class="xm-scarf" viewBox="0 0 200 230" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible">${lit(`<path d="M118 156L130 200L112 203L104 160Z" fill="${C.berry}" ${S}/>`)}<path d="M113 172l12 -3M116 186l12 -3" stroke="${C.snow}" stroke-width="4" stroke-linecap="round"/>
+    ${lit(`<path d="M60 146Q100 168 140 146L142 160Q100 184 58 160Z" fill="${C.berry}" ${S}/>`)}<path d="M74 156l2 10M92 160v11M110 160v11M126 156l-2 10" stroke="${C.snow}" stroke-width="4" stroke-linecap="round"/></svg>`;
+  /* a small decorated tree for the place tile and the home (calm colours) */
+  function icon(){
+    const orn=(x,y,c)=>`<g transform="translate(${x} ${y}) scale(.9)">${ornament(c,{band:false})}</g>`;
+    return `<svg viewBox="-6 -4 172 292" class="xm-icon" style="overflow:visible">${tree()}${lights(1)}${orn(60,124,'#E0786F')}${orn(100,120,'#EBCB6B')}${orn(82,214,'#7D9BE0')}${orn(46,206,'#E89AAE')}${orn(116,202,'#AE9BE0')}${orn(78,60,'#8FC3E6')}<g transform="translate(80 14)">${topStar('#EBCB6B',{r:20})}</g></svg>`;
+  }
+  /* standalone pictures for the cards and the level-up moment */
+  function card(kind,c,rb){
+    if(kind==='orn')return `<svg viewBox="-19 -26 38 40" style="overflow:visible">${ornament(c)}</svg>`;
+    if(kind==='star')return `<svg viewBox="-24 -24 48 48" style="overflow:visible">${topStar(c)}</svg>`;
+    if(kind==='stock')return `<svg viewBox="-20 -10 56 68" style="overflow:visible">${stocking(c)}</svg>`;
+    if(kind==='gift')return `<svg viewBox="-30 -54 60 60" style="overflow:visible">${gift(c,rb)}</svg>`;
+    if(kind==='wreath')return `<svg viewBox="-36 -40 72 78" style="overflow:visible">${wreath(c)}</svg>`;
+    if(kind==='lights')return `<svg viewBox="20 140 120 52" style="overflow:visible">${lights(1)}</svg>`;
+    if(kind==='snow')return `<svg viewBox="-24 -24 48 48" style="overflow:visible"><circle r="20" fill="${C.night}" ${S}/><g stroke="#fff" stroke-width="3.4" stroke-linecap="round">${[0,60,120].map(a=>`<path d="M${f1(Math.cos(a*Math.PI/180)*13)} ${f1(Math.sin(a*Math.PI/180)*13)}L${f1(-Math.cos(a*Math.PI/180)*13)} ${f1(-Math.sin(a*Math.PI/180)*13)}"/>`).join('')}</g>${VOL.shine(-7,-8,6,4,-30)}</svg>`;
+    if(kind==='tree')return icon();
+    return '';
+  }
+  return {C,TREE,FIRE,DOOR,WIN,BULB,tree,ornament,star:topStar,lights,stocking,gift,wreath,fireplace,window:windowArt,door,room,scarf,icon,card};
+})();
+
+window.ART={vol:VOL,paper,OL,animal,animalOverlay,petCells:PET_CELLS,petLayer,petState,cellState,stateCells,fluffSet,fluffOf,HAIR,HAIR_STYLES,hairPlan,KINDS,F,TOPPING,WHOLE,wholeSVG,pieceSVG,pizza,TOOL,oven,BUILD,blob,rng,ACC,accSVG,face,FACE_ZONES,dress,lipstick,polish,star,twinkle,HAND,GIFTS,giftSVG,XMAS};
 })();
