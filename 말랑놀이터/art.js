@@ -919,6 +919,7 @@ const giftSVG=id=>{const g=GIFTS.find(x=>x.id===id);return g?g.svg():''};
    벽·바닥은 종이 공예(외곽선 없음, 겹마다 그림자 하나). 색은 themes.christmas.palette 를 씀.
    좌표: tree()/fireplace()/window()/door() 는 자기 상자(왼쪽 위 0,0) 안에 그림 → 놀이 쪽에서 translate 로 놓음.
          ornament()/star()/wreath() 는 가운데가 (0,0), stocking() 은 고리가 (0,0), gift() 는 바닥 가운데가 (0,0).
+   room() 은 300 × 400 상자 밖으로도 벽과 바닥을 이어 그림(무대가 더 길거나 넓어도 빈틈 없음).
    tree 상자 160 × 280: TREE.spots(방울 자리 = 공 가운데), TREE.star(꼭대기), TREE.strings(꼬마전구 줄 3개 [x0,y0,cx,cy,x1,y1]).
    fireplace 상자 96 × 128: FIRE.hooks(양말 고리). window 상자 84 × 104. door 상자 72 × 220: DOOR.wreath(리스 자리). */
 const XMAS=(()=>{
@@ -934,7 +935,7 @@ const XMAS=(()=>{
   const TREE={w:160,h:280,tiers:[[80,14,88,40,4],[80,60,162,56,5],[80,126,238,72,6]],star:[80,12],
     spots:[[78,60],[60,124],[100,120],[46,206],[82,216],[116,202]],
     strings:[[44,84,80,102,118,80],[26,156,80,180,134,152],[12,232,80,256,148,228]]};
-  const FIRE={w:96,h:128,hooks:[[22,14],[48,14],[74,14]]};
+  const FIRE={w:96,h:128,hooks:[[24,14],[64,14]]};
   const DOOR={w:72,h:220,wreath:[36,62]};
   const WIN={w:84,h:104};
   const BULB=['#F2D06B','#E07A70','#8EC9F0','#FFF4DC'];
@@ -954,7 +955,7 @@ const XMAS=(()=>{
     const nd=[[-.42,.62],[.18,.5],[.5,.78],[-.1,.84]].slice(0,2+i).map(([u,v])=>{const y=top+(base-top)*v,x=cx+hw*u*((y-top)/(base-top));return `<path d="M${f1(x-5)} ${f1(y-3)}Q${f1(x)} ${f1(y+3)} ${f1(x+5)} ${f1(y-3)}" fill="none" stroke="${dk}" stroke-width="2" stroke-linecap="round" opacity=".35"/>`}).join('');
     const rim=VOL.off?'':`<path class="vol-rim" d="M${cx+8} ${top+12}Q${f1(cx+hw*.52)} ${f1(top+(base-top)*.55)} ${cx+hw-7} ${base-7}" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="2.6" stroke-linecap="round"/>`;
     const low=VOL.off?'':`<path class="vol-low" d="${hemD(cx,base,hw,n)}" fill="none" stroke="${OL}" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>`;
-    return shape+VOL.lit(shape)+nd+rim+low+VOL.shine(f1(cx-hw*.3),f1(top+(base-top)*.5),f1(hw*.2),f1((base-top)*.13),-28);
+    return shape+VOL.lit(shape)+nd+rim+low+VOL.shine(f1(cx-hw*.3),f1(top+(base-top)*.46),f1(hw*.13),f1((base-top)*.08),-30);
   }
   /* the big tree (no decorations): pot, trunk, three tiers; each upper tier leaves a soft shadow on the one below */
   function tree(){
@@ -979,7 +980,7 @@ const XMAS=(()=>{
   /* the top star, centre (0,0) */
   function topStar(c,o={}){
     const r=o.r||18,body=star(0,0,r,c,S);
-    return `<g class="xm-star">${o.halo?`<circle r="${r*1.7}" fill="${C.gold}" opacity=".2"/>`:''}${body}${VOL.lit(star(0,0,r,'#000'))}${VOL.shine(f1(-r*.24),f1(-r*.3),f1(r*.22),f1(r*.15),-30)}</g>`;
+    return `<g class="xm-star">${o.halo?`<circle r="${r*1.9}" fill="url(#xmGlowG)" opacity=".8"/>`:''}${body}${VOL.lit(star(0,0,r,'#000'))}${VOL.shine(f1(-r*.24),f1(-r*.3),f1(r*.22),f1(r*.15),-30)}</g>`;
   }
   /* one string of little lights along a tree tier (tree box units). Lit: the bulbs glow softly (no blinking) */
   function lights(i){
@@ -993,10 +994,10 @@ const XMAS=(()=>{
   }
   /* stocking, the hook at (0,0) */
   function stocking(c){
-    const body=`<path d="M-10 6H10V30Q10 34 14 35.5L22 38Q31 41 29 49Q27 57 16 55L-1 51Q-12 48 -11 37Z" fill="${c}" ${S}/>`;
+    const body=`<path d="M-9 6H9V30Q9 33.5 12 35L16 37Q23 40 21.5 47.5Q19.5 54.5 11 53L-1 50.5Q-11 48 -10 37Z" fill="${c}" ${S}/>`;
     return `<g class="xm-stock"><path d="M0 -6V4" stroke="${OL}" stroke-width="2" stroke-linecap="round"/>${body}${VOL.lit(body)}
-      <path d="M17 41Q27 41 28 49Q27 55 19 54Z" fill="#fff" opacity=".42"/><path d="M-11 38Q-9 47 0 49L1 41Q-6 40 -11 38Z" fill="#fff" opacity=".3"/>
-      ${lit(`<rect x="-13" y="1" width="26" height="12" rx="5" fill="${C.snow}" ${S}/>`)}<ellipse cx="-6" cy="5" rx="4" ry="2" fill="#fff" opacity=".8"/></g>`;
+      <path d="M14 39.5Q21 41 20.5 47.5Q19.5 52.5 14 52.5Z" fill="#fff" opacity=".42"/><path d="M-10 38Q-8 46.5 0 48.5L1 41Q-5.5 40 -10 38Z" fill="#fff" opacity=".3"/>
+      ${lit(`<rect x="-12" y="1" width="24" height="12" rx="5" fill="${C.snow}" ${S}/>`)}<ellipse cx="-5" cy="5" rx="4" ry="2" fill="#fff" opacity=".8"/></g>`;
   }
   /* a present, bottom centre (0,0). rb = ribbon colour */
   function gift(c,rb){
@@ -1054,9 +1055,9 @@ const XMAS=(()=>{
   function room(){
     const L=d=>`<g filter="url(#xmPaper)">${d}</g>`;
     return `<defs><filter id="xmPaper" x="-5%" y="-5%" width="110%" height="120%"><feDropShadow dx="0" dy="1.5" stdDeviation="1.4" flood-color="#5B3A29" flood-opacity=".18"/></filter>${treeGlow()}</defs>
-      <rect width="300" height="400" fill="${C.wall}"/>${L(`<rect x="0" y="236" width="300" height="78" fill="${C.wainscot}"/>`)}${L(`<rect x="0" y="232" width="300" height="6" fill="${C.rail}"/>`)}
-      ${L(`<rect x="0" y="312" width="300" height="88" fill="${C.floor}"/>`)}<path d="M0 338H300M0 366H300" stroke="${C.plank}" stroke-width="1.2"/><path d="M60 312L52 338M180 338L186 366M110 366L104 400M250 312L246 338" stroke="${C.plank}" stroke-width="1.2"/>
-      ${L(`<rect x="0" y="308" width="300" height="7" fill="${C.rail}"/>`)}${L(`<ellipse cx="150" cy="342" rx="112" ry="25" fill="${C.rug}"/><ellipse cx="150" cy="342" rx="84" ry="17" fill="${C.rugIn}"/>`)}`;
+      <rect x="-300" y="-400" width="900" height="800" fill="${C.wall}"/>${L(`<rect x="-300" y="236" width="900" height="78" fill="${C.wainscot}"/>`)}${L(`<rect x="-300" y="232" width="900" height="6" fill="${C.rail}"/>`)}
+      ${L(`<rect x="-300" y="312" width="900" height="88" fill="${C.floor}"/>`)}<path d="M-300 338H600M-300 366H600" stroke="${C.plank}" stroke-width="1.2"/><path d="M60 312L52 338M180 338L186 366M110 366L104 400M250 312L246 338" stroke="${C.plank}" stroke-width="1.2"/>
+      ${L(`<rect x="-300" y="308" width="900" height="7" fill="${C.rail}"/>`)}${L(`<ellipse cx="150" cy="342" rx="112" ry="25" fill="${C.rug}"/><ellipse cx="150" cy="342" rx="84" ry="17" fill="${C.rugIn}"/>`)}`;
   }
   /* Toto's red scarf, laid over ART.animal (viewBox 200 × 230) */
   const scarf=`<svg class="xm-scarf" viewBox="0 0 200 230" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible">${lit(`<path d="M118 156L130 200L112 203L104 160Z" fill="${C.berry}" ${S}/>`)}<path d="M113 172l12 -3M116 186l12 -3" stroke="${C.snow}" stroke-width="4" stroke-linecap="round"/>
@@ -1070,10 +1071,11 @@ const XMAS=(()=>{
   function card(kind,c,rb){
     if(kind==='orn')return `<svg viewBox="-19 -26 38 40" style="overflow:visible">${ornament(c)}</svg>`;
     if(kind==='star')return `<svg viewBox="-24 -24 48 48" style="overflow:visible">${topStar(c)}</svg>`;
-    if(kind==='stock')return `<svg viewBox="-20 -10 56 68" style="overflow:visible">${stocking(c)}</svg>`;
+    if(kind==='stock')return `<svg viewBox="-22 -10 56 68" style="overflow:visible">${stocking(c)}</svg>`;
     if(kind==='gift')return `<svg viewBox="-30 -54 60 60" style="overflow:visible">${gift(c,rb)}</svg>`;
     if(kind==='wreath')return `<svg viewBox="-36 -40 72 78" style="overflow:visible">${wreath(c)}</svg>`;
     if(kind==='lights')return `<svg viewBox="20 140 120 52" style="overflow:visible">${lights(1)}</svg>`;
+    if(kind==='bulb')return `<svg viewBox="-16 -18 32 36" style="overflow:visible"><circle cx="0" cy="4" r="14" fill="${c||BULB[0]}" opacity=".3"/>${lit(`<rect x="-5" y="-15" width="10" height="8" rx="2" fill="#A8968A" ${S2}/>`)}<ellipse cx="0" cy="3" rx="8.5" ry="11" fill="${c||BULB[0]}" ${S}/>${VOL.lit('<ellipse cx="0" cy="3" rx="8.5" ry="11" fill="#000"/>')}${VOL.shine(-3,-1.5,2.6,3.6,-20)}</svg>`;
     if(kind==='snow')return `<svg viewBox="-24 -24 48 48" style="overflow:visible"><circle r="20" fill="${C.night}" ${S}/><g stroke="#fff" stroke-width="3.4" stroke-linecap="round">${[0,60,120].map(a=>`<path d="M${f1(Math.cos(a*Math.PI/180)*13)} ${f1(Math.sin(a*Math.PI/180)*13)}L${f1(-Math.cos(a*Math.PI/180)*13)} ${f1(-Math.sin(a*Math.PI/180)*13)}"/>`).join('')}</g>${VOL.shine(-7,-8,6,4,-30)}</svg>`;
     if(kind==='tree')return icon();
     return '';

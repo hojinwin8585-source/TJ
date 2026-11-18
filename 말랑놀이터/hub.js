@@ -96,6 +96,12 @@ const css=`
 .hm-snow i{position:absolute;top:-20px;left:var(--x);width:var(--s);height:var(--s);border-radius:50%;background:#FFFFFF;box-shadow:0 1px 2px rgba(91,74,66,.18);opacity:.95;animation:hmsnow var(--t) linear infinite;animation-delay:var(--dl)}
 @keyframes hmsnow{from{transform:translate(0,0)}50%{transform:translate(8px,calc(var(--h) / 2))}to{transform:translate(0,calc(var(--h) + 30px))}}
 .hm-scarf{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.hm-house.gift .hm-lights{animation:none;opacity:.9}
+.hm-xtree{position:absolute;width:112px;height:128px;transform:translate(-50%,-50%);border:0;background:none;padding:0 14px;z-index:3;display:flex;flex-direction:column;align-items:center}
+.hm-xtree .xt{width:84px;height:104px;display:block;filter:drop-shadow(0 4px 4px rgba(91,58,41,.14))}
+.hm-xtree .xt svg{width:100%;height:100%;display:block;overflow:visible}
+.hm-xtree b{font-weight:400;font-size:12px;color:#6B5A50;background:rgba(255,253,249,.92);border-radius:999px;padding:1px 8px;margin-top:-4px;white-space:nowrap;box-shadow:0 2px 0 rgba(91,74,66,.1)}
+.hm-xtree:active .xt{transform:scale(.95)}
 `;
 const st=document.createElement('style');st.textContent=css;document.head.appendChild(st);
 
@@ -118,7 +124,7 @@ function villageBG(W,H,x){
   let s=`<rect width="${W}" height="${H}" fill="${sky}"/>`;
   s+=L(cloud(W*.5,H*.07,1.1)+(x?'':cloud(W*.86,H*.18,.8)));
   s+=L(`<path d="M0 ${H*.2}Q${W*.3} ${H*.12} ${W*.55} ${H*.19}T${W} ${H*.16}V${H}H0Z" fill="${far}"/>`);
-  s+=L(`<path d="M0 ${H*.42}Q${W*.35} ${H*.34} ${W*.62} ${H*.41}T${W} ${H*.38}V${H}H0Z" fill="${mid}"/>`+tree(W*.06,H*.5,1,pine)+tree(W*.95,H*.47,1.1,pine)+bush(W*.5,H*.31,.8,x?'#DDE7DF':'#A8CC9C'));
+  s+=L(`<path d="M0 ${H*.42}Q${W*.35} ${H*.34} ${W*.62} ${H*.41}T${W} ${H*.38}V${H}H0Z" fill="${mid}"/>`+(x&&A.XMAS?'':tree(W*.06,H*.5,1,pine))+tree(W*.95,H*.47,1.1,pine)+bush(W*.5,H*.31,.8,x?'#DDE7DF':'#A8CC9C'));
   s+=L(`<path d="M0 ${H*.7}Q${W*.4} ${H*.63} ${W*.7} ${H*.69}T${W} ${H*.67}V${H}H0Z" fill="${near}"/>`+bush(W*.07,H*.74,.9,x?'#E4EAE4':'#94BF88')+bush(W*.92,H*.76,.8,x?'#E4EAE4':'#94BF88')+tree(W*.5,H*.99,.9,pine)
     +flower(W*.38,H*.95,'#E9B7A6')+flower(W*.62,H*.96,'#EBC9A0')+flower(W*.12,H*.97,'#C3B4E6')+flower(W*.88,H*.97,'#E9B7A6'));
   return `<svg class="hm-bg" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg"><defs>${pf(id)}<filter id="${id}g"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="5"/><feColorMatrix values="0 0 0 0 .36  0 0 0 0 .23  0 0 0 0 .16  0 0 0 .09 0"/></filter></defs>${s}<rect width="${W}" height="${H}" filter="url(#${id}g)"/></svg>`;
@@ -134,7 +140,7 @@ function houseSVG(x){
   const id='hmh'+(++_fid),L=d=>`<g filter="url(#${id})">${d}</g>`;
   const roof=x?(XP.berry||'#C96A63'):'#D9928A';
   let s='';
-  if(x)s+=L(`<g transform="translate(16 132)"><rect x="-3" y="0" width="6" height="12" rx="2" fill="#B89878"/><path d="M0-44L20-6H-20Z" fill="${XP.pine||'#6FA58A'}"/><path d="M0-58L15-30H-15Z" fill="${XP.pine||'#6FA58A'}"/>
+  if(x&&!(A.XMAS&&document.getElementById('xmashouse')))s+=L(`<g transform="translate(16 132)"><rect x="-3" y="0" width="6" height="12" rx="2" fill="#B89878"/><path d="M0-44L20-6H-20Z" fill="${XP.pine||'#6FA58A'}"/><path d="M0-58L15-30H-15Z" fill="${XP.pine||'#6FA58A'}"/>
     <path d="M0-64l3 6 6 1-4.5 4 1 6-5.5-3-5.5 3 1-6-4.5-4 6-1z" fill="${XP.gold||'#E3C46A'}"/><circle cx="-8" cy="-14" r="3" fill="${XP.berry||'#C96A63'}"/><circle cx="7" cy="-24" r="3" fill="${XP.gold||'#E3C46A'}"/><circle cx="9" cy="-8" r="3" fill="${XP.snow||'#FBF8F2'}"/></g>`);
   s+=L(`<rect x="88" y="16" width="14" height="30" rx="2" fill="#C9A98A"/>${x?'<path d="M86 16Q95 8 104 16Z" fill="#FFFFFF"/>':''}`);
   s+=L(`<rect x="30" y="66" width="100" height="78" rx="6" fill="#F6EEE2"/>`);
@@ -195,7 +201,7 @@ function portalHTML(p){
 }
 function renderVillage(){
   const x=isXmas();
-  village.innerHTML=PORTALS.map(portalHTML).join('')+`<button class="hm-house" type="button" data-go="zone-myroom" data-en="My room"><span class="hh">${houseSVG(x)}<span class="hm-gift">${R?R.BOX:''}</span></span><b>${(HOME.mySpace||{}).ko||'내 방'}</b></button>`+(x?`<div class="hm-snow">${Array.from({length:SNOW_MAX},(_,i)=>`<i style="--x:${(4+i*9.6+(i%2)*3).toFixed(1)}%;--s:${6+(i%3)*2}px;--t:${16+(i*7)%9}s;--dl:${-(i*2.3).toFixed(1)}s"></i>`).join('')}</div>`:'');
+  village.innerHTML=PORTALS.map(portalHTML).join('')+`<button class="hm-house" type="button" data-go="zone-myroom" data-en="My room"><span class="hh">${houseSVG(x)}<span class="hm-gift">${R?R.BOX:''}</span></span><b>${(HOME.mySpace||{}).ko||'내 방'}</b></button>`+(x&&A.XMAS&&document.getElementById('xmashouse')?`<button class="hm-xtree" type="button" data-go="xmashouse" data-en="Christmas house"><span class="xt">${A.XMAS.icon()}</span><b>${(M.NAMES&&M.NAMES.xmashouse)||'크리스마스 집'}</b></button>`:'')+(x?`<div class="hm-snow">${Array.from({length:SNOW_MAX},(_,i)=>`<i style="--x:${(4+i*9.6+(i%2)*3).toFixed(1)}%;--s:${6+(i%3)*2}px;--t:${16+(i*7)%9}s;--dl:${-(i*2.3).toFixed(1)}s"></i>`).join('')}</div>`:'');
   layout();
 }
 /* 4 circles at the corners, the house in the middle, paths between; sizes from the village box */
@@ -208,6 +214,7 @@ function layout(){
   village.querySelectorAll('.hm-portal').forEach((b,i)=>{const p=pts[i]||pts[0];b.style.setProperty('--d',d+'px');b.style.left=p[0]+'px';b.style.top=p[1]+'px'});
   const hw=Math.round(Math.max(120,Math.min(W*.48,176,cy2-cy1-d+40)));
   const hb=village.querySelector('.hm-house');if(hb){hb.style.setProperty('--hw',hw+'px');hb.style.left=hx+'px';hb.style.top=hy+'px'}
+  const xt=village.querySelector('.hm-xtree');if(xt){xt.style.left=Math.round(Math.max(58,hx-hw/2-50))+'px';xt.style.top=(hy+8)+'px'}
   village.querySelectorAll('svg.hm-bg,svg.hm-paths').forEach(s=>s.remove());
   village.insertAdjacentHTML('afterbegin',villageBG(W,H,x)+pathsSVG(W,H,hx,hy,pts,x));
   village.style.setProperty('--h',H+'px');village.querySelectorAll('.hm-snow i').forEach(i=>i.style.setProperty('--h',H+'px'));
@@ -235,6 +242,8 @@ function greet(force){
 const HG=M.Guide?M.Guide.make(home):null;
 if(HG){home.addEventListener('pointerdown',()=>HG.touch(),true);['pointerup','pointercancel'].forEach(t=>home.addEventListener(t,()=>HG.release(),true))}
 const IDLE=4000;
+/* themes.christmas.voice: Toto says it when the home opens, at most once a minute (P7 7-나) */
+const XMAS_SAY_GAP=60000;let lastXmasSay=0;
 const he=games.home.enter;
 games.home.enter=()=>{he();
   renderToday();renderToto(allDone?'happy':'idle');renderVillage();renderGift();
@@ -246,12 +255,13 @@ games.home.enter=()=>{he();
   if(gift){renderGift();setTimeout(()=>{if(M.current()!=='home')return;if(al)al.play('hop');try{M.tone(784,.3,'sine',.07);M.tone(1046,.45,'sine',.07,.22)}catch(e){}
     say('오늘 놀이를 다 했어요! 선물이 왔어요! 내 방에 가 볼까?','You finished today\'s play! A present came! Let\'s go to your room!')},700);lastGreet=now}
   else if(now-lastGreet>45000){lastGreet=now;setTimeout(()=>{if(M.current()==='home')greet()},600)}
-  if(isXmas()&&XM.voice&&!home.dataset.xmasSaid){home.dataset.xmasSaid='1';setTimeout(()=>{if(M.current()==='home')say(XM.voice.ko,XM.voice.en,true)},2600)}
+  if(isXmas()&&XM.voice&&now-lastXmasSay>XMAS_SAY_GAP){lastXmasSay=now;setTimeout(()=>{if(M.current()==='home')say(XM.voice.ko,XM.voice.en,true)},2600)}
   if(HG)HG.start({type:'tap',wait:true,after:IDLE,quiet:true,at:()=>{const r=startBtn.getBoundingClientRect(),hr=home.getBoundingClientRect();return[r.left-hr.left+r.width*.5,r.top-hr.top+r.height*.45]}});
 };
 games.home.exit=()=>{if(HG)HG.stop();dropT.forEach(clearTimeout);dropT=[];if(al){al.detach();al=null}};
 let rz=0;window.addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(M.current()==='home')layout()},120)});
 document.addEventListener('ml-mission',()=>{if(M.current()==='home')renderToday()});
+document.addEventListener('ml-bgmset',()=>{if(M.current()==='home'){renderToto(allDone?'happy':'idle');if(M.Alive){if(al)al.detach();al=M.Alive.attach(totoBox,{kind:'bunny'})}renderVillage();renderGift()}});
 
 /* ============================== parent settings > 아이 기록 (progress.parentView) ============================== */
 const REC_CSS=`

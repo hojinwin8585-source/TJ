@@ -5,7 +5,7 @@
    - sameLayoutEverywhere : 뒤로 가기(64px 이상, 왼쪽 위) · 무대(화면 높이 60~66%) · 도구 칸(18~22%, 맨 아래)
    - madeEqualsUsed / everyIngredientPrepared : 피자 1단계를 콕·쓱쓱으로 끝까지 해서 썬 수 == 접시 수 == 피자 위 수, 접시 0 / 모든 재료에 준비 과정, 조각 크기 16% 이상
    - depth : 놀이마다 과정 수 · 손동작 종류 · 살아 있는 손님 · 고르기 · 끝내기 장면 표. 놀이가 깊이 훅(ML.__pzDepth, __dishDepth, __choreDepth, __bakeDepth,
-             __routineDepth, __mkDepth, __clDepth, __rsDepth, __icDepth, __jbDepth)을 주면 그 값을 쓰고, 없을 때만 첫 화면에서 추정
+             __routineDepth, __mkDepth, __clDepth, __rsDepth, __icDepth, __jbDepth, __xmDepth)을 주면 그 값을 쓰고, 없을 때만 첫 화면에서 추정
    - oneShell (P16) : 모든 놀이 화면(장소 화면 포함)이 ML.Shell 로 만들어졌는지 · 머리줄 높이 · 뒤로 가기 그림의 위치와 크기가 모든 화면에서 같은지 ·
              오른쪽 그림 버튼 하나까지 · 오른쪽 위 글자 전환 버튼 0 · 단계 탭 0 · 글자 안내 줄 0. 하나라도 어기면 실패
    pizza · petsalon · nailshop 은 통과해야 하고(하나라도 어기면 실패로 끝남), 다른 화면은 어긴 것의 목록만 보여 줍니다(P8 이후에 고침). */
@@ -136,7 +136,7 @@ const TOL=.01;   // measuring tolerance on the height ratios
   const ns=(CFG.games||{}).nailshop||{},lvls=ns.levels||[],nl=lvls.length?lvls[lvls.length-1].steps:[],nf=lvls.length?lvls[0].steps:[];
   rows.push({g:`nailshop (1~${lvls.length}단계)`,proc:`${new Set(nf).size}~${new Set(nl).size}`,hands:['rub(도구 따라옴)','tap','card'],someone:true,choice:true,ending:'거울·액자',src:'config levels'});
   /* the games' own depth hooks (P16): use what the game says about itself; guess from the first screen only when there is no hook */
-  const HOOKS={dishes2:'__dishDepth',chores2:'__choreDepth',bakery:'__bakeDepth',routine2:'__routineDepth',makeup2:'__mkDepth',clothes:'__clDepth',restaurant:'__rsDepth',icecream2:'__icDepth',jobs:'__jbDepth'};
+  const HOOKS={dishes2:'__dishDepth',chores2:'__choreDepth',bakery:'__bakeDepth',routine2:'__routineDepth',makeup2:'__mkDepth',clothes:'__clDepth',restaurant:'__rsDepth',icecream2:'__icDepth',jobs:'__jbDepth',xmashouse:'__xmDepth'};
   const hooked=await p.evaluate(H=>{const out={};Object.keys(H).forEach(g=>{const f=window.ML[H[g]];if(typeof f!=='function')return;try{let v=f();if(!Array.isArray(v))v=[v];
       out[g]=v.map(d=>({level:d.level,processes:d.processes,hands:(d.hands||d.handActions||[]).filter(Boolean),someone:!!(d.someone!=null?d.someone:d.customer),choice:d.choice,ending:d.ending}))}catch(e){out[g]={err:e.message}}});return out},HOOKS);
   for(const g of others){const q=probe[g];if(!q||/^zone-|^map$|^stage$|^friends$|^stamps$|^videos$/.test(g))continue;

@@ -68,6 +68,7 @@ const I={
   wind:`<svg viewBox="0 0 100 100"><path d="M10 40H62Q76 40 76 28Q76 18 66 18Q58 18 58 26" fill="none" stroke="${C.sky}" stroke-width="8" stroke-linecap="round"/><path d="M10 60H74Q88 60 88 72Q88 82 78 82Q70 82 70 74" fill="none" stroke="${C.sky}" stroke-width="8" stroke-linecap="round"/><path d="M10 40H62Q76 40 76 28Q76 18 66 18Q58 18 58 26M10 60H74Q88 60 88 72Q88 82 78 82Q70 82 70 74" fill="none" stroke="${OL}" stroke-width="2" opacity=".5"/></svg>`,
   candle:`<svg viewBox="0 0 100 100"><rect x="38" y="40" width="24" height="50" rx="6" fill="${C.rose}" ${S}/><path d="M38 54L62 46M38 70L62 62M38 86L62 78" stroke="#fff" stroke-width="4" opacity=".7"/><path d="M50 40V32" ${S}/><path d="M50 8Q62 20 56 28Q52 34 50 34Q42 32 44 24Q46 16 50 8Z" fill="${C.butter}" ${S}/></svg>`,
   gift:`<svg viewBox="0 0 100 100"><rect x="16" y="40" width="68" height="48" rx="8" fill="${C.rose}" ${S}/><rect x="10" y="28" width="80" height="16" rx="6" fill="#F3B7C2" ${S}/><path d="M50 28V88" stroke="${C.butter}" stroke-width="10"/><path d="M50 28Q30 6 26 20Q24 30 50 28Q70 6 74 20Q76 30 50 28Z" fill="${C.butter}" ${S}/></svg>`,
+  xmtree:()=>A&&A.XMAS?A.XMAS.icon():'',
   maze:`<svg viewBox="0 0 100 100"><rect x="10" y="10" width="80" height="80" rx="12" fill="${C.sage}" ${S}/><path d="M26 10V58H48M74 90V44H50V26" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round"/><circle cx="20" cy="80" r="6" fill="${C.rose}" ${S}/><path d="M80 14l2 5 5 .5-4 3.5 1 5-4-3-4 3 1-5-4-3.5 5-.5z" fill="${C.butter}" ${S}/></svg>`
 };
 const art=k=>{const v=I[k];return typeof v==='function'?v():(v||'')};
@@ -77,7 +78,7 @@ const art=k=>{const v=I[k];return typeof v==='function'?v():(v||'')};
 const SCREEN_OF={pizza:'pizza',bread:'bakery',cake:'bakery',bakery:'bakery',chef:'restaurant',restaurant:'restaurant',icecream:'icecream2',dishes:'dishes2',
   petsalon:'petsalon',nailshop:'nailshop',dressup:'clothes',clothes:'clothes',makeup:'makeup2',coloring:'draw',drawing:'draw',
   photoCards:'words',words:'words',maze:'maze',jobs:'jobs',animals:'animals',counting:'jelly',shapes:'shapes',trace:'trace',quest:'map',explore:'map',
-  rhythmClap:'rhythm',music:'music',instruments:'music',songs:'videos',chores:'chores2',routine:'routine2','가족':'friends','도장':'stamps'};
+  xmasHouse:'xmashouse',rhythmClap:'rhythm',music:'music',instruments:'music',songs:'videos',chores:'chores2',routine:'routine2','가족':'friends','도장':'stamps'};
 /* not in config: the place screen ids (kept from the earlier building screens so old links still work) and their pictures */
 const PLACE_ID={cook:'zone-cook',salon:'zone-salon',learn:'zone-school',music:'zone-music',myroom:'zone-myroom'};
 const PLACE_BG={cook:'kitchen',salon:'forest',learn:'sea',music:'hill',myroom:'room'};
@@ -86,7 +87,8 @@ const EXTRA_PLACE={sounds:'learn',dishes:'cook',bread:'cook',chores:'myroom',rou
 const PLACES={};
 Object.keys(PLACE_ID).forEach(k=>{
   const P=(HOME.places||{})[k]||{},list=[];
-  const add=n=>{const key=String(n||'').split('(')[0].trim(),s=SCREEN_OF[key];if(s&&!list.includes(s))list.push(s)};
+  /* home.places 의 '(12월에는 맨 앞)': in December that game comes first in its place */
+  const add=n=>{const key=String(n||'').split('(')[0].trim(),s=SCREEN_OF[key];if(!s||list.includes(s))return;if(/12월에는 맨 앞/.test(String(n))&&new Date().getMonth()===11)list.unshift(s);else list.push(s)};
   (P.games||[]).forEach(add);(CAT[k]||[]).forEach(c=>add(c&&c.id));
   Object.keys(EXTRA_PLACE).forEach(s=>{if(EXTRA_PLACE[s]===k&&s==='sounds')list.push(s)});
   PLACES[k]={key:k,id:PLACE_ID[k],ko:P.ko||k,en:P.en||k,games:list};
@@ -290,9 +292,9 @@ function start(sec,items,onPick,o={}){
 
 /* ============================== Shell.place: a place screen (2×2 drawn tiles, big next-page arrow) ============================== */
 const TILE_ART={animals:'dog',trace:'trace',shapes:'shapes',jelly:'jelly',music:'keys',rhythm:'drum',draw:'palette',words:'apple',sounds:'sounds',videos:'tv',
-  map:'castle',friends:'friends',stamps:'stamp',maze:'maze'};
-const TILE_NAME={map:['공주 모험','Princess adventure'],friends:['우리 가족','Our family'],stamps:['칭찬 도장','Praise stamps'],sounds:['소리 놀이','Sounds'],videos:['노래 영상','Songs']};
-const TILE_COL={map:'var(--berry)',friends:'var(--peach)',stamps:'var(--banana)'};
+  map:'castle',friends:'friends',stamps:'stamp',maze:'maze',xmashouse:'xmtree'};
+const TILE_NAME={map:['공주 모험','Princess adventure'],friends:['우리 가족','Our family'],stamps:['칭찬 도장','Praise stamps'],sounds:['소리 놀이','Sounds'],videos:['노래 영상','Songs'],xmashouse:['크리스마스 집','Christmas house']};
+const TILE_COL={map:'var(--berry)',friends:'var(--peach)',stamps:'var(--banana)',xmashouse:'var(--lime)'};
 const EMO=/\p{Extended_Pictographic}/u;
 function tileFor(gid){
   let t=document.querySelector(`#home .tile[data-go="${gid}"]`);
