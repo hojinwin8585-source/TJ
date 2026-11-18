@@ -1302,7 +1302,7 @@ games.stage=(()=>{
   }
   function playStage(i){
     clear();si=i;st=STAGES[i];go('stage',true);
-    scene.className='scene bg-'+st.bg;$('#stTitle').textContent=`${st.icon} ${st.name}`;
+    scene.className='scene bg-'+st.bg;{const stt=$('#stTitle');if(stt)stt.textContent=`${st.icon} ${st.name}`;}
     $('#stDeco').innerHTML=st.deco.map(([e,x,y,s])=>`<span style="left:${x}%;top:${y}%;font-size:${s}px">${e}</span>`).join('');
     dots(0);play.innerHTML='';
     requestAnimationFrame(()=>renderParty(true));
