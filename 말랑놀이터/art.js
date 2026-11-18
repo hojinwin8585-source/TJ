@@ -616,12 +616,16 @@ function polish(color='#FF5A7A'){return `<svg viewBox="0 0 100 140" style="overf
 /* 종이 공예 그림체: 외곽선 없이 종이를 여러 겹 겹친 둥근 그림. 겹마다 부드러운 그림자, 종이 결.
    paper(kind, {grow:0~3, size}) — grow가 오를수록 그림에 나무·꽃·집이 하나씩 늘어남(숫자 대신 그림이 자람). */
 let _pid=0;
+/* P9 options: tint = colour overrides for the layers (노래 = forest의 다른 색), who = [animal kind, mood, opt] living in the circle
+   (so four circles stay different in the christmas picture too), notes = two paper music notes in the sky (노래) */
 function paper(kind='forest',o={}){
   const g=Math.max(0,Math.min(3,o.grow??3)),id='pp'+(++_pid);
-  const P={forest:{sky:'#DCEBF0',far:'#B9D3B0',mid:'#9CC293',near:'#86B27E',path:'#EBDCC0',acc:'#E9B7A6'},
+  const who=(x,y,s,def)=>{const w=o.who||def;return `<g transform="translate(${x} ${y}) scale(${s})">${animal(w[0],w[1]||'happy',w[2]||{})}</g>`};
+  const P0={forest:{sky:'#DCEBF0',far:'#B9D3B0',mid:'#9CC293',near:'#86B27E',path:'#EBDCC0',acc:'#E9B7A6'},
            sea:{sky:'#DDEBF2',far:'#A9CBDA',mid:'#8EBBCF',near:'#EADCC2',path:'#F3E8D3',acc:'#E8C27A'},
            christmas:{sky:'#DCE4EE',far:'#C4D3CB',mid:'#F4F1EA',near:'#FBF9F4',path:'#E9E2D6',acc:'#D9928A'},
            kitchen:{sky:'#F3E6DA',far:'#E8D3C0',mid:'#D9BFA6',near:'#EFE2D0',path:'#F6EEE2',acc:'#E3A79A'}}[kind]||{};
+  const P=Object.assign({},P0,o.tint||{});
   const L=(d)=>`<g filter="url(#${id}s)">${d}</g>`;                 // 한 겹 = 그림자 하나
   const tree=(x,y,s=1,c='#7FA978')=>`<g transform="translate(${x} ${y}) scale(${s})"><rect x="-3" y="-4" width="6" height="16" rx="2" fill="#B89878"/><path d="M0-34L16-6H-16Z" fill="${c}"/><path d="M0-46L12-22H-12Z" fill="${c}" opacity=".92"/></g>`;
   const bush=(x,y,s=1,c='#93BC8A')=>`<g transform="translate(${x} ${y}) scale(${s})"><circle cx="-8" cy="0" r="10" fill="${c}"/><circle cx="6" cy="-4" r="12" fill="${c}"/><circle cx="16" cy="2" r="8" fill="${c}"/></g>`;
@@ -635,24 +639,25 @@ function paper(kind='forest',o={}){
     s+=L(`<path d="M0 136Q60 110 120 130T200 124V200H0Z" fill="${P.mid}"/>`+(g>=1?tree(40,124,1)+tree(58,128,.75,'#8DB585'):'')+(g>=2?tree(160,122,1.1)+tree(178,128,.8,'#8DB585'):''));
     s+=L(`<path d="M0 160Q70 146 130 158T200 154V200H0Z" fill="${P.near}"/>`+(g>=1?bush(150,160,.9):'')+(g>=3?bush(30,166,.8,'#A3C799')+flower(118,168)+flower(132,174,'#EBC9A0')+flower(70,176):''));
     s+=L(`<path d="M84 200Q92 170 104 156Q112 148 106 140Q118 150 114 162Q104 182 120 200Z" fill="${P.path}"/>`);
-    s+=`<g transform="translate(78 92) scale(.3)">${animal('bunny','happy',{bow:'#E9A2B4'})}</g>`;
+    if(o.notes)s+=L(`<g fill="${P.acc}"><path d="M38 34V58" stroke="${P.acc}" stroke-width="3"/><ellipse cx="33" cy="58" rx="6" ry="4.6"/><path d="M38 34L50 38V44L38 40Z"/><path d="M160 64V84" stroke="${P.acc}" stroke-width="3"/><ellipse cx="155" cy="84" rx="5.4" ry="4.2"/></g>`);
+    s+=who(78,92,.3,['bunny','happy',{bow:'#E9A2B4'}]);
   }else if(kind==='sea'){
     s+=L(cloud(150,48,.9)+`<circle cx="52" cy="56" r="14" fill="#F2DDA0"/>`);
     s+=L(`<path d="M0 112Q50 104 100 112T200 108V200H0Z" fill="${P.far}"/>`);
     s+=L(`<path d="M0 132Q40 124 80 132T160 130T200 132V200H0Z" fill="${P.mid}"/>`+(g>=2?`<path d="M120 118L136 118L128 96Z" fill="#FBF9F4"/><path d="M112 120H146L140 128H118Z" fill="#D9928A"/>`:''));
     s+=L(`<path d="M0 158Q60 146 120 156T200 150V200H0Z" fill="${P.near}"/>`+(g>=1?`<path d="M40 162l8-14 8 14z" fill="#E3B48A"/><circle cx="160" cy="166" r="6" fill="#E8C7B8"/>`:'')+(g>=3?`<path d="M120 172q8-12 16 0q-8 6-16 0z" fill="#E9B7A6"/><circle cx="74" cy="176" r="4" fill="#FBF9F4"/>`:''));
-    s+=`<g transform="translate(70 104) scale(.28)">${animal('cat','happy',{bow:'#9DB7E0'})}</g>`;
+    s+=who(70,104,.28,['cat','happy',{bow:'#9DB7E0'}]);
   }else if(kind==='christmas'){
     s+=L(Array.from({length:10},(_,i)=>`<circle cx="${18+i*19}" cy="${30+(i*37)%50}" r="${2+(i%3)}" fill="#FBF9F4"/>`).join(''));
     s+=L(`<path d="M0 116Q50 96 100 110T200 104V200H0Z" fill="${P.far}"/>`+tree(150,110,.9,'#8FAE98')+tree(166,114,.7,'#8FAE98'));
     s+=L(`<path d="M0 138Q60 122 120 136T200 130V200H0Z" fill="${P.mid}"/>`+house(62,138,'#C98A84')+(g>=2?house(126,140,'#9FB5C9'):''));
     s+=L(`<path d="M0 164Q70 150 130 162T200 158V200H0Z" fill="${P.near}"/>`+(g>=1?tree(30,170,1,'#7FA48A'):'')+(g>=3?`<circle cx="160" cy="170" r="10" fill="#FBF9F4"/><circle cx="160" cy="154" r="7" fill="#FBF9F4"/><path d="M160 154l8 2-8 2z" fill="#E3A060"/>`:''));
-    s+=`<g transform="translate(84 112) scale(.26)">${animal('bear','happy',{bow:'#D9928A'})}</g>`;
+    s+=who(84,112,.26,['bear','happy',{bow:'#D9928A'}]);
   }else{ // kitchen
     s+=L(`<rect x="0" y="0" width="200" height="120" fill="${P.far}"/><rect x="30" y="30" width="50" height="40" rx="6" fill="#DDEBF0"/>`);
     s+=L(`<rect x="0" y="120" width="200" height="80" fill="${P.mid}"/>`+(g>=1?`<rect x="120" y="70" width="50" height="50" rx="8" fill="#EFE2D0"/><rect x="130" y="82" width="30" height="22" rx="4" fill="#C9A98A"/>`:''));
     s+=L(`<path d="M20 150H180L170 172H30Z" fill="${P.near}"/>`+(g>=2?`<circle cx="70" cy="146" r="12" fill="#E3A79A"/><circle cx="70" cy="140" r="6" fill="#F6EEE2"/>`:'')+(g>=3?`<path d="M120 148h28l-4 -16h-20z" fill="#F2DDA0"/>`:''));
-    s+=`<g transform="translate(84 92) scale(.28)">${animal('bear','yum',{apron:'#E3A79A'})}</g>`;
+    s+=who(84,92,.28,['bear','yum',{apron:'#E3A79A'}]);
   }
   return `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" class="paper-art"><defs>
 <clipPath id="${id}c"><circle cx="100" cy="100" r="92"/></clipPath>
@@ -838,5 +843,76 @@ const HAND=(()=>{
   return{KINDS,geo,path,inside,cells,tipCells,nail,hand,zoom,portrait,TOOLS,LAMP,STAMP,PART,bottle:c=>polish(c),GRID};
 })();
 
-window.ART={vol:VOL,paper,OL,animal,animalOverlay,petCells:PET_CELLS,petLayer,petState,cellState,stateCells,fluffSet,fluffOf,HAIR,HAIR_STYLES,hairPlan,KINDS,F,TOPPING,WHOLE,wholeSVG,pieceSVG,pizza,TOOL,oven,BUILD,blob,rng,ACC,accSVG,face,FACE_ZONES,dress,lipstick,polish,star,twinkle,HAND};
+/* =========================== P9 선물 (내 방에 놓는 것, 20개 이상) ===========================
+   GIFTS[i] = {id, ko, en, place:'floor'|'wall', size:'big'|'small', svg()}  — viewBox 0 0 100 100, 말랑 그림체(갈색 외곽선) + P19 입체감(VOL).
+   바닥에 놓는 것은 아래 가운데(50, 94)가 바닥에 닿고 접지 그림자 두 겹. 벽에 붙이는 스티커(small)는 흰 테두리. */
+const GIFTS=(()=>{
+  const P={rose:'#E8A0AE',peach:'#F2B48C',butter:'#F0D58A',sage:'#A9CFA0',sky:'#A7CFE8',lilac:'#C3B4E6',cream:'#FFFDF9',wood:'#D9B48C',bear:'#D9A877',bearIn:'#F6E3C8',grey:'#7A6A62'};
+  const L2=`stroke="${OL}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"`;
+  const eyes=(x1,x2,y,r=2.8)=>`<circle cx="${x1}" cy="${y}" r="${r}" fill="${OL}"/><circle cx="${x2}" cy="${y}" r="${r}" fill="${OL}"/><circle cx="${x1+.9}" cy="${y-1}" r="${r*.35}" fill="#fff"/><circle cx="${x2+.9}" cy="${y-1}" r="${r*.35}" fill="#fff"/>`;
+  const smile=(x,y,w=4)=>`<path d="M${x-w} ${y}Q${x} ${y+w*.9} ${x+w} ${y}" fill="none" ${L2}/>`;
+  /* sticker: every outlined shape first gets a thick white edge (the paper of the sticker), then the shape itself */
+  const sticker=m=>{const backs=(m.match(/<(path|ellipse|circle|rect)\b[^>]*?stroke="#5B3A29" stroke-width="3"[^>]*?\/>/g)||[]).map(x=>x.replace(/fill="[^"]*"/,'fill="#FFFFFF"').replace(/stroke="#5B3A29" stroke-width="3"/,'stroke="#FFFFFF" stroke-width="12"')).join('');
+    return `<g transform="translate(0 2.5)" opacity=".12">${backs.replace(/#FFFFFF/g,OL)}</g>${backs}${m}`};
+  const wheel=(x,y)=>`<circle cx="${x}" cy="${y}" r="7.5" fill="${P.grey}" ${S}/><circle cx="${x}" cy="${y}" r="2.6" fill="#fff"/>`;
+  const flags=()=>{let s=`<path d="M6 22Q50 46 94 22" fill="none" stroke="${OL}" stroke-width="2.6"/>`;const c=[P.rose,P.butter,P.sky,P.sage,P.lilac];
+    [.1,.3,.5,.7,.9].forEach((t,i)=>{const x=6+88*t,y=22+48*t*(1-t);s+=`<path d="M${(x-9).toFixed(1)} ${y.toFixed(1)}L${(x+9).toFixed(1)} ${y.toFixed(1)}L${x.toFixed(1)} ${(y+24).toFixed(1)}Z" fill="${c[i]}" ${S}/>`});return s};
+  const band=(R,r,c)=>`<path d="M${50-R} 72A${R} ${R} 0 0 1 ${50+R} 72H${50+r}A${r} ${r} 0 0 0 ${50-r} 72Z" fill="${c}" ${S}/>`;
+  const D=[
+    ['teddy','곰 인형','teddy bear','floor','big',()=>`<circle cx="30" cy="24" r="10" fill="${P.bear}" ${S}/><circle cx="70" cy="24" r="10" fill="${P.bear}" ${S}/><circle cx="30" cy="24" r="4.5" fill="${P.bearIn}"/><circle cx="70" cy="24" r="4.5" fill="${P.bearIn}"/>
+      <ellipse cx="50" cy="72" rx="25" ry="21" fill="${P.bear}" ${S}/><ellipse cx="27" cy="86" rx="10" ry="8" fill="${P.bear}" ${S}/><ellipse cx="73" cy="86" rx="10" ry="8" fill="${P.bear}" ${S}/>
+      <ellipse cx="50" cy="75" rx="12" ry="10" fill="${P.bearIn}"/><circle cx="50" cy="40" r="22" fill="${P.bear}" ${S}/><ellipse cx="50" cy="48" rx="10" ry="7.5" fill="${P.bearIn}" ${S}/>
+      ${eyes(42,58,37)}<ellipse cx="50" cy="45" rx="3.4" ry="2.6" fill="${OL}"/>${smile(50,50,3.5)}<path d="M40 60L50 65L60 60L58 70L50 66L42 70Z" fill="${P.rose}" ${S}/>`],
+    ['plant','화분','flower pot','floor','big',()=>`<path d="M50 58V22" stroke="${OL}" stroke-width="3"/><path d="M50 58Q28 56 24 36Q46 34 50 58Z" fill="${P.sage}" ${S}/><path d="M50 56Q72 52 78 30Q54 32 50 56Z" fill="#8DBF85" ${S}/>
+      <circle cx="50" cy="20" r="10" fill="${P.rose}" ${S}/><circle cx="50" cy="20" r="4" fill="${P.butter}"/><path d="M32 64H68L63 92H37Z" fill="${P.peach}" ${S}/><rect x="27" y="56" width="46" height="11" rx="4" fill="#E9A07A" ${S}/>`],
+    ['lamp','전등','lamp','floor','big',()=>`<ellipse cx="50" cy="90" rx="20" ry="5.5" fill="${P.lilac}" ${S}/><rect x="47" y="40" width="6" height="50" rx="3" fill="#B89878" ${S}/><ellipse cx="50" cy="48" rx="24" ry="7" fill="#FFF3C4" opacity=".75"/>
+      <path d="M27 46L36 14H64L73 46Z" fill="${P.butter}" ${S}/><path d="M37 22H63" stroke="#fff" stroke-width="3" opacity=".6" stroke-linecap="round"/>`],
+    ['shelf','책장','bookshelf','floor','big',()=>`<rect x="18" y="12" width="64" height="82" rx="5" fill="${P.wood}" ${S}/><rect x="24" y="18" width="52" height="33" rx="2" fill="#F3E3CC"/><rect x="24" y="57" width="52" height="31" rx="2" fill="#F3E3CC"/>
+      ${[[27,P.rose,30],[37,P.sky,28],[47,P.butter,31],[57,P.sage,26]].map(([x,c,h])=>`<rect x="${x}" y="${51-h}" width="8.5" height="${h}" rx="2" fill="${c}" ${S}/>`).join('')}
+      ${[[27,P.lilac,28],[37,P.peach,25]].map(([x,c,h])=>`<rect x="${x}" y="${88-h}" width="8.5" height="${h}" rx="2" fill="${c}" ${S}/>`).join('')}<circle cx="62" cy="79" r="9" fill="${P.rose}" ${S}/>`],
+    ['balloons','풍선','balloons','floor','big',()=>`<path d="M50 88Q46 72 34 56M50 88Q50 68 50 46M50 88Q56 72 66 58" stroke="${OL}" stroke-width="2" fill="none"/>
+      <ellipse cx="33" cy="38" rx="14" ry="17" fill="${P.rose}" ${S}/><ellipse cx="67" cy="40" rx="14" ry="17" fill="${P.sky}" ${S}/><ellipse cx="50" cy="27" rx="14" ry="17" fill="${P.butter}" ${S}/>
+      <rect x="41" y="84" width="18" height="10" rx="3.5" fill="${P.lilac}" ${S}/>`],
+    ['cushion','쿠션','cushion','floor','big',()=>`<path d="M16 54Q14 34 30 34H70Q86 34 84 54V72Q86 92 70 92H30Q14 92 16 72Z" fill="${P.lilac}" ${S}/><path d="M30 44Q40 52 50 63M70 44Q60 52 50 63M30 84Q40 74 50 63M70 84Q60 74 50 63" stroke="${OL}" stroke-width="1.6" opacity=".25" fill="none"/>
+      <circle cx="50" cy="63" r="4.5" fill="#A996D6" ${S}/>${eyes(40,60,56,2.4)}`],
+    ['train','장난감 기차','toy train','floor','big',()=>`<rect x="34" y="34" width="22" height="22" rx="3" fill="${P.rose}" ${S}/><rect x="38" y="38" width="14" height="10" rx="2" fill="#DDEBF0" ${S}/><rect x="16" y="36" width="9" height="16" rx="2" fill="${P.grey}" ${S}/>
+      <rect x="10" y="50" width="48" height="30" rx="6" fill="${P.rose}" ${S}/><path d="M58 70H62" stroke="${OL}" stroke-width="3"/><rect x="62" y="54" width="30" height="26" rx="5" fill="${P.sky}" ${S}/>
+      <rect x="67" y="46" width="20" height="10" rx="3" fill="${P.butter}" ${S}/>${wheel(22,84)}${wheel(46,84)}${wheel(70,84)}${wheel(86,84)}`],
+    ['ball','공','ball','floor','big',()=>`<circle cx="50" cy="62" r="30" fill="${P.butter}" ${S}/><path d="M23 52Q50 64 77 52" stroke="${P.rose}" stroke-width="8" fill="none"/><path d="M26 76Q50 86 74 76" stroke="${P.sky}" stroke-width="7" fill="none"/>`
+      +`<circle cx="50" cy="62" r="30" fill="none" ${S}/>`+VOL.lit(`<circle cx="50" cy="62" r="30" fill="#000"/>`)],
+    ['duck','오리 인형','rubber duck','floor','big',()=>`<path d="M14 66Q14 90 50 91Q84 91 86 66Q86 54 72 56Q64 64 52 60Q38 54 28 58Q14 56 14 66Z" fill="${P.butter}" ${S}/><circle cx="62" cy="38" r="18" fill="${P.butter}" ${S}/>
+      <path d="M78 40Q93 39 93 46Q87 51 76 49Z" fill="${P.peach}" ${S}/>${eyes(64,64,34,3)}<path d="M32 68Q46 60 56 70Q48 81 36 77Z" fill="#E9C46E" ${S}/><circle cx="56" cy="44" r="4" fill="${P.rose}" opacity=".5"/>`],
+    ['horse','흔들 목마','rocking horse','floor','big',()=>`<path d="M30 64L22 86M38 64L36 90M62 64L64 90M70 64L78 86" stroke="${OL}" stroke-width="7" stroke-linecap="round"/><path d="M30 64L22 86M38 64L36 90M62 64L64 90M70 64L78 86" stroke="${P.bearIn}" stroke-width="3" stroke-linecap="round"/>
+      <path d="M8 84Q50 102 92 84" stroke="${OL}" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M8 84Q50 102 92 84" stroke="${P.wood}" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <path d="M24 54Q10 56 12 72" stroke="${P.rose}" stroke-width="7" fill="none" stroke-linecap="round"/><ellipse cx="50" cy="58" rx="27" ry="13" fill="${P.bearIn}" ${S}/>
+      <path d="M66 52L72 28Q74 18 84 20L93 28Q95 35 88 37L80 35L79 56Z" fill="${P.bearIn}" ${S}/><path d="M71 28Q65 40 67 52" stroke="${P.rose}" stroke-width="7" fill="none" stroke-linecap="round"/>
+      <circle cx="83" cy="27" r="2.6" fill="${OL}"/><rect x="40" y="45" width="18" height="11" rx="3" fill="${P.sky}" ${S}/>`],
+    ['blocks','쌓기 블록','blocks','floor','big',()=>`<rect x="17" y="62" width="31" height="31" rx="4" fill="${P.sky}" ${S}/><rect x="52" y="62" width="31" height="31" rx="4" fill="${P.rose}" ${S}/><rect x="34.5" y="29" width="31" height="31" rx="4" fill="${P.butter}" ${S}/>
+      <circle cx="32.5" cy="77.5" r="7" fill="#fff" opacity=".85"/><path d="M50 36L59 52H41Z" fill="#fff" opacity=".85"/>${star(67.5,77.5,9,'#fff','opacity=".85"')}`],
+    ['rug','동그란 깔개','round rug','floor','big',()=>`<ellipse cx="50" cy="80" rx="45" ry="15" fill="${P.rose}" ${S}/><ellipse cx="50" cy="80" rx="33" ry="10.5" fill="#F6D3DB"/><ellipse cx="50" cy="80" rx="19" ry="6" fill="${P.butter}"/>
+      ${[-36,-24,-12,0,12,24,36].map(x=>`<path d="M${50+x} ${80+Math.sqrt(Math.max(0,1-(x/45)**2))*15}v4" stroke="${OL}" stroke-width="2" stroke-linecap="round"/>`).join('')}`],
+    ['clock','시계','clock','wall','big',()=>`<circle cx="25" cy="21" r="9" fill="${P.butter}" ${S}/><circle cx="75" cy="21" r="9" fill="${P.butter}" ${S}/><circle cx="50" cy="52" r="34" fill="${P.sky}" ${S}/><circle cx="50" cy="52" r="26" fill="${P.cream}" ${S}/>
+      ${[0,90,180,270].map(a=>{const r=a*Math.PI/180;return `<circle cx="${(50+Math.sin(r)*20).toFixed(1)}" cy="${(52-Math.cos(r)*20).toFixed(1)}" r="2.4" fill="${OL}"/>`}).join('')}
+      <path d="M50 52V36M50 52L61 58" stroke="${OL}" stroke-width="4" stroke-linecap="round"/><circle cx="50" cy="52" r="3.6" fill="${P.rose}" ${S}/>`],
+    ['bunting','깃발 줄','bunting','wall','big',flags],
+    ['painting','해님 그림','sun picture','wall','big',()=>`<path d="M36 22L50 9L64 22" stroke="${OL}" stroke-width="2.2" fill="none"/><rect x="13" y="22" width="74" height="60" rx="5" fill="${P.wood}" ${S}/><rect x="21" y="30" width="58" height="44" rx="2" fill="#DDEBF2"/>
+      <circle cx="37" cy="45" r="8" fill="${P.butter}"/><path d="M21 74Q38 54 54 66T79 58V74Z" fill="${P.sage}"/><path d="M48 74Q62 62 79 68V74Z" fill="#8DBF85"/>`],
+    ['mobile','구름 모빌','cloud mobile','wall','big',()=>`<path d="M50 2V12" stroke="${OL}" stroke-width="2.2"/><path d="M32 32V58M50 32V74M68 32V58" stroke="${OL}" stroke-width="1.8"/>
+      <path d="M24 33Q13 33 15 23Q19 15 29 17Q33 7 48 9Q61 5 67 15Q81 13 83 23Q85 33 74 33Z" fill="${P.cream}" ${S}/>${eyes(42,56,22,2.4)}
+      ${star(32,64,9,P.butter,S)}${star(50,80,9,P.rose,S)}${star(68,64,9,P.sky,S)}`],
+    ['stStar','별 스티커','star sticker','wall','small',()=>sticker(star(50,54,36,P.butter,S)+eyes(42,58,52,3)+smile(50,62,5))],
+    ['stHeart','하트 스티커','heart sticker','wall','small',()=>sticker(`<path d="M50 86C10 60 14 22 34 22C42 22 48 28 50 34C52 28 58 22 66 22C86 22 90 60 50 86Z" fill="${P.rose}" ${S}/>`+`<ellipse cx="34" cy="36" rx="7" ry="4.5" fill="#fff" opacity=".6" transform="rotate(-30 34 36)"/>`)],
+    ['stMoon','달 스티커','moon sticker','wall','small',()=>sticker(`<path d="M58 14A37 37 0 1 0 86 72A29 29 0 1 1 58 14Z" fill="${P.butter}" ${S}/>`+`<circle cx="40" cy="52" r="2.8" fill="${OL}"/>${smile(46,62,4)}`+star(78,26,8,P.cream,S))],
+    ['stRainbow','무지개 스티커','rainbow sticker','wall','small',()=>sticker(band(38,30,P.rose)+band(30,22,P.butter)+band(22,14,P.sky)+`<circle cx="18" cy="74" r="9" fill="${P.cream}" ${S}/><circle cx="82" cy="74" r="9" fill="${P.cream}" ${S}/>`)],
+    ['stFlower','꽃 스티커','flower sticker','wall','small',()=>sticker([0,72,144,216,288].map(a=>{const r=(a-90)*Math.PI/180;return `<circle cx="${(50+Math.cos(r)*20).toFixed(1)}" cy="${(52+Math.sin(r)*20).toFixed(1)}" r="15" fill="${P.lilac}" ${S}/>`}).join('')+`<circle cx="50" cy="52" r="13" fill="${P.butter}" ${S}/>`+eyes(45,55,50,2.2)+smile(50,56,3))],
+    ['stButterfly','나비 스티커','butterfly sticker','wall','small',()=>sticker(`<ellipse cx="30" cy="38" rx="20" ry="17" fill="${P.sky}" ${S}/><ellipse cx="70" cy="38" rx="20" ry="17" fill="${P.sky}" ${S}/><ellipse cx="33" cy="66" rx="15" ry="13" fill="${P.rose}" ${S}/><ellipse cx="67" cy="66" rx="15" ry="13" fill="${P.rose}" ${S}/>`
+      +`<ellipse cx="50" cy="52" rx="6" ry="24" fill="${P.grey}" ${S}/>`+`<path d="M47 30Q42 18 36 16M53 30Q58 18 64 16" fill="none" ${L2}/>`)]
+  ];
+  const memo={};
+  return D.map(([id,ko,en,place,size,fn])=>({id,ko,en,place,size,svg(){if(memo[id])return memo[id];
+    const body=VOL.litAll(fn());return memo[id]=`<svg viewBox="0 0 100 100" class="gift-art" data-gift="${id}" style="overflow:visible">${place==='floor'&&id!=='rug'?VOL.ground(50,94,30,5):''}${body}</svg>`}}));
+})();
+const giftSVG=id=>{const g=GIFTS.find(x=>x.id===id);return g?g.svg():''};
+
+window.ART={vol:VOL,paper,OL,animal,animalOverlay,petCells:PET_CELLS,petLayer,petState,cellState,stateCells,fluffSet,fluffOf,HAIR,HAIR_STYLES,hairPlan,KINDS,F,TOPPING,WHOLE,wholeSVG,pieceSVG,pizza,TOOL,oven,BUILD,blob,rng,ACC,accSVG,face,FACE_ZONES,dress,lipstick,polish,star,twinkle,HAND,GIFTS,giftSVG};
 })();

@@ -528,10 +528,17 @@ function award(reason,en){
   if(cur()==='stamps')setTimeout(renderStamps,500);
   renderTile();
 }
-document.addEventListener('ml-cheer',e=>{
-  ensureMissions();const sid=e.detail;
-  if(STP.missions.includes(sid)&&!STP.done.includes(sid)){STP.done.push(sid);saveSTP();const m=POOL.find(x=>x[0]===sid);setTimeout(()=>award(`오늘의 미션 성공: ${m[2]}`),2600)}
-});
+/* P9: today's plays open the game that replaced an old screen (not in config: which screen each old mission id opens).
+   A mission is done when its game finishes a round: ml-cheer (old screens) or ml-round (games on the level engine) */
+const TARGET={jobmatch:'jobs',chores:'chores2',dishes:'dishes2',bread:'bakery',routine:'routine2'};
+M.missionTarget=id=>TARGET[id]||id;
+function missionDone(screen,game){
+  ensureMissions();const sid=STP.missions.find(m=>m===screen||TARGET[m]===screen||(game&&m===game&&TARGET[m]===screen));
+  if(sid&&!STP.done.includes(sid)){STP.done.push(sid);saveSTP();const m=POOL.find(x=>x[0]===sid);setTimeout(()=>award(`오늘의 미션 성공: ${m[2]}`),2600);
+    try{document.dispatchEvent(new CustomEvent('ml-mission',{detail:{id:sid,done:STP.done.length,all:STP.missions.length}}))}catch(e){}}
+}
+document.addEventListener('ml-cheer',e=>missionDone(e.detail));
+document.addEventListener('ml-round',e=>{const d=e.detail||{};missionDone(d.screen,d.game)});
 document.addEventListener('ml-stageclear',()=>setTimeout(()=>award('공주 모험 성공!'),3200));
 
 const sec=screen('stamps','칭찬 도장판','','<div class="stp" id="stpBody"></div>','칭찬 도장판');

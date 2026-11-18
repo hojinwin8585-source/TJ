@@ -29,6 +29,8 @@ function clear(id){
   let up=false,full=false;r.clears++;
   if(r.clears>=NEED){full=true;r.clears=0;if(r.level<maxOf(id)){r.level++;up=true}}
   save();sync();
+  /* P9: every finished round (carrot basket, today's plays); a level-up also brings a gift for My Room */
+  try{document.dispatchEvent(new CustomEvent('ml-round',{detail:{game:id,screen:M.current?M.current():''}}))}catch(e){}
   if(up)document.dispatchEvent(new CustomEvent('ml-levelup',{detail:{game:id,level:r.level}}));
   return{level:r.level,clears:r.clears,up,full,filled:full?NEED:r.clears};
 }
@@ -39,6 +41,8 @@ function struggle(id,f){
   if(r.struggles>=DOWN){r.struggles=0;if(r.level>1){r.level--;r.clears=0;down=true}}
   save();sync();return down?'down':true;
 }
+/* P9 parent record: level, stars, the last day it was played, how many levels, whether the game uses the level engine */
+function info(id){const known=!!REG[id]||!!DB[id];if(!DB[id])return{level:1,clears:0,last:0,max:maxOf(id),known};const r=rec(id);return{level:r.level,clears:r.clears,last:r.last||0,max:maxOf(id),known}}
 function set(id,n){const r=rec(id);r.level=clamp(n,id);r.clears=0;r.struggles=0;r.hard=false;save();sync();return get(id)}
 function register(id,o={}){
   const fresh=!DB[id];REG[id]=Object.assign({},REG[id],o);
@@ -104,5 +108,5 @@ function sync(){
   block.querySelectorAll('.mlp-cl[data-game]').forEach(s=>{s.textContent=`(별 ${get(s.dataset.game).clears}/${NEED})`});
 }
 
-M.Progress={get,level,clear,struggle,set,register,stars,fillStars,moment,NEED,STARS,get games(){return Object.keys(REG)}};
+M.Progress={get,info,level,clear,struggle,set,register,stars,fillStars,moment,NEED,STARS,get games(){return Object.keys(REG)}};
 })();
