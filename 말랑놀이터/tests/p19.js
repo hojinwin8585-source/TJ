@@ -12,6 +12,8 @@ const path=require('path'),fs=require('fs'),os=require('os'),{execSync}=require(
 const APP=path.resolve(__dirname,'..'),URL='file://'+path.join(APP,'index.html');
 const SHOT=process.env.SHOT_DIR||'';
 const BASE_COMMIT=process.env.P19_BASE||'710d175';   // P16 검증 커밋 (P19 전)
+/* 3번은 P19가 다른 화면을 옮기지 않았는지 보는 검사. 뒤 단계(P9 홈 등)는 일부러 화면을 바꾸므로, 기본은 P19 커밋과 비교. 지금 코드와 비교하려면 P19_AFTER=now */
+const AFTER_COMMIT=process.env.P19_AFTER||'6bb3337';
 let fails=0;
 const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패')+' | '+name+(info?' | '+info:''))};
 const SEED=()=>{let x=12345;Math.random=()=>{x=(x*1103515245+12345)%2147483648;return x/2147483648}};
@@ -85,7 +87,9 @@ function cmpList(a,b){let diff=[];const n=Math.max(a.length,b.length);for(let i=
   let baseDir='';try{baseDir=fs.mkdtempSync(path.join(os.tmpdir(),'p19base-'));const root=execSync('git rev-parse --show-toplevel',{cwd:APP}).toString().trim(),rel=path.relative(root,APP);
     execSync(`git archive ${BASE_COMMIT} "${rel}" | tar -x -C "${baseDir}"`,{cwd:root,shell:'/bin/bash'});baseDir=path.join(baseDir,rel)}catch(e){baseDir=''}
   if(baseDir&&fs.existsSync(path.join(baseDir,'index.html'))){
-    const A0=await measure(b,'file://'+path.join(baseDir,'index.html')),A1=await measure(b,URL);
+    let afterURL=URL;if(AFTER_COMMIT!=='now'){try{const ad=fs.mkdtempSync(path.join(os.tmpdir(),'p19after-'));const root=execSync('git rev-parse --show-toplevel',{cwd:APP}).toString().trim(),rel=path.relative(root,APP);
+      execSync(`git archive ${AFTER_COMMIT} "${rel}" | tar -x -C "${ad}"`,{cwd:root,shell:'/bin/bash'});if(fs.existsSync(path.join(ad,rel,'index.html')))afterURL='file://'+path.join(ad,rel,'index.html')}catch(e){}}
+    const A0=await measure(b,'file://'+path.join(baseDir,'index.html')),A1=await measure(b,afterURL);
     const rows=Object.keys(A0).map(g=>{const d1=cmpList(A0[g].boxes,A1[g].boxes),d2=cmpList(A0[g].parts,A1[g].parts);return{g,nb:A1[g].boxes.length,np:A1[g].parts.length,d:d1.concat(d2)}});
     const bad=rows.filter(r=>r.d.length);
     ok('3. 다른 화면의 겉모양(요소 위치·크기, 캐릭터 부분 좌표) 변화 없음 (P19 전과 비교)',!bad.length,rows.map(r=>`${r.g} 상자 ${r.nb}·부분 ${r.np}${r.d.length?' 다름 '+r.d.length+' 예: '+r.d[0]:''}`).join(' / '));
