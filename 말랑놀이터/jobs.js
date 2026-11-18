@@ -56,6 +56,10 @@ const lerp=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t];
 const line=(p,q,w,c,ow)=>`<path d="M${p[0].toFixed(1)} ${p[1].toFixed(1)}L${q[0].toFixed(1)} ${q[1].toFixed(1)}" stroke="${OL}" stroke-width="${w+(ow||6)}" stroke-linecap="round"/><path d="M${p[0].toFixed(1)} ${p[1].toFixed(1)}L${q[0].toFixed(1)} ${q[1].toFixed(1)}" stroke="${c}" stroke-width="${w}" stroke-linecap="round"/>`;
 const FACE='M120 36C164 36 182 66 182 98C182 134 154 158 120 158C86 158 58 134 58 98C58 66 76 36 120 36Z';
 const TORSO='M94 162Q120 156 146 162Q158 166 157 182L153 236Q120 244 87 236L83 182Q82 166 94 162Z';
+/* P19 art.volume: skin parts use the shared ball gradient of the skin colour; the arm leaves a soft shadow on the body, the head on the neck and collar */
+const SKN=d=>A.vol.off?d.skin:A.vol.ball(d.skin,d.shade);
+const ARMSH=a=>A.vol.off?'':`<path class="vol-under" d="M${a.s[0]} ${a.s[1]+2}L${a.h[0]} ${a.h[1]+2}" stroke="${OL}" stroke-width="20" stroke-linecap="round" opacity=".15"/>`;
+const HEADSH_=()=>A.vol.off?'':`<ellipse class="vol-under" cx="120" cy="163" rx="24" ry="5.5" fill="${OL}" opacity=".14"/>`;
 const HIP='M84 226Q120 234 156 226L159 260Q140 268 122 263L120 256L118 263Q100 268 81 260Z';
 const blobs=(cs,fill,sw=5)=>cs.map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${OL}" stroke="${OL}" stroke-width="${sw}"/>`).join('')+cs.map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}"/>`).join('');
 const star5=(x,y,r,f)=>{let d='';for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,q=i%2?r*.45:r;d+=(i?'L':'M')+(x+q*Math.cos(a)).toFixed(1)+' '+(y+q*Math.sin(a)).toFixed(1)}return `<path d="${d}Z" fill="${f}"/>`};
@@ -65,7 +69,8 @@ const DOLLS=[
   {id:'jun',hair:'short',hc:'#3D2B29',hh:'#6A4F4A',skin:'#F6D5B8',shade:'#E7B896',eye:'#3A2216',iris:'#6B4129',rib:'#8FC3E6'},
   {id:'sora',hair:'wavy',hc:'#B8682F',hh:'#DB955E',skin:'#DDA882',shade:'#C68C66',eye:'#43281A',iris:'#7A4A2A',rib:'#8FC48A'}
 ];
-function hairBack(d){
+function hairBack(d){return A.vol.litAll(hairBack0(d))}
+function hairBack0(d){
   if(d.hair==='pigtails')return blobs([[50,104,20],[44,128,18],[44,150,15],[190,104,20],[196,128,18],[196,150,15]],d.hc)+`<path d="M62 120C52 70 84 28 120 28C156 28 188 70 178 120Z" fill="${d.hc}" ${S3}/>`;
   if(d.hair==='wavy'){const cs=[];for(let i=0;i<=10;i++){const t=i/10;cs.push([54-6*Math.sin(t*9),100+t*120,16]);cs.push([186+6*Math.sin(t*9),100+t*120,16])}
     return blobs(cs,d.hc)+`<path d="M60 124C48 66 84 26 120 26C156 26 192 66 180 124Z" fill="${d.hc}" ${S3}/>`}
@@ -78,18 +83,18 @@ function hairFront(d){
 }
 function eyes(d,px){
   return ['l','r'].map(s=>{const ex=s==='l'?98:142,ey=106,k=s==='l'?-1:1;
-    return `<g class="al-eye al-eye-${s} al-open"><g class="al-pupil"><ellipse cx="${ex}" cy="${ey}" rx="10" ry="12.5" fill="url(#${px}gi)" stroke="${OL}" stroke-width="2"/><circle cx="${ex-3.5}" cy="${ey-4.5}" r="4" fill="#fff"/><circle cx="${ex+3.6}" cy="${ey+5}" r="1.9" fill="#fff"/></g>
+    return `<g class="al-eye al-eye-${s} al-open"><g class="al-pupil"><ellipse cx="${ex}" cy="${ey}" rx="10" ry="12.5" fill="url(#${px}gi)" stroke="${OL}" stroke-width="2"/><circle cx="${ex-3.5}" cy="${ey-4.5}" r="4" fill="#fff"/><circle cx="${ex+3.6}" cy="${ey+5}" r="1.9" fill="#fff"/>${A.vol.glass(ex,ey,10,12.5)}</g>
       <path d="M${ex-11} ${ey-7}Q${ex} ${ey-17} ${ex+11} ${ey-7}" stroke="${OL}" stroke-width="3" fill="none" stroke-linecap="round"/>${d.hair!=='short'?`<path d="M${ex+k*10} ${ey-9}l${k*4} -3" stroke="${OL}" stroke-width="2.2" stroke-linecap="round"/>`:''}</g>
       <path class="al-lid al-lid-${s}" opacity="0" d="M${ex-12} ${ey}Q${ex} ${ey+7} ${ex+12} ${ey}" stroke="${OL}" stroke-width="3" fill="none" stroke-linecap="round"/>`}).join('');
 }
 function head(d,px){
-  const ears=[58,182].map(x=>`<ellipse cx="${x}" cy="112" rx="8" ry="11" fill="${d.skin}" ${S3}/>`).join('');
-  return `${hairBack(d)}${ears}<path d="${FACE}" fill="${d.skin}" ${S3}/>
-    ${[88,152].map(x=>`<ellipse cx="${x}" cy="128" rx="11" ry="7" fill="#FF9AAE" opacity=".45"/>`).join('')}
+  const ears=[58,182].map(x=>`<ellipse cx="${x}" cy="112" rx="8" ry="11" fill="${SKN(d)}" ${S3}/>`).join('');
+  return `${hairBack(d)}${ears}<path d="${FACE}" fill="${SKN(d)}" ${S3}/>
+    ${[88,152].map(x=>A.vol.off?`<ellipse cx="${x}" cy="128" rx="11" ry="7" fill="#FF9AAE" opacity=".45"/>`:`<ellipse cx="${x}" cy="128" rx="13" ry="8.5" fill="${A.vol.cheek('#FF9AAE')}" opacity=".85"/>`).join('')}
     ${eyes(d,px)}<path d="M118 121Q120 123 122 121" stroke="${d.shade}" stroke-width="2.4" fill="none" stroke-linecap="round"/>
     <g class="al-mouth"><path d="M111 131Q120 142 129 131Z" stroke="${OL}" stroke-width="2.6" fill="#F08A96" stroke-linejoin="round" stroke-linecap="round"/></g>
     <g class="al-mouth-o" opacity="0"><ellipse cx="120" cy="135" rx="6" ry="7.5" fill="#F08A96" ${S3}/></g>
-    ${hairFront(d)}`;
+    ${A.vol.litAll(hairFront(d))}${A.vol.off?'':A.vol.shine(94,50,24,11,-24)}`;
 }
 const sleeve=(s,t,c,w=21)=>{const a=ARM[s];return line(a.s,lerp(a.s,a.h,t),w,c,5)};
 const band=(s,t0,t1,c,w)=>{const a=ARM[s];return line(lerp(a.s,a.h,t0),lerp(a.s,a.h,t1),w,c,5)};
@@ -180,20 +185,20 @@ const gearOf=(job,slot)=>((GEAR[job]||{})[slot])||null;
 const itemKo=(job,slot)=>(jobOf(job).wear||[])[SLOTS.indexOf(slot)]||'';
 function pieces(job,wear,vivid,skip){
   const out={back:'',legL:'',legR:'',footL:'',footR:'',hip:'',torso:'',neck:'',front:'',armL:'',armR:'',handR:'',hat:''};
-  Object.keys(BASE).forEach(k=>{out[k]+=BASE[k]});
+  Object.keys(BASE).forEach(k=>{out[k]+=A.vol.litAll(BASE[k])});
   if(job)['top','tool','hat'].forEach(slot=>{const w=wear[slot];if(!w||skip===slot)return;const it=gearOf(job,slot);if(!it)return;const p=pal(w.col),pc=it.d(vivid?p.vivid:p.hex,p.light);
-    Object.keys(pc).forEach(k=>{out[k]+=`<g data-slot="${slot}">${pc[k]}</g>`})});
+    Object.keys(pc).forEach(k=>{out[k]+=`<g data-slot="${slot}">${A.vol.litAll(pc[k])}</g>`})});   // P19 art.volume.objects: clothes get the same light and shade
   return out;
 }
 let UID=0;
 function doll(d,job,wear={},o={}){
   const px='jb'+(++UID)+'_',p=pieces(job,wear,o.vivid!==false,o.skip);
-  const legs=['l','r'].map(s=>{const g=LEG[s],K=s.toUpperCase();return `<g class="jb-leg jb-leg-${s}">${line(g.s,g.a,18,d.skin,6)}<ellipse cx="${FOOT[s][0]}" cy="${FOOT[s][1]}" rx="12" ry="7" fill="${d.skin}" ${S3}/>${p['leg'+K]}${p['foot'+K]}</g>`}).join('');
-  const arms=['l','r'].map(s=>{const a=ARM[s],K=s.toUpperCase();return `<g class="al-arm al-arm-${s} jb-arm"><g class="al-arm-s">${line(a.s,a.h,14,d.skin,6)}<circle cx="${HAND[s][0]}" cy="${HAND[s][1]}" r="9" fill="${d.skin}" ${S3}/>${p['arm'+K]}${s==='r'?p.handR:''}</g></g>`}).join('');
+  const legs=['l','r'].map(s=>{const g=LEG[s],K=s.toUpperCase();return `<g class="jb-leg jb-leg-${s}">${line(g.s,g.a,18,d.skin,6)}${A.vol.limb(g.s,g.a,18)}<ellipse cx="${FOOT[s][0]}" cy="${FOOT[s][1]}" rx="12" ry="7" fill="${SKN(d)}" ${S3}/>${p['leg'+K]}${p['foot'+K]}</g>`}).join('');
+  const arms=['l','r'].map(s=>{const a=ARM[s],K=s.toUpperCase();return `<g class="al-arm al-arm-${s} jb-arm"><g class="al-arm-s">${ARMSH(a)}${line(a.s,a.h,14,d.skin,6)}${A.vol.limb(a.s,a.h,14)}<circle cx="${HAND[s][0]}" cy="${HAND[s][1]}" r="9" fill="${SKN(d)}" ${S3}/>${p['arm'+K]}${s==='r'?p.handR:''}</g></g>`}).join('');
   return `<svg viewBox="${o.vb||'0 0 240 400'}" style="overflow:visible"><defs><radialGradient id="${px}gi" cx=".5" cy=".35" r=".7"><stop offset="0" stop-color="${d.iris}"/><stop offset="1" stop-color="${d.eye}"/></radialGradient></defs>
-    <ellipse cx="120" cy="366" rx="58" ry="9" fill="rgba(91,58,41,.16)"/>
+    ${A.vol.ground(120,366,58,9)}
     <g class="al-root" style="transform-origin:50% 92%"><g class="al-breathe" style="transform-origin:50% 92%">${p.back}${legs}
-    <g class="jb-torso"><path d="M111 148H129V168H111Z" fill="${d.skin}" ${S3}/><path d="${TORSO}" fill="${d.skin}" ${S3}/>${p.hip}${p.torso}${p.neck}${p.front}</g>
+    <g class="jb-torso"><path d="M111 148H129V168H111Z" fill="${SKN(d)}" ${S3}/><path d="${TORSO}" fill="${SKN(d)}" ${S3}/>${p.hip}${p.torso}${p.neck}${p.front}${HEADSH_()}</g>
     ${arms}<g class="al-head" style="transform-origin:50% 40%"><g class="al-head-s" style="transform-origin:50% 40%"><g class="jb-head">${head(d,px)}${p.hat}</g></g></g>
     </g></g></svg>`;
 }

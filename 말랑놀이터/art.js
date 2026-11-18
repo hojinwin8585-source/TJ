@@ -3,7 +3,7 @@
 (()=>{
 'use strict';
 const OL='#5B3A29';           // 공통 외곽선 색
-const S=`stroke="${OL}" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"`;
+const S=`stroke="${OL}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"`;   // P19 art.volume.outline: 3.5 → 3 (the bottom gets a heavier line, VOL.low)
 let gid=0;const uid=p=>p+(++gid);
 
 /* seeded random so a pizza looks the same every time it is redrawn */
@@ -34,7 +34,10 @@ const KINDS={
   '.ps-fbw{transform:translate(var(--al-fwx,0px),var(--al-fwy,0px))}'+
   '.hs .j0{transform:rotate(var(--h0,0deg))}.hs .j1{transform:rotate(var(--h1,0deg))}.hs .j2{transform:rotate(var(--h2,0deg))}'+
   '.hs .w{transform:scaleX(calc(.62 + .48 * var(--d,1)))}.hs .hw{opacity:calc((1 - var(--d,1)) * .6)}.hs .hg{opacity:var(--g,0);transition:opacity .4s}'+
-  '.hs .hw-drop{opacity:calc((1 - var(--d,1)) * 1.4 - .4)}';
+  '.hs .hw-drop{opacity:calc((1 - var(--d,1)) * 1.4 - .4)}'+
+  /* P19 art.volume.contact: the ground shadow gets smaller and lighter while the character is in the air */
+  '.vol-ground{transform-box:fill-box;transform-origin:50% 50%}.alive.al-p-hop .vol-ground{animation:vol-hop .6s ease-in-out var(--al-n,1)}.alive.al-p-clap .vol-ground{animation:vol-hop .6s ease-in-out}'+
+  '@keyframes vol-hop{0%,100%{transform:scale(1);opacity:1}15%{transform:scale(1.05,1)}50%{transform:scale(.74);opacity:.5}85%{transform:scale(1.04,1)}}';
   (document.head||document.documentElement).appendChild(st)})();
 /* ---------- P18 fluffyFix: the outline itself turns soft (small half-circles in the fur colour), no white lumps ----------
    Two layers so the outline stays one line: A = shapes with outline, B = the same shapes a little smaller without outline on top.
@@ -64,6 +67,68 @@ function fluffSet(root,vals){
 /* a lighter shade of the fur for the soft inner-fur strokes (white fur → a hint of its edge colour) */
 function hexMix(a,b,t){const p=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)),A=p(a),B=p(b);return '#'+A.map((v,i)=>Math.round(v+(B[i]-v)*t).toString(16).padStart(2,'0')).join('')}
 const lum=h=>{const v=[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255);return .3*v[0]+.59*v[1]+.11*v[2]};
+
+/* ---------- P19 art.volume: soft round volume drawn with light and shadow only (light always from the top left) ----------
+   One shared <defs> for the whole page: each gradient is made once per colour and referenced by id, so a hundred characters
+   still cost a handful of gradients (motion.performance). No blur filters: the soft highlight is a fading gradient.
+   ball(c,edge)   round part: +12% light at the top left → colour → −14% (or the drawn edge colour) at the bottom right
+   ballU(...)     the same in picture units (for shapes that must match a ball exactly, e.g. the salon's soft outline)
+   cheek(c)       blush: strong in the middle, gone at the edge
+   hl()           soft white highlight (white 35%, fades out)
+   over()         one colour-free overlay for objects, clothes and food: a little light at the top left, warm shade at the bottom right
+   rim(...)       thin reflected light along the bottom right edge (an arc just inside the outline, no gradient)
+   low(...)       a slightly heavier outline along the bottom (weight)
+   ground(...)    two-layer contact shadow (dark small + light wide); shrinks while hopping (CSS below)
+   under(shape)   overlap shadow: the same shape 2px lower in brown 15%, drawn just before the shape in front
+   glass(...)     a very faint reflection at the bottom of an eye (glass bead)
+   VOL.off = true draws everything without the added light (used for the before/after page). */
+const VOL=(()=>{
+  const NS='http://www.w3.org/2000/svg',made=new Set();let defs=null;
+  const HEX=/^#[0-9a-f]{6}$/i,f1=n=>+(+n).toFixed(1);
+  function host(){
+    if(defs&&defs.isConnected)return defs;
+    const sv=document.createElementNS(NS,'svg');sv.setAttribute('id','volDefs');sv.setAttribute('aria-hidden','true');sv.setAttribute('width','0');sv.setAttribute('height','0');
+    sv.style.cssText='position:absolute;left:0;top:0;width:0;height:0;overflow:hidden;pointer-events:none';
+    defs=document.createElementNS(NS,'defs');sv.appendChild(defs);(document.body||document.documentElement).appendChild(sv);made.clear();return defs;
+  }
+  const def=(id,mk)=>{const h=host();if(!made.has(id)){h.insertAdjacentHTML('beforeend',mk());made.add(id)}return `url(#${id})`};
+  const key=c=>c.slice(1).toLowerCase();
+  const light=c=>hexMix(c,'#FFFFFF',.3),dark=c=>hexMix(c,'#4A2C1E',.17);   // ≈ +12% / −14% brightness, the shade a little warm (brown, not grey)
+  const stops=(c,e)=>`<stop offset="0" stop-color="${light(c)}"/><stop offset=".52" stop-color="${c}"/><stop offset=".82" stop-color="${hexMix(c,e,.55)}"/><stop offset="1" stop-color="${e}"/>`;
+  const V={off:false,
+    ball(c,edge){if(!HEX.test(c||''))return c;const e=HEX.test(edge||'')?hexMix(edge,dark(c),.35):dark(c);
+      return def('vb'+key(c)+key(e),()=>`<radialGradient id="vb${key(c)}${key(e)}" cx=".36" cy=".28" r=".85" fx=".3" fy=".22">${stops(c,e)}</radialGradient>`)},
+    ballU(c,edge,x,y,rx,ry,tag){if(!HEX.test(c||''))return c;const e=HEX.test(edge||'')?hexMix(edge,dark(c),.35):dark(c),id='vu'+tag+key(c)+key(e);
+      return def(id,()=>`<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="translate(${x} ${y}) scale(${rx} ${ry})">${stops(c,e)}</radialGradient>`)},
+    cheek(c){if(!HEX.test(c||''))return c;return def('vc'+key(c),()=>`<radialGradient id="vc${key(c)}"><stop offset="0" stop-color="${c}" stop-opacity=".9"/><stop offset=".55" stop-color="${c}" stop-opacity=".5"/><stop offset="1" stop-color="${c}" stop-opacity="0"/></radialGradient>`)},
+    hl(){return def('vhl',()=>`<radialGradient id="vhl"><stop offset="0" stop-color="#fff" stop-opacity=".72"/><stop offset=".5" stop-color="#fff" stop-opacity=".4"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>`)},
+    over(){return def('vov',()=>`<radialGradient id="vov" cx=".36" cy=".28" r=".85" fx=".3" fy=".22"><stop offset="0" stop-color="#fff" stop-opacity=".34"/><stop offset=".42" stop-color="#fff" stop-opacity="0"/><stop offset=".72" stop-color="${OL}" stop-opacity="0"/><stop offset="1" stop-color="${OL}" stop-opacity=".2"/></radialGradient>`)},
+    /* an arc of an ellipse (rx, ry, turned rot°) between two angles (0° = right, 90° = down) */
+    arc(cx,cy,rx,ry,rot,a0,a1){const r=(rot||0)*Math.PI/180,p=a=>{a*=Math.PI/180;const x=rx*Math.cos(a),y=ry*Math.sin(a);return f1(cx+x*Math.cos(r)-y*Math.sin(r))+' '+f1(cy+x*Math.sin(r)+y*Math.cos(r))};
+      return `M${p(a0)}A${f1(rx)} ${f1(ry)} ${rot||0} ${a1-a0>180?1:0} 1 ${p(a1)}`},
+    rim(cx,cy,rx,ry,rot,w){if(V.off)return'';const k=w||2.6,i=1.5+k/2+.4;if(rx<=i*2||ry<=i*2)return'';
+      return `<path class="vol-rim" d="${V.arc(cx,cy,rx-i,ry-i,rot,-12,104)}" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="${k}" stroke-linecap="round"/><path class="vol-rim" d="${V.arc(cx,cy,rx-i,ry-i,rot,14,78)}" fill="none" stroke="#fff" stroke-opacity=".16" stroke-width="${k}" stroke-linecap="round"/>`},
+    low(cx,cy,rx,ry,rot){if(V.off)return'';return `<path class="vol-low" d="${V.arc(cx,cy,rx,ry,rot,28,152)}" fill="none" stroke="${OL}" stroke-width="3.6" stroke-linecap="round"/>`},
+    ground(cx,cy,rx,ry){ry=ry||6;if(V.off)return `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="rgba(91,58,41,.16)"/>`;
+      return `<g class="vol-ground"><ellipse cx="${cx}" cy="${cy}" rx="${f1(rx*1.08)}" ry="${f1(ry*1.25)}" fill="${OL}" opacity=".09"/><ellipse cx="${cx}" cy="${f1(cy-ry*.1)}" rx="${f1(rx*.64)}" ry="${f1(ry*.6)}" fill="${OL}" opacity=".2"/></g>`},
+    under(shape,dy){if(V.off)return'';return `<g class="vol-under" transform="translate(0 ${dy||2})" opacity=".15">${shape.replace(/\s(stroke|stroke-width|stroke-linejoin|stroke-linecap|opacity|class|id|data-[\w-]+)="[^"]*"/g,'').replace(/fill="[^"]*"/,`fill="${OL}"`)}</g>`},
+    glass(cx,cy,rx,ry){if(V.off)return'';return `<path class="vol-glass" d="M${f1(cx-rx*.55)} ${f1(cy+ry*.52)}Q${f1(cx)} ${f1(cy+ry*.92)} ${f1(cx+rx*.55)} ${f1(cy+ry*.52)}" fill="none" stroke="#fff" stroke-width="${f1(Math.max(1.2,rx*.16))}" stroke-linecap="round" opacity=".26"/>`},
+    /* a soft highlight ellipse (top left of a head or a round thing) */
+    shine(cx,cy,rx,ry,rot){if(V.off)return `<ellipse cx="${cx}" cy="${cy}" rx="${f1(rx*.83)}" ry="${f1(ry*.76)}" fill="#fff" opacity=".38"${rot?` transform="rotate(${rot} ${cx} ${cy})"`:''}/>`;
+      return `<ellipse class="vol-hl" cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${V.hl()}"${rot?` transform="rotate(${rot} ${cx} ${cy})"`:''}/>`},
+    /* overlay copy of a filled shape: same geometry, colour-free light and shade on top (objects, clothes, food) */
+    lit(shape){if(V.off)return'';return shape.replace(/\s(stroke|stroke-width|stroke-linejoin|stroke-linecap|stroke-dasharray|opacity|fill-opacity|class|filter|id|style|data-[\w-]+|aria-[\w-]+|vector-effect)="[^"]*"/g,'').replace(/fill="[^"]*"/,`fill="${V.over()}" pointer-events="none"`)},
+    /* every outlined, coloured shape in a piece of markup gets its overlay copy right after it (clothes, tools, food drawn by the games) */
+    litAll(markup){if(V.off||!markup)return markup;return markup.replace(/<(path|ellipse|circle|rect)\b[^>]*?fill="#[0-9A-Fa-f]{6}"[^>]*?stroke="#5B3A29"[^>]*?\/>/g,m=>/fill="#5B3A29"/i.test(m)?m:m+V.lit(m))},
+    /* a round limb drawn as one thick stroke from p to q (width w): a light stripe on its upper left side, a soft shade on the lower right */
+    limb(p,q,w){if(V.off)return'';const dx=q[0]-p[0],dy=q[1]-p[1],L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;let nx=-uy,ny=ux;if(nx+ny>0){nx=-nx;ny=-ny}
+      const cut=Math.min(L*.3,w*.35),a=[p[0]+ux*cut,p[1]+uy*cut],b=[q[0]-ux*cut,q[1]-uy*cut],ln=(o,sw,col,op)=>`<path class="vol-limb" d="M${f1(a[0]+nx*o)} ${f1(a[1]+ny*o)}L${f1(b[0]+nx*o)} ${f1(b[1]+ny*o)}" stroke="${col}" stroke-width="${f1(sw)}" stroke-linecap="round" opacity="${op}"/>`;
+      return ln(w*.22,w*.26,'#fff',.3)+ln(-w*.28,w*.22,OL,.12)},
+    /* how many different gradients one picture uses (art.volume.limits: 6 or fewer per character) */
+    count(svgEl){const ids=new Set();(svgEl.outerHTML.match(/url\(#([^)]+)\)/g)||[]).forEach(u=>{const id=u.slice(5,-1),g=document.getElementById(id);if(g&&/Gradient$/.test(g.tagName))ids.add(id)});return ids.size}
+  };
+  return V;
+})();
 
 /* ---------- P18 motion.hair: long hair as strands (8~14). Each strand turns at its root and at two joints (nested <g>), so the tip follows later.
    strand: [x, y, angle (deg, 0 = straight down, + = tip to the left), length, width, bend per joint (deg)]
@@ -143,63 +208,71 @@ const EAR_DROOP={muddy:.3,foamy:.2,rinse1:.6,wet:1,dry1:.5,fluffy:0};
 const EAR_PIVOT={bunny:[[78,74,-24],[122,74,24]],bear:[[56,64,-14],[144,64,14]],cat:[[62,58,-18],[138,58,18]],dog:[[50,72,-9],[150,72,9]],pony:[[66,62,-22],[134,62,22]]};
 /* opt (P18): layer:false = no per-cell drawings (the salon draws them on its own overlay), hairStyle/knots = hairstyle, brushed = neat shiny hair, hairD = how dry the hair is (0..1) */
 function animal(kind='bunny',mood='idle',opt={}){
-  const k=KINDS[kind]||KINDS.bunny,id=uid('an'),c=`url(#${id}b)`,EYE='#4A2E20';let s='';
+  const k=KINDS[kind]||KINDS.bunny,id=uid('an'),EYE='#4A2E20';let s='',c=`url(#${id}b)`;
   /* opt.state: one of games.petsalon.petStates (muddy · foamy · rinse1 · wet · dry1 · fluffy). opt.cells: per-cell values (see petLayer) so the look changes where it was touched */
   const state=opt.state||'',droop=EAR_DROOP[state]||0,vals=opt.cells||(state?stateCells(state):null),layer=vals&&opt.layer!==false?petLayer(kind,PET_CELLS(opt.grid),vals):null;
   /* P18: soft outline rings (only for the salon looks: other screens draw exactly as before) */
   const FB=vals&&!k.nofur?fluffBumps(opt.grid):null,fluffy=state==='fluffy';
   const hp=k.hair?hairPlan(kind,opt.hairStyle,opt.knots):null,hd=opt.hairD!=null?opt.hairD:(HAIR_D[state]!=null?HAIR_D[state]:1),ho={d:hd,neat:!!opt.brushed,shine:state==='fluffy'};
-  const dress=!!k.dress,bodyF=dress?`url(#${id}d)`:c,skin=c,feetF=dress?k.shoe:c;
+  const dress=!!k.dress;let bodyF=dress?`url(#${id}d)`:c,skin=c,feetF=dress?k.shoe:c;
   const ear=(side,inner)=>{const o=(AL_EAR[kind]||AL_EAR.bunny)[side==='l'?0:1],pv=(EAR_PIVOT[kind]||EAR_PIVOT.bunny)[side==='l'?0:1];
     if(droop)inner=`<g class="ps-droop" transform="rotate(${(pv[2]*droop).toFixed(1)} ${pv[0]} ${pv[1]})">${inner}</g>`;
     return `<g class="al-ear al-ear-${side}" ${AL_FB(o[0],o[1])}><g class="al-ear-s">${inner}</g></g>`};
+  /* P19 art.volume: the round parts share one ball gradient per colour (page-wide defs, VOL); VOL.off keeps the old flat-centred look */
+  const V=!VOL.off;let CH=`url(#${id}c)`,HU=`url(#${id}h)`,UU=`url(#${id}u)`;
+  if(V){c=VOL.ball(k.body,k.edge);CH=VOL.cheek(k.cheek);if(FB){HU=VOL.ballU(k.body,k.edge,80.4,69.2,119,119,'h');UU=dress?VOL.ballU(k.dress,k.dressEdge,86.56,171.28,81.6,64.6,'u'):VOL.ballU(k.body,k.edge,86.56,171.28,81.6,64.6,'u')}
+    skin=c;if(dress)bodyF=VOL.ball(k.dress,k.dressEdge);else{bodyF=c;feetF=c}}
+  else{
   s+=`<defs><radialGradient id="${id}b" cx=".36" cy=".28" r=".85"><stop offset="0" stop-color="${k.body}"/><stop offset=".62" stop-color="${k.body}"/><stop offset="1" stop-color="${k.edge}"/></radialGradient>
     <radialGradient id="${id}c"><stop offset="0" stop-color="${k.cheek}" stop-opacity=".95"/><stop offset=".6" stop-color="${k.cheek}" stop-opacity=".55"/><stop offset="1" stop-color="${k.cheek}" stop-opacity="0"/></radialGradient>`;
   /* the same gradients in picture units, for the outline bumps (they must match the plain shape exactly) */
   const gU=(n,a,b,x,y,rx,ry)=>`<radialGradient id="${id}${n}" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="translate(${x} ${y}) scale(${rx} ${ry})"><stop offset="0" stop-color="${a}"/><stop offset=".62" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></radialGradient>`;
   if(FB)s+=gU('h',k.body,k.edge,80.4,69.2,119,119)+(dress?gU('u',k.dress,k.dressEdge,86.56,171.28,81.6,64.6):gU('u',k.body,k.edge,86.56,171.28,81.6,64.6));
   if(dress)s+=`<radialGradient id="${id}d" cx=".36" cy=".28" r=".85"><stop offset="0" stop-color="${k.dress}"/><stop offset=".62" stop-color="${k.dress}"/><stop offset="1" stop-color="${k.dressEdge}"/></radialGradient>`;
-  s+=`</defs>`;
-  s+=`<ellipse cx="100" cy="225" rx="58" ry="6" fill="rgba(91,58,41,.16)"/>`;
+  s+=`</defs>`;}
+  s+=VOL.ground(100,225,58,6);
   s+=`<g class="al-root" ${AL_VB(100,226)}><g class="al-breathe" ${AL_VB(100,228)}>`;
   /* tail (behind everything); the pony's is a bunch of hair strands */
   s+=`<g class="al-tail" ${AL_VB(114,210)}><g class="al-tail-s">${hp&&hp.tail?hairGroup(hp.tail,hp.H,ho,'t'):k.hair?'':`${AL_TAIL[kind]||AL_TAIL.bunny} fill="${kind==='dog'?k.dark:c}" ${S}/>`}</g></g>`;
   /* body, feet, arms */
-  s+=`<g class="al-foot al-foot-l" ${AL_FB(60,0)}><ellipse cx="78" cy="220" rx="17" ry="9" fill="${feetF}" ${S}/></g><g class="al-foot al-foot-r" ${AL_FB(40,0)}><ellipse cx="122" cy="220" rx="17" ry="9" fill="${feetF}" ${S}/></g>`;
-  if(FB)s+=fluffRing(FB.body,vals,`url(#${id}u)`,`<ellipse cx="100" cy="188" rx="48" ry="38" fill="${bodyF}" ${S}/>`,`<ellipse cx="100" cy="188" rx="46.25" ry="36.25" fill="url(#${id}u)"/>`);
-  else s+=`<ellipse cx="100" cy="188" rx="48" ry="38" fill="${bodyF}" ${S}/>`;
-  s+=dress?`<path d="M80 166Q100 176 120 166L128 214Q100 222 72 214Z" fill="${k.dressIn}" opacity=".9"/><path d="M86 168L100 176L114 168L112 160L100 168L88 160Z" fill="#fff" opacity=".8"/>`:`<ellipse cx="100" cy="196" rx="28" ry="22" fill="${k.inner}" opacity=".92"/>`;
+  s+=`<g class="al-foot al-foot-l" ${AL_FB(60,0)}><ellipse cx="78" cy="220" rx="17" ry="9" fill="${feetF}" ${S}/>${VOL.rim(78,220,17,9,0,2)}</g><g class="al-foot al-foot-r" ${AL_FB(40,0)}><ellipse cx="122" cy="220" rx="17" ry="9" fill="${feetF}" ${S}/>${VOL.rim(122,220,17,9,0,2)}</g>`;
+  if(FB)s+=fluffRing(FB.body,vals,UU,`<ellipse cx="100" cy="188" rx="48" ry="38" fill="${bodyF}" ${S}/>`,`<ellipse cx="100" cy="188" rx="46.25" ry="36.25" fill="${UU}"/>`);
+  else s+=`<ellipse cx="100" cy="188" rx="48" ry="38" fill="${bodyF}" ${S}/>`+VOL.low(100,188,48,38);
+  s+=dress?`<path d="M80 166Q100 176 120 166L128 214Q100 222 72 214Z" fill="${k.dressIn}" opacity=".9"/><path d="M86 168L100 176L114 168L112 160L100 168L88 160Z" fill="#fff" opacity=".8"/>`:`${V?`<ellipse class="vol-under" cx="100" cy="171" rx="36" ry="8" fill="${OL}" opacity=".1"/>`:''}<ellipse cx="100" cy="196" rx="28" ry="22" fill="${k.inner}" opacity="${V?.8:.92}"/>`;   // art.volume.overlap: the head leaves a soft shadow on the top of the body
+  s+=VOL.rim(100,188,48,38);
   if(opt.apron)s+=`<path d="M72 164H128L134 220Q100 228 66 220Z" fill="${opt.apron}" ${S}/><rect x="88" y="184" width="24" height="16" rx="5" fill="#fff" opacity=".75"/><path d="M92 172c-5-6-13 1-6 7l6 5 6-5c7-6-1-13-6-7z" fill="#fff" opacity=".9" transform="translate(8 0)"/>`;
-  s+=`<g class="al-arm al-arm-l" ${AL_FB(90,8)}><g class="al-arm-s"><ellipse cx="52" cy="182" rx="13" ry="21" fill="${skin}" ${S} transform="rotate(28 52 182)"/></g></g>`;
-  s+=`<g class="al-arm al-arm-r" ${AL_FB(10,8)}><g class="al-arm-s"><g${opt.wave?' class="wave"':''}><ellipse cx="148" cy="182" rx="13" ry="21" fill="${skin}" ${S} transform="rotate(-28 148 182)"/></g></g></g>`;
+  const armL=`<ellipse cx="52" cy="182" rx="13" ry="21" fill="${skin}" ${S} transform="rotate(28 52 182)"/>`,armR=`<ellipse cx="148" cy="182" rx="13" ry="21" fill="${skin}" ${S} transform="rotate(-28 148 182)"/>`;
+  s+=`<g class="al-arm al-arm-l" ${AL_FB(90,8)}><g class="al-arm-s">${VOL.under(armL)}${armL}${VOL.rim(52,182,13,21,28,2.2)}</g></g>`;
+  s+=`<g class="al-arm al-arm-r" ${AL_FB(10,8)}><g class="al-arm-s"><g${opt.wave?' class="wave"':''}>${VOL.under(armR)}${armR}${VOL.rim(148,182,13,21,-28,2.2)}</g></g></g>`;
   /* fluffyFix.instead: soft inner-fur strokes a little lighter than the fur (3~4 short curves) */
   const furOn=fluffy&&!k.nofur,furLine=lum(k.body)>.9?hexMix(k.edge,k.body,.35):hexMix(k.body,'#ffffff',.45);
   if(furOn)s+=`<g class="ps-fur" stroke="${furLine}" stroke-width="3.2" fill="none" stroke-linecap="round"><path d="M66 196q-3 8 1 15"/><path d="M134 196q3 8 -1 15"/></g>`;
   if(layer)s+=`<g class="ps-cells" data-state="${state}">${layer.b}</g>`;
   /* head: ears are behind the head (they never touch the body, so drawing them after the body looks the same) */
   s+=`<g class="al-head" ${AL_VB(100,166)}><g class="al-head-s" ${AL_VB(100,166)}>`;
-  if(kind==='bunny')s+=`<g class="ears">${ear('l',`<ellipse cx="72" cy="36" rx="19" ry="44" fill="${c}" ${S} transform="rotate(-10 72 36)"/><ellipse cx="72" cy="40" rx="9" ry="31" fill="${k.inner}" transform="rotate(-10 72 40)"/>`)}
-    ${ear('r',`<ellipse cx="128" cy="36" rx="19" ry="44" fill="${c}" ${S} transform="rotate(12 128 36)"/><ellipse cx="128" cy="40" rx="9" ry="31" fill="${k.inner}" transform="rotate(12 128 40)"/>`)}</g>`;
-  if(kind==='bear')s+=`<g class="ears">${ear('l',`<circle cx="42" cy="50" r="25" fill="${c}" ${S}/><circle cx="42" cy="52" r="13" fill="${k.inner}"/>`)}${ear('r',`<circle cx="158" cy="50" r="25" fill="${c}" ${S}/><circle cx="158" cy="52" r="13" fill="${k.inner}"/>`)}</g>`;
+  if(kind==='bunny')s+=`<g class="ears">${ear('l',`<ellipse cx="72" cy="36" rx="19" ry="44" fill="${c}" ${S} transform="rotate(-10 72 36)"/>${VOL.rim(72,36,19,44,-10,2.2)}<ellipse cx="72" cy="40" rx="9" ry="31" fill="${k.inner}" transform="rotate(-10 72 40)"/>`)}
+    ${ear('r',`<ellipse cx="128" cy="36" rx="19" ry="44" fill="${c}" ${S} transform="rotate(12 128 36)"/>${VOL.rim(128,36,19,44,12,2.2)}<ellipse cx="128" cy="40" rx="9" ry="31" fill="${k.inner}" transform="rotate(12 128 40)"/>`)}</g>`;
+  if(kind==='bear')s+=`<g class="ears">${ear('l',`<circle cx="42" cy="50" r="25" fill="${c}" ${S}/>${VOL.rim(42,50,25,25,0,2.2)}<circle cx="42" cy="52" r="13" fill="${k.inner}"/>`)}${ear('r',`<circle cx="158" cy="50" r="25" fill="${c}" ${S}/>${VOL.rim(158,50,25,25,0,2.2)}<circle cx="158" cy="52" r="13" fill="${k.inner}"/>`)}</g>`;
   if(kind==='cat')s+=`<g class="ears">${ear('l',`<path d="M36 74L44 12L90 44Z" fill="${c}" ${S}/><path d="M49 58L52 30L74 46Z" fill="${k.inner}"/>`)}${ear('r',`<path d="M164 74L156 12L110 44Z" fill="${c}" ${S}/><path d="M151 58L148 30L126 46Z" fill="${k.inner}"/>`)}</g>`;
   if(kind==='pony')s+=`<g class="ears">${ear('l',`<path d="M48 64Q40 20 60 0Q80 24 76 58Z" fill="${c}" ${S}/><path d="M56 52Q52 26 60 14Q70 32 68 52Z" fill="#F8CFE0"/>`)}${ear('r',`<path d="M152 64Q160 20 140 0Q120 24 124 58Z" fill="${c}" ${S}/><path d="M144 52Q148 26 140 14Q130 32 132 52Z" fill="#F8CFE0"/>`)}</g>`;
   /* long hair behind the head (and a bun or braid behind it) */
   if(hp)s+=hp.pre+hairGroup(hp.back,hp.H,ho,'b');
-  if(FB)s+=fluffRing(FB.head,vals,`url(#${id}h)`,`<circle cx="100" cy="100" r="70" fill="${c}" ${S}/>`,`<circle cx="100" cy="100" r="68.25" fill="url(#${id}h)"/>`);
+  if(FB)s+=fluffRing(FB.head,vals,HU,`<circle cx="100" cy="100" r="70" fill="${c}" ${S}/>`,`<circle cx="100" cy="100" r="68.25" fill="${HU}"/>`);
   else if(kind==='pony')s+=`<path d="M38 98Q36 30 100 28Q164 30 162 98Q161 124 144 140Q142 186 100 188Q58 186 56 140Q39 124 38 98Z" fill="${c}" ${S}/>`;
-  else s+=`<circle cx="100" cy="100" r="70" fill="${c}" ${S}/>`;
-  s+=`<ellipse cx="68" cy="56" rx="25" ry="13" fill="#fff" opacity=".38" transform="rotate(-28 68 56)"/>`;
+  else s+=`<circle cx="100" cy="100" r="70" fill="${c}" ${S}/>`+VOL.low(100,100,70,70);
+  if(kind!=='pony')s+=VOL.rim(100,100,70,70,0,2.8);
+  s+=VOL.shine(68,56,30,17,-28);
   if(kind==='cat')s+=`<path d="M100 32v15M84 35l3 13M116 35l-3 13" stroke="${k.dark}" stroke-width="5.5" stroke-linecap="round"/>`;
-  if(kind==='dog')s+=`<ellipse cx="128" cy="92" rx="21" ry="24" fill="${k.dark}" opacity=".55"/><g class="ears">${ear('l',`<path d="M36 68Q16 108 40 140Q58 120 58 78Z" fill="${k.dark}" ${S}/>`)}${ear('r',`<path d="M164 68Q184 108 160 140Q142 120 142 78Z" fill="${k.dark}" ${S}/>`)}</g>`;
+  if(kind==='dog')s+=`<ellipse cx="128" cy="92" rx="21" ry="24" fill="${k.dark}" opacity=".55"/><g class="ears">${ear('l',`<path d="M36 68Q16 108 40 140Q58 120 58 78Z" fill="${V?VOL.ball(k.dark):k.dark}" ${S}/>`)}${ear('r',`<path d="M164 68Q184 108 160 140Q142 120 142 78Z" fill="${V?VOL.ball(k.dark):k.dark}" ${S}/>`)}</g>`;
   if(kind==='bunny')s+=`<path d="M90 36q10-12 20 0" stroke="${k.inner}" stroke-width="5" fill="none" stroke-linecap="round"/>`;
   if(furOn)s+=`<g class="ps-fur" stroke="${furLine}" stroke-width="3.2" fill="none" stroke-linecap="round"><path d="M44 116q-4 9 0 17"/><path d="M156 116q4 9 0 17"/></g>`;
-  if(hp)s+=hp.H.cap(k);
+  if(hp){const cp=hp.H.cap(k);s+=cp+VOL.lit(cp.match(/^<path[^>]*\/>/)[0])}
   if(kind==='pony')s+=`<path d="M60 150Q62 126 100 124Q138 126 140 150Q140 186 100 188Q60 186 60 150Z" fill="#FBE3EE"/><path d="M84 146q4 -6 9 -1M116 146q-4 -6 -9 -1" stroke="#B07A98" stroke-width="4" fill="none" stroke-linecap="round"/>`;
   else if(kind==='bear'||kind==='dog'||kind==='fluffdog')s+=`<ellipse cx="100" cy="127" rx="31" ry="23" fill="${k.inner}"/>`;else if(kind!=='dolly')s+=`<ellipse cx="100" cy="127" rx="25" ry="17" fill="#fff" opacity=".5"/>`;
   const chx=kind==='pony'?[60,140]:[52,148];
-  s+=`<circle cx="${chx[0]}" cy="124" r="18" fill="url(#${id}c)"/><circle cx="${chx[1]}" cy="124" r="18" fill="url(#${id}c)"/>`;
+  s+=`<circle cx="${chx[0]}" cy="124" r="18" fill="${CH}"/><circle cx="${chx[1]}" cy="124" r="18" fill="${CH}"/>`;
   /* fluffyFix.instead: rosier cheeks */
-  if(fluffy)s+=`<circle cx="${chx[0]}" cy="124" r="21" fill="url(#${id}c)" opacity=".7"/><circle cx="${chx[1]}" cy="124" r="21" fill="url(#${id}c)" opacity=".7"/>`;
+  if(fluffy)s+=`<circle cx="${chx[0]}" cy="124" r="21" fill="${CH}" opacity=".7"/><circle cx="${chx[1]}" cy="124" r="21" fill="${CH}" opacity=".7"/>`;
   /* worried brows (shown only by alive.js for the 'sad' mood) */
   s+=`<g class="al-brows" opacity="0"><path d="M60 84L84 75M140 84L116 75" stroke="${EYE}" stroke-width="4" stroke-linecap="round"/></g>`;
   /* eyes */
@@ -210,7 +283,7 @@ function animal(kind='bunny',mood='idle',opt={}){
     if(mood==='sleepy')return `<g class="al-eye al-eye-${side}"><path d="M${x-11} 100Q${x} 108 ${x+11} 100" stroke="${EYE}" stroke-width="5" fill="none" stroke-linecap="round"/></g>`;
     const w=mood==='wow',rx=w?13:11.5,ry=w?15.5:13.5;
     return `<g class="eye al-eye al-eye-${side} al-open"><g class="al-pupil"><ellipse cx="${x}" cy="100" rx="${rx}" ry="${ry}" fill="${EYE}"/><ellipse cx="${x}" cy="${105}" rx="${rx*.62}" ry="${ry*.5}" fill="#8A5638"/>
-      <circle cx="${x+4}" cy="${94}" r="${w?5.6:4.8}" fill="#fff"/><circle cx="${x-4.5}" cy="${106}" r="${w?2.8:2.3}" fill="#fff" opacity=".95"/>${fluffy?`<circle cx="${x+6.5}" cy="101" r="2" fill="#fff"/>`:''}</g></g>${lash}`;
+      <circle cx="${x+4}" cy="${94}" r="${w?5.6:4.8}" fill="#fff"/><circle cx="${x-4.5}" cy="${106}" r="${w?2.8:2.3}" fill="#fff" opacity=".95"/>${VOL.glass(x,100,rx,ry)}${fluffy?`<circle cx="${x+6.5}" cy="101" r="2" fill="#fff"/>`:''}</g></g>${lash}`;
   };
   s+=`<g class="eyes al-eyes">${eye(74,-1)}${eye(126,1)}</g>`;
   /* fluffyFix.instead: sparkly eyes (a tiny star beside smiling eyes) */
@@ -382,7 +455,7 @@ function pizza(st){
   const id=uid('pz'),r=st.r,b=st.baked;
   let s=`<defs><radialGradient id="${id}c" cx=".5" cy=".5" r=".5"><stop offset=".78" stop-color="${b?'#F0C27A':'#F6DDB0'}"/><stop offset=".93" stop-color="${b?'#D58F3E':'#EBC78E'}"/><stop offset="1" stop-color="${b?'#B8732E':'#DDB377'}"/></radialGradient>
     <radialGradient id="${id}s" cx=".45" cy=".4" r=".7"><stop offset="0" stop-color="${b?'#D2402A':'#E2513A'}"/><stop offset="1" stop-color="${b?'#A82D1C':'#C2381F'}"/></radialGradient></defs>`;
-  s+=`<ellipse cx="4" cy="8" rx="${r+2}" ry="${r}" fill="rgba(90,50,20,.18)"/><path d="${blob(0,0,r,.05,22,7)}" fill="url(#${id}c)" stroke="${b?'#9A5E24':'#C79A5E'}" stroke-width="2"/>`;
+  s+=`<ellipse cx="4" cy="8" rx="${r+2}" ry="${r}" fill="rgba(90,50,20,.18)"/><path d="${blob(0,0,r,.05,22,7)}" fill="url(#${id}c)" stroke="${b?'#9A5E24':'#C79A5E'}" stroke-width="2"/>`+VOL.lit(`<path d="${blob(0,0,r,.05,22,7)}" fill="#000"/>`);   // P19 art.volume.objects: the crust gets the shared light and shade
   if(st.flour)for(let i=0;i<26;i++){const R=rng(i*13+5),a=R()*6.28,d=R()*r*.9;s+=`<circle cx="${(Math.cos(a)*d).toFixed(1)}" cy="${(Math.sin(a)*d).toFixed(1)}" r="${1+R()*1.6}" fill="#fff" opacity=".7"/>`}
   if(b)for(let i=0;i<14;i++){const a=i/14*6.28+.2;s+=`<ellipse cx="${(Math.cos(a)*(r-6)).toFixed(1)}" cy="${(Math.sin(a)*(r-6)).toFixed(1)}" rx="5" ry="3" fill="#9E5A20" opacity=".35" transform="rotate(${a*57.3} ${(Math.cos(a)*(r-6)).toFixed(1)} ${(Math.sin(a)*(r-6)).toFixed(1)})"/>`}
   if(st.sauce){s+=`<path d="${blob(0,0,r-14,.08,18,3)}" fill="url(#${id}s)"/>`;for(let i=0;i<18;i++){const R=rng(i*29+1),a=R()*6.28,d=R()*(r-22);s+=`<circle cx="${(Math.cos(a)*d).toFixed(1)}" cy="${(Math.sin(a)*d).toFixed(1)}" r="${.8+R()*1.4}" fill="${R()>.5?'#3E7E2E':'#8E2216'}" opacity=".7"/>`}}
@@ -477,10 +550,12 @@ function face(st={}){
   /* hair behind, buns */
   s+=`<circle cx="56" cy="70" r="38" fill="${HAIR}" ${S}/><circle cx="244" cy="70" r="38" fill="${HAIR}" ${S}/><circle cx="46" cy="58" r="10" fill="${HAIR2}" opacity=".7"/><circle cx="234" cy="58" r="10" fill="${HAIR2}" opacity=".7"/>
     <path d="M36 200Q18 64 150 44Q282 64 264 200Q268 268 238 300L62 300Q32 268 36 200Z" fill="${HAIR}" ${S}/>`;
-  s+=`<ellipse cx="46" cy="196" rx="15" ry="19" fill="${SKIN}" ${S}/><ellipse cx="254" cy="196" rx="15" ry="19" fill="${SKIN}" ${S}/>`;
-  s+=`<ellipse cx="150" cy="190" rx="106" ry="108" fill="url(#${id}s)" ${S}/>`;
+  s=VOL.litAll(s);   // P19 art.volume: hair, buns and ears get the same light and shade
+  s+=`<ellipse cx="46" cy="196" rx="15" ry="19" fill="${SKIN}" ${S}/>${VOL.lit(`<ellipse cx="46" cy="196" rx="15" ry="19" fill="#000"/>`)}<ellipse cx="254" cy="196" rx="15" ry="19" fill="${SKIN}" ${S}/>${VOL.lit(`<ellipse cx="254" cy="196" rx="15" ry="19" fill="#000"/>`)}`;
+  s+=`<ellipse cx="150" cy="190" rx="106" ry="108" fill="url(#${id}s)" ${S}/>`+VOL.low(150,190,106,108)+VOL.rim(150,190,106,108,0,3);
   /* fringe */
   s+=`<path d="M48 168Q50 72 150 66Q250 72 252 168Q232 120 196 108Q184 136 150 108Q118 136 104 108Q68 120 48 168Z" fill="${HAIR}" ${S}/><path d="M92 92Q120 78 150 80" stroke="${HAIR2}" stroke-width="7" fill="none" stroke-linecap="round" opacity=".8"/>`;
+  if(!VOL.off)s+=VOL.lit(`<path d="M48 168Q50 72 150 66Q250 72 252 168Q232 120 196 108Q184 136 150 108Q118 136 104 108Q68 120 48 168Z" fill="#000"/>`)+VOL.shine(108,86,40,14,-18);
   /* bun ties */
   s+=`<g transform="translate(78 96) scale(.42) rotate(-20)">${ACC.ribbon}</g><g transform="translate(222 96) scale(.42) rotate(20)">${ACC.ribbon}</g>`;
   /* eye shadow, eyes */
@@ -488,7 +563,7 @@ function face(st={}){
   if(st.lidR)s+=`<ellipse cx="194" cy="168" rx="30" ry="15" fill="${st.lidR}" opacity=".75"/>${twinkle(216,158,6)}`;
   const eye=(x,out)=>{const side=out<0?'l':'r';return st.mood==='happy'
     ?`<g class="al-eye al-eye-${side}"><path d="M${x-18} 196Q${x} 170 ${x+18} 196" stroke="${EYE}" stroke-width="7" fill="none" stroke-linecap="round"/></g><path d="M${x+out*18} 190l${out*9} -5M${x+out*13} 182l${out*7} -8" stroke="${EYE}" stroke-width="3.5" stroke-linecap="round"/>`
-    :`<g class="al-eye al-eye-${side} al-open"><g class="al-pupil"><ellipse cx="${x}" cy="190" rx="17" ry="20" fill="${EYE}"/><ellipse cx="${x}" cy="197" rx="10.5" ry="10" fill="#8A5638"/><circle cx="${x+6}" cy="181" r="7" fill="#fff"/><circle cx="${x-6}" cy="199" r="3.4" fill="#fff" opacity=".95"/></g></g>
+    :`<g class="al-eye al-eye-${side} al-open"><g class="al-pupil"><ellipse cx="${x}" cy="190" rx="17" ry="20" fill="${EYE}"/><ellipse cx="${x}" cy="197" rx="10.5" ry="10" fill="#8A5638"/><circle cx="${x+6}" cy="181" r="7" fill="#fff"/><circle cx="${x-6}" cy="199" r="3.4" fill="#fff" opacity=".95"/>${VOL.glass(x,190,17,20)}</g></g>
       <path d="M${x+out*16} 178l${out*9} -6M${x+out*11} 171l${out*6} -9" stroke="${EYE}" stroke-width="3.5" stroke-linecap="round"/>`};
   s+=`<g class="eyes al-eyes">${eye(106,-1)}${eye(194,1)}</g>`;
   if(st.mood!=='happy')s+=[106,194].map((x,i)=>`<path class="al-lid al-lid-${i?'r':'l'}" opacity="0" d="M${x-19} 192Q${x} 205 ${x+19} 192" stroke="${EYE}" stroke-width="6" fill="none" stroke-linecap="round"/>`).join('');
@@ -715,16 +790,17 @@ const HAND=(()=>{
   /* customers: mom (the makeup face), baby, Toto */
   function baby(mood){
     const EYE='#4A2E20',hp=mood==='happy';
-    const eye=(x,sd)=>hp?`<g class="al-eye al-eye-${sd}"><path d="M${x-11} 104Q${x} 88 ${x+11} 104" stroke="${EYE}" stroke-width="5" fill="none" stroke-linecap="round"/></g>`:`<g class="al-eye al-eye-${sd} al-open"><g class="al-pupil"><ellipse cx="${x}" cy="100" rx="10" ry="12" fill="${EYE}"/><circle cx="${x+3.5}" cy="95" r="4" fill="#fff"/></g></g>`;
+    const eye=(x,sd)=>hp?`<g class="al-eye al-eye-${sd}"><path d="M${x-11} 104Q${x} 88 ${x+11} 104" stroke="${EYE}" stroke-width="5" fill="none" stroke-linecap="round"/></g>`:`<g class="al-eye al-eye-${sd} al-open"><g class="al-pupil"><ellipse cx="${x}" cy="100" rx="10" ry="12" fill="${EYE}"/><circle cx="${x+3.5}" cy="95" r="4" fill="#fff"/>${VOL.glass(x,100,10,12)}</g></g>`;
     const lid=x=>hp?'':`<path class="al-lid al-lid-${x<100?'l':'r'}" opacity="0" d="M${x-11} 100Q${x} 108 ${x+11} 100" stroke="${EYE}" stroke-width="4.5" fill="none" stroke-linecap="round"/>`;
     /* P12: grouped like animal() for alive.js (same look) */
-    return `<svg viewBox="0 0 200 230" style="overflow:visible" xmlns="http://www.w3.org/2000/svg"><ellipse cx="100" cy="225" rx="58" ry="6" fill="rgba(91,58,41,.16)"/>
+    const V=!VOL.off,SKB=V?VOL.ball('#FFEADB','#F6CDB6'):'#FFEADB',SUIT='#F7E8B8';   // P19 art.volume
+    return `<svg viewBox="0 0 200 230" style="overflow:visible" xmlns="http://www.w3.org/2000/svg">${VOL.ground(100,225,58,6)}
       <g class="al-root" style="transform-origin:50% 100%"><g class="al-breathe" style="transform-origin:50% 100%">
-      <ellipse cx="100" cy="196" rx="50" ry="34" fill="#F7E8B8" ${S}/><circle cx="100" cy="182" r="7" fill="#fff" ${S}/>
-      <g class="al-head" style="transform-origin:50% 95%"><g class="al-head-s" style="transform-origin:50% 95%"><ellipse cx="34" cy="108" rx="13" ry="16" fill="#FFEADB" ${S}/><ellipse cx="166" cy="108" rx="13" ry="16" fill="#FFEADB" ${S}/>
-      <circle cx="100" cy="104" r="68" fill="#FFEADB" ${S}/><path d="M92 38Q100 22 112 30Q118 38 108 42" stroke="#7A4A2A" stroke-width="5" fill="none" stroke-linecap="round"/>
-      <ellipse cx="72" cy="66" rx="20" ry="10" fill="#fff" opacity=".4" transform="rotate(-25 72 66)"/>
-      <circle cx="56" cy="126" r="15" fill="#FFB3C6" opacity=".6"/><circle cx="144" cy="126" r="15" fill="#FFB3C6" opacity=".6"/><g class="eyes al-eyes">${eye(76,'l')}${eye(124,'r')}</g>${lid(76)}${lid(124)}
+      <ellipse cx="100" cy="196" rx="50" ry="34" fill="${SUIT}" ${S}/>${VOL.lit('<ellipse cx="100" cy="196" rx="50" ry="34" fill="#000"/>')}${VOL.low(100,196,50,34)}${VOL.rim(100,196,50,34)}${V?`<ellipse class="vol-under" cx="100" cy="173" rx="38" ry="8" fill="${OL}" opacity=".12"/>`:''}<circle cx="100" cy="182" r="7" fill="#fff" ${S}/>
+      <g class="al-head" style="transform-origin:50% 95%"><g class="al-head-s" style="transform-origin:50% 95%"><ellipse cx="34" cy="108" rx="13" ry="16" fill="${SKB}" ${S}/><ellipse cx="166" cy="108" rx="13" ry="16" fill="${SKB}" ${S}/>
+      <circle cx="100" cy="104" r="68" fill="${SKB}" ${S}/>${VOL.low(100,104,68,68)}${VOL.rim(100,104,68,68,0,2.8)}<path d="M92 38Q100 22 112 30Q118 38 108 42" stroke="#7A4A2A" stroke-width="5" fill="none" stroke-linecap="round"/>
+      ${V?VOL.shine(72,66,26,14,-25):'<ellipse cx="72" cy="66" rx="20" ry="10" fill="#fff" opacity=".4" transform="rotate(-25 72 66)"/>'}
+      ${V?`<circle cx="56" cy="126" r="17" fill="${VOL.cheek('#FFB3C6')}"/><circle cx="144" cy="126" r="17" fill="${VOL.cheek('#FFB3C6')}"/>`:'<circle cx="56" cy="126" r="15" fill="#FFB3C6" opacity=".6"/><circle cx="144" cy="126" r="15" fill="#FFB3C6" opacity=".6"/>'}<g class="eyes al-eyes">${eye(76,'l')}${eye(124,'r')}</g>${lid(76)}${lid(124)}
       <g class="al-mouth" style="transform-origin:50% 30%">${hp?`<path d="M86 124Q100 144 114 124Z" fill="#B8474B" ${S}/>`:`<path d="M92 126q8 7 16 0" stroke="${OL}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`}</g><g class="al-mouth-o" opacity="0"><ellipse cx="100" cy="130" rx="7" ry="8.5" fill="#B8474B" ${S}/></g>
       </g></g></g></g></svg>`;
   }
@@ -762,5 +838,5 @@ const HAND=(()=>{
   return{KINDS,geo,path,inside,cells,tipCells,nail,hand,zoom,portrait,TOOLS,LAMP,STAMP,PART,bottle:c=>polish(c),GRID};
 })();
 
-window.ART={paper,OL,animal,animalOverlay,petCells:PET_CELLS,petLayer,petState,cellState,stateCells,fluffSet,fluffOf,HAIR,HAIR_STYLES,hairPlan,KINDS,F,TOPPING,WHOLE,wholeSVG,pieceSVG,pizza,TOOL,oven,BUILD,blob,rng,ACC,accSVG,face,FACE_ZONES,dress,lipstick,polish,star,twinkle,HAND};
+window.ART={vol:VOL,paper,OL,animal,animalOverlay,petCells:PET_CELLS,petLayer,petState,cellState,stateCells,fluffSet,fluffOf,HAIR,HAIR_STYLES,hairPlan,KINDS,F,TOPPING,WHOLE,wholeSVG,pieceSVG,pizza,TOOL,oven,BUILD,blob,rng,ACC,accSVG,face,FACE_ZONES,dress,lipstick,polish,star,twinkle,HAND};
 })();

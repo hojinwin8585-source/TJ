@@ -1,7 +1,7 @@
 /* P8-나 빵집 완료 기준 검사: node tests/bakery.js   (SHOT_DIR=폴더 를 주면 과정마다 캡처를 저장)
    모든 손동작은 CDP Input.dispatchTouchEvent 로 보낸 진짜 터치입니다.
    1) 1단계 빵 한 판을 콕과 쓱쓱만으로 끝까지 (젓기 → 판에 놓기 → 굽기 → 꺼내기 → 상자에 담기)
-   2) 4단계(훅): 빵은 재료 넣기·치대기·모양 고르기·잼 고르기·바르기가 설정된 순서대로 늘고, 케이크는 크림 → 과일 → 짤주머니 → 초 순서
+   2) 4단계(훅): 빵은 재료 넣기·치대기·모양 고르기·잼 고르기·바르기가 설정된 순서대로 늘고, 케이크는 (P19 휘핑) → 크림 → 과일 → 짤주머니 → 초 순서
    3) 수가 맞음: 만든 반죽 = 놓은 반죽 = 구운 빵 = 상자에 담은 빵, 썬 과일 = 올린 과일
    4) 글자 · 이모지 · 다음 버튼 없음, 누를 것 110px 이상, 엉뚱한 곳을 눌러도 진행 안 됨 */
 const {chromium}=require('playwright');
@@ -91,7 +91,7 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
   let planCake='';
   await play('L4c_','cake',{onState:async x=>{if(x.step&&!planCake&&x.order==='cake')planCake=x.plan.join();return false}});
   s=await st();
-  ok('4단계 케이크 과정이 설정 순서대로: 크림 → 과일 → 짤주머니 → 초',planCake==='cream,pickFruit,cut,top,pipe,candle,light,blow,serve',planCake);
+  ok('4단계 케이크 과정이 설정 순서대로: (P19 휘핑: 붓기 → 젓기 → 색 → 짤주머니) → 크림 → 과일 → 짤주머니 → 초',planCake==='cin,whip,tint,fill,cream,pickFruit,cut,top,pipe,candle,light,blow,serve',planCake);
   ok('썬 과일 = 올린 과일 = 4, 크림 꽃 8곳, 초 3개 꽂고 켜고 끔',s.cnt.cut===4&&s.cnt.topped===4&&s.slices===4&&s.cnt.rose===8&&s.roses===8&&s.cnt.cand===3&&s.cnt.lit===3&&s.cnt.blown===3,JSON.stringify(s.cnt));
   ok('케이크 한 판이 끝까지 감',s.log.includes('serve'));
   ok('누를 것은 모두 110px 이상 (4단계 포함)',smallHot.length===0,smallHot.slice(0,5).join(', ')||'모두 110px 이상');

@@ -1078,11 +1078,13 @@ const toolCss=document.createElement('style');toolCss.textContent=
 '.tl-intro{position:absolute;z-index:30;pointer-events:none;filter:drop-shadow(0 6px 5px rgba(91,74,66,.22))}'+
 '.tl-intro svg{width:100%;height:100%;display:block;overflow:visible}';
 document.head.appendChild(toolCss);
+/* P19 art.volume.objects: the big tools get the same light and shade as the characters (overlay on every outlined part, one shared gradient) */
+const volTool=h=>window.ART&&window.ART.vol?window.ART.vol.litAll(h):h;
 function makeTool(el,o={}){
   const host=o.host||el,SVGNS='http://www.w3.org/2000/svg';
   const rub=()=>Object.assign({},(M.CFG.touch||{}).rub,o.rub||{}),tcfg=()=>Object.assign({},(M.CFG.touch||{}).tool),cfg=()=>Object.assign({offsetAboveFingerRatio:.55,coverage:{}},o.cfg?o.cfg():{});
   const cov=()=>Object.assign({radiusRatio:.16,doneAt:.85,holdStillCleansNearest:true},cfg().coverage||{});
-  const tool=document.createElement('div');tool.className='tl-tool tl-'+(o.effect||'foam');tool.innerHTML=o.tool||'';host.appendChild(tool);
+  const tool=document.createElement('div');tool.className='tl-tool tl-'+(o.effect||'foam');tool.innerHTML=volTool(o.tool||'');host.appendChild(tool);
   const fx=document.createElementNS(SVGNS,'svg');fx.setAttribute('class','tl-fx tl-fx-'+(o.effect||'foam'));fx.style.display='none';host.appendChild(fx);
   const N=o.cells.length,v=o.cells.map(()=>0);
   let processed=0,id=null,F=null,lastMove=0,lastT=0,raf=0,done=false,enabled=true,snd=null,doneRatio=0,timers=[],trailD=0,G=null,downs=0;
@@ -1219,7 +1221,7 @@ function makeTool(el,o={}){
    from: the tray picture element, host: the stage, size: px of the tool while used. Returns a stop function. */
 function toolIntro(host,from,html,o={}){
   if(!host||!from)return()=>{};const hr=host.getBoundingClientRect(),fr=from.getBoundingClientRect();if(!fr.width||!hr.width)return()=>{};
-  const sz=o.size||Math.max(180,hr.width*.45),el=document.createElement('div');el.className='tl-intro';el.innerHTML=html;
+  const sz=o.size||Math.max(180,hr.width*.45),el=document.createElement('div');el.className='tl-intro';el.innerHTML=volTool(html);
   Object.assign(el.style,{width:sz+'px',height:sz+'px',left:(fr.left-hr.left+fr.width/2-sz/2)+'px',top:(fr.top-hr.top+fr.height/2-sz/2)+'px'});host.appendChild(el);
   const s0=fr.width/sz,up=Math.min(hr.height*.5,fr.top-hr.top-sz*.1),dx=hr.width/2-(fr.left-hr.left+fr.width/2),T=(x,y,k)=>`translate(${x}px,${y}px) scale(${k})`;
   const a=el.animate([{transform:T(0,0,s0),opacity:.3},{transform:T(dx,-up,1),opacity:1,offset:.25},{transform:T(dx,-up+30,'1.04,.96'),offset:.38},

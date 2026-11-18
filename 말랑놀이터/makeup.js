@@ -13,7 +13,7 @@ const M=window.ML,P=M&&M.P2,A=window.ART;if(!P||!A||!M.Guide||!P.makeTool)return
 const {say,sfx,tone,pick,rand,shuffle,cap,games,actx,store}=M;
 const {life,noise,SFX}=P;
 const id='makeup2',GID='makeup',L=life(id),OL=A.OL||'#5B3A29';
-const S3=`stroke="${OL}" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"`;
+const S3=`stroke="${OL}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"`;   // P19 art.volume.outline 3.5 → 3
 const cur=()=>M.current();
 const CF=M.CFG||{},MK=(CF.games||{}).makeup||{},RULES=CF.rules||{},SHELL=CF.shell||{},TOUCH=CF.touch||{},VO=CF.voice||{},CALM=CF.calm||{},PAL=CALM.palette||{},MO=CF.motion||{};
 const num=(s,i,d)=>{const m=String(s||'').match(/\d+(?:\.\d+)?/g);return m&&m[i]!=null?+m[i]:d};
@@ -141,7 +141,7 @@ function hairFront(c){
 function eye(s,c,px){
   const [ex,ey]=EYE[s],k=s==='l'?-1:1;
   const open=`<g class="al-eye al-eye-${s} al-open mk-open"><g class="al-pupil"><ellipse cx="${ex}" cy="${ey+2}" rx="22" ry="27" fill="url(#${px}gi)" stroke="${OL}" stroke-width="3"/>
-    <ellipse cx="${ex}" cy="${ey+6}" rx="11" ry="14" fill="${c.eye}" opacity=".85"/><circle cx="${ex-7}" cy="${ey-8}" r="8.5" fill="#fff"/><circle cx="${ex+8}" cy="${ey+11}" r="4" fill="#fff"/><circle cx="${ex+10}" cy="${ey-12}" r="2.2" fill="#fff" opacity=".9"/></g>
+    <ellipse cx="${ex}" cy="${ey+6}" rx="11" ry="14" fill="${c.eye}" opacity=".85"/><circle cx="${ex-7}" cy="${ey-8}" r="8.5" fill="#fff"/><circle cx="${ex+8}" cy="${ey+11}" r="4" fill="#fff"/><circle cx="${ex+10}" cy="${ey-12}" r="2.2" fill="#fff" opacity=".9"/>${A.vol.glass(ex,ey+2,22,27)}</g>
     <path d="${lashLine(ex)}" fill="none" stroke="${OL}" stroke-width="5.5" stroke-linecap="round"/>
     <path d="M${ex+k*26} ${ey-14}l${k*9} -7M${ex+k*22} ${ey-18}l${k*6} -9" stroke="${OL}" stroke-width="3.6" stroke-linecap="round"/></g>`;
   /* blink lid (ML.Alive shows it while blinking) */
@@ -191,9 +191,10 @@ const ORN={
 function bust(c,look={},o={}){
   const px='mk'+(++UID)+'_',idg=k=>o.live?` id="mkL-${k}"`:'';
   const sm=look.smudge?SMUDGE_AT.map(([x,y],i)=>`<ellipse cx="${x}" cy="${y}" rx="${10+i%3*3}" ry="${7+i%2*3}" fill="#9A6A4A" opacity=".35"/>`).join(''):'';
-  const shoulders=`<path d="M58 470C66 428 118 404 200 404C282 404 334 428 342 470Z" fill="${c.top}" ${S3}/><path d="M150 408Q200 440 250 408" fill="none" stroke="${c.trim}" stroke-width="7" stroke-linecap="round"/>`;
-  const neck=`<path d="M172 360V414Q200 428 228 414V360Z" fill="${c.skin}" ${S3}/><path d="M174 392Q200 404 226 392" stroke="${c.shade}" stroke-width="6" fill="none" opacity=".7"/>`;
-  const ears=['l','r'].map(s=>{const x=s==='l'?66:334,k=s==='l'?1:-1;return `<ellipse cx="${x}" cy="270" rx="17" ry="23" fill="${c.skin}" ${S3}/><path d="M${x+k*-4} 262q${k*-6} 8 0 16" stroke="${c.shade}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`}).join('');
+  const V=!A.vol.off,SK=V?A.vol.ball(c.skin,c.shade):c.skin;   // P19 art.volume: skin as one shared ball gradient, light from the top left
+  const shoulders=`<path d="M58 470C66 428 118 404 200 404C282 404 334 428 342 470Z" fill="${c.top}" ${S3}/>${A.vol.lit(`<path d="M58 470C66 428 118 404 200 404C282 404 334 428 342 470Z" fill="#000"/>`)}<path d="M150 408Q200 440 250 408" fill="none" stroke="${c.trim}" stroke-width="7" stroke-linecap="round"/>`;
+  const neck=`<path d="M172 360V414Q200 428 228 414V360Z" fill="${SK}" ${S3}/><path d="M174 392Q200 404 226 392" stroke="${c.shade}" stroke-width="6" fill="none" opacity=".7"/>`;
+  const ears=['l','r'].map(s=>{const x=s==='l'?66:334,k=s==='l'?1:-1;return `<ellipse cx="${x}" cy="270" rx="17" ry="23" fill="${SK}" ${S3}/>${A.vol.rim(x,270,17,23,0,2)}<path d="M${x+k*-4} 262q${k*-6} 8 0 16" stroke="${c.shade}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`}).join('');
   const cheeksBase=['l','r'].map(s=>`<ellipse cx="${CHEEK[s][0]}" cy="${CHEEK[s][1]}" rx="26" ry="17" fill="#FF9AAE" opacity=".32" filter="url(#${px}soft)"/>`).join('');
   const brows=['l','r'].map(s=>{const ex=EYE[s][0];return `<path d="M${ex-24} 203Q${ex} 189 ${ex+24} 199" stroke="${c.hair}" stroke-width="5" fill="none" stroke-linecap="round" opacity=".85"/>`}).join('');
   const nose=`<path d="M195 304Q200 309 205 304" stroke="${c.shade}" stroke-width="3.6" fill="none" stroke-linecap="round"/>`;
@@ -204,14 +205,14 @@ function bust(c,look={},o={}){
   const lidsOpen=['l','r'].map(s=>`<g class="mk-lido mk-lido-${s}"${idg('lido'+s)}>${paintLid(px,look,s,o.vals&&o.vals['lid'+s.toUpperCase()],false)}</g>`).join('');
   const st=(look.stickers||[]).map(k=>STK[k.k]?STK[k.k](k.x,k.y,1.25):'').join('');
   const orn=look.orn&&ORN[look.orn.k]?ORN[look.orn.k](colorOf(look.orn.col).vivid):'';
-  const head=`${hairBack(c)}${shoulders}${neck}${ears}<path d="${FACE}" fill="${c.skin}" ${S3}/>
+  const head=`${A.vol.litAll(hairBack(c))}${shoulders}${neck}${A.vol.ground(200,404,64,9)}${ears}<path d="${FACE}" fill="${SK}" ${S3}/>${A.vol.low(200,252,136,138)}${A.vol.rim(200,252,136,138,0,3)}
     <g clip-path="url(#${px}cf)"><path d="M70 330Q200 420 330 330V400H70Z" fill="${c.shade}" opacity=".25"/><g${idg('smudge')}>${sm}</g></g>
     ${cheeksBase}<g${idg('blush')}>${paintBlush(px,look,o.vals&&o.vals.cheeks)}</g>
     <g clip-path="url(#${px}cf)"><g${idg('pack')}></g><g${idg('lotion')}></g></g>
     ${lidsOpen}${lidsClosed}${brows}${eye('l',c,px)}${eye('r',c,px)}<g${idg('lash')}>${lashes(look.lashes)}</g>${nose}
     <g class="mk-lips"><g class="al-mouth">${lipsBase}<g${idg('lips')}>${paintLips(px,look,o.vals&&o.vals.lips)}</g>${lipsTop}</g></g>
     ${sheen?`<g${idg('sheen')}>${sheen}</g>`:`<g${idg('sheen')}></g>`}
-    <g${idg('cuke')}></g>${hairFront(c)}<g${idg('orn')}>${orn}</g><g${idg('stk')}>${st}</g><g clip-path="url(#${px}cf)"><g${idg('foam')}></g></g>`;
+    <g${idg('cuke')}></g>${A.vol.litAll(hairFront(c))}${V?A.vol.shine(150,124,46,15,-20):''}<g${idg('orn')}>${orn}</g><g${idg('stk')}>${st}</g><g clip-path="url(#${px}cf)"><g${idg('foam')}></g></g>`;
   return `<svg viewBox="0 0 ${VBW} ${VBH}" style="overflow:visible" data-px="${px}">${faceDefs(px,c)}<g class="mk-pose"><g class="al-root" style="transform-origin:50% 100%"><g class="al-breathe" style="transform-origin:50% 100%">
     <g class="al-head" style="transform-origin:50% 88%"><g class="al-head-s" style="transform-origin:50% 88%">${head}</g></g></g></g></g></svg>`;
 }

@@ -48,7 +48,7 @@ const ICON={
 /* one ball of ice cream (centre x,y, radius r): bumpy bottom edge, curl lines, shine */
 function ball(f,x,y,r,rot){
   const c=ballC(f),d=ballD(f),l=ballL(f),n=9;let bump='';for(let i=0;i<=n;i++){const a=Math.PI*(i/n),bx=x+Math.cos(a)*r*1.02,by=y+r*.38+Math.sin(a)*r*.18;bump+=(i?'Q':'M')+(i?`${(x+Math.cos(a-Math.PI/n/2)*r*1.08).toFixed(1)} ${(by+r*.14).toFixed(1)} `:'')+`${bx.toFixed(1)} ${by.toFixed(1)}`}
-  return `<g transform="rotate(${rot||0} ${x} ${y})"><path d="M${x-r} ${y+r*.36}A${r} ${r} 0 1 1 ${x+r} ${y+r*.36}Z" fill="${c}" ${S3}/><path d="${bump}" fill="${c}" ${S3}/><path d="M${x-r*.98} ${y+r*.36}H${x+r*.98}" stroke="${c}" stroke-width="5"/>
+  return `<g transform="rotate(${rot||0} ${x} ${y})"><path d="M${x-r} ${y+r*.36}A${r} ${r} 0 1 1 ${x+r} ${y+r*.36}Z" fill="${c}" ${S3}/>${A.vol.lit(`<path d="M${x-r} ${y+r*.36}A${r} ${r} 0 1 1 ${x+r} ${y+r*.36}Z" fill="#000"/>`)}<path d="${bump}" fill="${c}" ${S3}/><path d="M${x-r*.98} ${y+r*.36}H${x+r*.98}" stroke="${c}" stroke-width="5"/>
     <path d="M${x-r*.55} ${y-r*.05}Q${x-r*.1} ${y-r*.42} ${x+r*.45} ${y-r*.12}" stroke="${d}" stroke-width="${Math.max(2,r*.07)}" fill="none" stroke-linecap="round" opacity=".55"/><path d="M${x-r*.35} ${y+r*.2}Q${x+r*.1} ${y-r*.05} ${x+r*.6} ${y+r*.2}" stroke="${d}" stroke-width="${Math.max(2,r*.06)}" fill="none" stroke-linecap="round" opacity=".45"/>
     <ellipse cx="${x-r*.38}" cy="${y-r*.42}" rx="${r*.24}" ry="${r*.14}" fill="${l}" opacity=".9" transform="rotate(-25 ${x-r*.38} ${y-r*.42})"/></g>`;
 }
@@ -60,6 +60,7 @@ function treat(o){
   const holder=o.holder||'cone';
   if(holder==='cone')s+=`<path d="M48 ${CONE_TOP}L100 290L152 ${CONE_TOP}Z" fill="#E8B46C" ${S3}/><path d="M62 ${CONE_TOP+10}L118 270M84 ${CONE_TOP+6}L130 238M106 ${CONE_TOP+4}L140 208M138 ${CONE_TOP+10}L82 270M116 ${CONE_TOP+6}L70 238M94 ${CONE_TOP+4}L60 208" stroke="#C98A3E" stroke-width="3" stroke-linecap="round"/><path d="M44 ${CONE_TOP-6}H156V${CONE_TOP+6}Q100 ${CONE_TOP+16} 44 ${CONE_TOP+6}Z" fill="#F0C882" ${S3}/>`;
   else s+=`<path d="M38 ${CONE_TOP}H162L148 280Q146 288 138 288H62Q54 288 52 280Z" fill="${PAL.sky||'#A7CFE8'}" ${S3}/><path d="M50 ${CONE_TOP+30}H150M55 ${CONE_TOP+70}H145" stroke="#fff" stroke-width="7" opacity=".7"/><path d="M34 ${CONE_TOP-6}H166V${CONE_TOP+6}H34Z" fill="#CFE5F4" ${S3}/>`;
+  s=A.vol.litAll(s);   // P19 art.volume.objects: the cone or cup gets the same light and shade
   (o.scoops||[]).forEach((f,i)=>{s+=ball(f,100,SCOOP_Y[i]+(holder==='cup'?8:0),SCOOP_R-i*4,0)});
   (o.sp||[]).forEach(([x,y,r,c])=>{s+=`<rect x="${x-6}" y="${y-2.4}" width="12" height="4.8" rx="2.4" fill="${c}" stroke="${OL}" stroke-width="1" transform="rotate(${r} ${x} ${y})"/>`});
   if(o.cherry){const n=(o.scoops||[]).length,cy=SCOOP_Y[Math.max(0,n-1)]-SCOOP_R+4+(holder==='cup'?8:0);s+=cherryAt(100,cy)}
