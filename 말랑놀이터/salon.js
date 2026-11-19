@@ -28,7 +28,9 @@ const KINDS=VO.animalNames;   // [{id,ko,en,name}]
 /* ---------- levels (games.petsalon.levels) through ML.Progress ----------
    This salon plays the levels whose customers are animals it can draw (1~3). 4 (family faces) and 5 (things from home) come with P4 and P6. */
 const PROG=M.Progress||null,LEVELS=(PS.levels||[]).filter(l=>l&&l.level);
-const PLAY_MAX=Math.max(1,(i=>i<0?LEVELS.length:i)(LEVELS.findIndex(l=>!(l.customers||[]).length||!(l.customers||[]).every(k=>A.KINDS[k]))));
+/* P4: level 4's customers are the family faces ('가족 얼굴'); without photos that level runs with the animals */
+const FAM='가족 얼굴';
+const PLAY_MAX=Math.max(1,(i=>i<0?LEVELS.length:i)(LEVELS.findIndex(l=>!(l.customers||[]).length||!(l.customers||[]).every(k=>A.KINDS[k]||k===FAM))));
 const BRUSH_FROM=(TOOLS.brush||{}).from||3;
 const LEAVES_N=Math.max(1,+(String(((CF.flow||{}).extraSteps||{}).pickLeaves||'').match(/잎\s*(\d+)/)||[0,5])[1]);   // '잎 5개'
 const PATS_N=Math.max(1,+(String(((CF.flow||{}).extraSteps||{}).towel||'').match(/콕\s*(\d+)/)||[0,3])[1]);        // '콕 3번'
@@ -43,7 +45,10 @@ const stepsOf=(need,n)=>((need&&need.steps)||[]).filter(s=>stepOk(s,n));
 /* needs that can come at this level (needs[].from), with at least one step this level has (party has none and needs none) */
 const needPool=(n=lvNo())=>NEEDS.filter(x=>(x.from||1)<=n&&(!(x.steps||[]).length||stepsOf(x,n).length));
 const openSlots=()=>(LV().choose||['head']).filter(k=>['head','neck','face'].includes(k));
-const kindOf=k=>KINDS.find(a=>a.id===k)||HAIRK.find(a=>a.id===k)||{id:k,ko:'친구',en:'friend',name:'친구'};
+const isFace=k=>String(k).startsWith('fc_');
+/* the family faces that have a photo, as customers (ids fc_<face>) */
+function faceKinds(){const F=M.Faces;if(!F)return[];try{F.register();return F.list().map(r=>({id:F.kindOf(r.id),ko:F.nameKo(r),en:F.nameEn(r),name:F.nameKo(r),face:1}))}catch(e){return[]}}
+const kindOf=k=>KINDS.find(a=>a.id===k)||HAIRK.find(a=>a.id===k)||(isFace(k)&&faceKinds().find(a=>a.id===k))||{id:k,ko:'친구',en:'friend',name:'친구'};
 const hairOn=()=>HAIRK.length>0&&lvNo()>=HC_FROM;
 const ya=w=>w+(batchim(w)?'아':'야'),iya=w=>w+(batchim(w)?'이야':'야');
 const LINE={
@@ -74,7 +79,10 @@ const LINE={
   style:['어떤 머리를 해 줄까? 하나 골라 봐!','Which hairstyle? Pick one!'],
   knot:['머리를 콕콕 눌러 봐!','Tap tap the hair!'],
   styled:['예쁜 머리 완성!','Pretty hair!'],
-  thanks:['고마워!','Thank you!']
+  thanks:['고마워!','Thank you!'],
+  /* P4 family faces: the name greeting, and the wish for a hair wash */
+  here:a=>[`${a.ko}${M.Faces?M.Faces.iga(a.ko):'가'} 오셨어요!`,`${cap(a.en)} is here!`],
+  famWash:a=>[`${a.ko}${M.Faces?M.Faces.iga(a.ko):'가'} 머리를 감고 싶대요! 거품을 내 줄래?`,`${cap(a.en)} wants a hair wash! Make some bubbles!`]
 };
 
 /* ---------- colours: calm for choosing (hex, light), vivid for the finished result ---------- */
@@ -164,6 +172,8 @@ const NEED_ICON={
   leaves:`<g transform="translate(26 24) rotate(-30)"><path d="M0 -14Q12 -4 0 14Q-12 -4 0 -14Z" fill="#9CC48F" stroke="${OL}" stroke-width="2.2" stroke-linejoin="round"/><path d="M0 -10V11" stroke="#6E9E66" stroke-width="1.8"/></g><g transform="translate(40 22) rotate(35) scale(.7)"><path d="M0 -14Q12 -4 0 14Q-12 -4 0 -14Z" fill="#C9D98A" stroke="${OL}" stroke-width="2.6" stroke-linejoin="round"/></g>`,
   tangled:`<path d="M15 28q4-10 8 0t8 0t8 0t6 0M17 18q4-8 8 0t8 0t8 0" stroke="#B98154" stroke-width="3" fill="none" stroke-linecap="round"/>`,
   party:`<g transform="translate(30 23) scale(.34)">${WEAR.head[0].d(PAL.rose,'#F6D3DB')}</g>`,
+  /* P4 a family face comes to wash its hair: soft bubbles */
+  wash:`<g fill="#fff" stroke="#9FD0F0" stroke-width="2.4"><circle cx="26" cy="26" r="11"/><circle cx="41" cy="19" r="7.5"/><circle cx="40" cy="33" r="6"/></g><circle cx="22" cy="22" r="3" fill="#E8F6FF"/>`,
   /* P18 long hair: a little comb */
   hair:`<g transform="translate(13 5) scale(.34)">${ICON.brush.replace(/^<svg[^>]*>/,'').replace(/<\/svg>$/,'')}</g>`
 };
@@ -420,12 +430,18 @@ const unitPx=()=>petEl.getBoundingClientRect().width/200;
 
 /* ============================== shop front (가게 앞) ============================== */
 /* customers of this level (levels[].customers) with needs of this level (needs[].from) */
-const levelKinds=()=>{const ks=(LV().customers||[]).map(k=>KINDS.find(a=>a.id===k)).filter(Boolean);return ks.length?ks:KINDS};
+const famLevel=()=>(LV().customers||[]).includes(FAM)&&faceKinds().length>0;
+const levelKinds=()=>{
+  if(famLevel()){const fk=faceKinds();return fk.concat(KINDS)}   // faces first; animals only sit in when there are fewer faces than chairs
+  const ks=(LV().customers||[]).map(k=>KINDS.find(a=>a.id===k)).filter(Boolean);return ks.length?ks:KINDS};
 function newCustomer(avoidKinds,wantNeed){
   /* P18: a long-haired customer (hairCustomers, from level HC_FROM) wants the whole hair flow */
   if(wantNeed==='hair'){const hs=HAIRK.filter(k=>!avoidKinds.includes(k.id)),k=pick(hs.length?hs:HAIRK);return{kind:k.id,need:'hair',name:k.name||k.ko,inside:false}}
-  const pool=levelKinds(),kinds=pool.filter(k=>!avoidKinds.includes(k.id)),k=pick(kinds.length?kinds:pool),NP=needPool();
-  const need=NP.find(n=>n.id===wantNeed)||pick(NP)||{id:'party',steps:[]};
+  const pool=levelKinds();let kinds=pool.filter(k=>!avoidKinds.includes(k.id));
+  if(famLevel()){const fk=kinds.filter(k=>k.face);if(fk.length)kinds=fk}   // a family face whenever one is not already waiting
+  const k=pick(kinds.length?kinds:pool),NP=needPool();
+  /* a family face comes to have its hair washed (foam, rinse, dry); no mud */
+  const need=k.face?(NP.find(n=>n.id==='muddy')||NP[0]):NP.find(n=>n.id===wantNeed)||pick(NP)||{id:'party',steps:[]};
   return{kind:k.id,need:need.id,name:k.name||k.ko,inside:false};
 }
 /* a waiting customer this level cannot serve (after the parent lowers the level, or a quiet step down) goes home */
@@ -435,13 +451,13 @@ function fillLobby(avoid){
   const NP=needPool().map(n=>n.id),fresh=lobby.every(c=>!c);
   /* a muddy customer always waits; from level HC_FROM one long-haired customer waits too (hairCustomers.from) */
   lobby.forEach((c,i)=>{if(c)return;const others=lobby.filter(Boolean),missing=NP.filter(n=>!others.some(o=>o.need===n)),avoidK=others.map(o=>o.kind).concat(avoid||[]);
-    if(hairOn()&&!others.some(o=>o.need==='hair')&&others.some(o=>o.need==='muddy')){lobby[i]=newCustomer(avoidK,'hair');return}
+    if(hairOn()&&!famLevel()&&!others.some(o=>o.need==='hair')&&others.some(o=>o.need==='muddy')){lobby[i]=newCustomer(avoidK,'hair');return}
     lobby[i]=newCustomer(avoidK,missing.includes('muddy')?'muddy':pick(missing.length?missing:NP))});
   if(fresh)shuffle(lobby);
   if(forceKind&&fresh){const k=forceKind;forceKind=null;lobby[0]={kind:k,need:isHair(k)?'hair':'muddy',name:kindOf(k).name||kindOf(k).ko,inside:false}}   // tests only
 }
 function seatBox(i){const r=lobbyEl.getBoundingClientRect(),W=r.width,H=r.height,bw=Math.round(Math.max(112,Math.min(W*.3,H*.26,210))),gap=(W-3*bw)/4,bh=Math.round(bw*1.32);return{left:gap+i*(bw+gap),bottom:Math.round(H*.03),w:bw,h:bh,W,H}}
-function custHTML(c,i){const a=kindOf(c.kind);return `<button class="lb-cust" data-i="${i}" aria-label="${a.ko}"><span class="lb-ani">${A.animal(c.kind,'idle',{lash:true})}</span><span class="lb-bub">${bubble(c.need)}</span></button>`}
+function custHTML(c,i){const a=kindOf(c.kind);return `<button class="lb-cust" data-i="${i}" aria-label="${a.ko}"><span class="lb-ani">${A.animal(c.kind,'idle',{lash:true})}</span><span class="lb-bub">${bubble(isFace(c.kind)?'wash':c.need)}</span></button>`}
 function renderSeats(skip){
   seatsEl.innerHTML='';
   for(let i=0;i<WAITING;i++){const b=seatBox(i),slot=document.createElement('div');slot.className='lb-slot';slot.dataset.i=i;
@@ -485,6 +501,9 @@ function newThing(n){
   if(BRUSH_FROM===n)return{art:ICON.brush,ko:TOOL_NAME.brush[0],en:TOOL_NAME.brush[1],what:'step:brush'};
   const kind=(cur.customers||[]).find(k=>!(prev.customers||[]).includes(k)&&A.KINDS[k]);
   if(kind){const a=kindOf(kind);return{art:A.animal(kind,'happy',{lash:true}),ko:a.ko+'!',en:cap(a.en)+'!',what:'kind:'+kind}}
+  /* P4: level 4 brings the family */
+  if((cur.customers||[]).includes(FAM)&&!(prev.customers||[]).includes(FAM)){const fk=M.Faces&&M.Faces.list()[0];
+    return{art:fk?A.personHead(fk.photo,M.Faces.look(fk)):A.animal('bunny','happy',{lash:true}),ko:'가족이 놀러 와요!',en:'The family is visiting!',what:'family'}}
   return null;
 }
 function levelUpMoment(n,then){
@@ -509,12 +528,12 @@ function arrive(i){
   const fromLeft=i<WAITING-1,dx=fromLeft?-(sr.right-lr.left+10):(lr.right-sr.left+10);
   b.classList.add('arriving');b.style.transition='none';b.style.transform=`translateX(${dx}px)`;void b.offsetWidth;b.style.transition='';b.classList.add('walk');b.style.transform='translateX(0)';
   tone(523,.12,'sine',.08);tone(659,.12,'sine',.08,.25);
-  L.later(()=>{b.classList.remove('arriving','walk');const a=kindOf(c.kind);say(a.ko+'!',cap(a.en)+'!');lobbyAlive();greet()},2050);
+  L.later(()=>{b.classList.remove('arriving','walk');const a=kindOf(c.kind),hl=isFace(c.kind)?LINE.here(a):[a.ko+'!',cap(a.en)+'!'];say(hl[0],hl[1]);lobbyAlive();greet()},2050);
 }
 function pickCustomer(i,btn){
   if(phase!=='lobby'||view!=='lobby')return;const c=lobby[i];if(!c)return;
   phase='pick';G.touch();G.stop();actx();sfx.pop();
-  const a=kindOf(c.kind),l=LINE.comeIn(a);say(l[0],l[1]);LOG.push('pick:'+c.kind);
+  const a=kindOf(c.kind),l=isFace(c.kind)?LINE.here(a):LINE.comeIn(a);say(l[0],l[1]);LOG.push('pick:'+c.kind);
   const lr=lobbyEl.getBoundingClientRect(),dr=doorEl.getBoundingClientRect(),br=btn.getBoundingClientRect();
   const dx=dr.left+dr.width/2-(br.left+br.width/2),dy=dr.bottom-dr.height*.25-(br.top+br.height/2);
   btn.style.transition='none';
@@ -548,8 +567,8 @@ function enterSalon(i){
   if(AL){al=AL.attach(petEl,{kind:st.kind});const me=al;L.onEnd(()=>{me.detach();if(al===me)al=null})}
   st.look=A.petState(st.cells);size();drawPet('idle');drawOver();stars();anim('enter');
   /* bigMoments: comes in with two hops and a wave; moods: dirty = sad, party = happy */
-  alMood(c.need==='party'||c.need==='hair'?'happy':'sad');L.later(()=>{alPlay('hop',{n:2,wave:true});if(al)al.sound('hehe')},900);
-  const need=NEEDS.find(n=>n.id===c.need)||{},hello=c.need==='party'&&need.say?need.say:(LINE[c.need]||LINE.muddy)(c.name);   // LINE.hair for the long-haired customers
+  alMood(c.need==='party'||c.need==='hair'||isFace(c.kind)?'happy':'sad');L.later(()=>{alPlay('hop',{n:2,wave:true});if(al)al.sound('hehe')},900);
+  const need=NEEDS.find(n=>n.id===c.need)||{},hello=isFace(c.kind)?LINE.famWash(kindOf(c.kind)):c.need==='party'&&need.say?need.say:(LINE[c.need]||LINE.muddy)(c.name);   // LINE.hair for the long-haired customers
   L.later(()=>say(hello[0],hello[1],true),500);
   showStrip(st.strip[0]);
   if(!st.steps.length){L.later(()=>{drawPet('idle');toDress()},2600);return}
@@ -950,6 +969,7 @@ function mirrorMoment(){
 }
 function sweep(){[1318,1568,2093].forEach((f,i)=>tone(f,.25,'sine',.06,i*.12))}
 function photo(){
+  if(isFace(st.kind)&&M.Face&&M.Faces){try{M.Face.react(petEl,'happy',M.Faces.byKind(st.kind))}catch(e){}}
   const r=petEl.getBoundingClientRect(),sr=stage.getBoundingClientRect(),w=r.width*.92,h=w*112/100;
   const f=document.createElement('div');f.className='ps-photo';f.innerHTML=FRAME(portrait(st.kind,st.wear,'happy',st));
   Object.assign(f.style,{width:w+'px',height:h+'px',left:(r.left-sr.left+r.width/2-w/2)+'px',top:(r.top-sr.top+r.height*.5-h/2)+'px'});stage.appendChild(f);

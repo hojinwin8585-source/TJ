@@ -506,6 +506,7 @@ body{background:linear-gradient(180deg,var(--bg),color-mix(in srgb,var(--bg) 82%
     <div class="row"><span>목소리</span><button class="btn small alt" id="openVoicePick">목소리 고르기</button></div>
     <div class="row"><span>엄마 목소리 녹음</span><button class="btn small alt" id="openRecs">녹음하기</button></div>
     <div class="row"><span>주인공·친구 사진</span><button class="btn small alt" id="openFriendsEdit">사진 바꾸기</button></div>
+    <div class="row"><span>우리 가족 얼굴<br><small>엄마·아빠·삼촌·할머니 사진을 넣어요</small></span><button class="btn small alt" id="openFaces">얼굴 관리</button></div>
     <div class="row"><span>칭찬 도장·진짜 드레스</span><button class="btn small alt" id="openStamps">도장판 열기</button></div>
     <div class="row"><span>모험 진행</span><button class="pillhold holdbtn" id="resetQuest">처음부터 다시 (꾹 2초)</button></div>
     <h4>오늘 논 놀이</h4>
@@ -668,7 +669,8 @@ CAST.family=Object.assign({mom:{},dad:{}},CAST.family||{});
 const PROG=Object.assign({cleared:0,pos:0},store.get('mallang_quest',{}));
 const saveProg=()=>store.set('mallang_quest',PROG);
 function saveCast(){
-  if(!store.set('mallang_cast',CAST)){toast('저장 공간이 부족해서 사진을 저장하지 못했어요. 다른 사진을 지우고 다시 해 주세요.');return false}
+  /* P4: with the faces in IndexedDB the family photos stay out of localStorage (ML.Faces.stripCast) */
+  if(!store.set('mallang_cast',window.ML&&window.ML.Faces?window.ML.Faces.stripCast(CAST):CAST)){toast('저장 공간이 부족해서 사진을 저장하지 못했어요. 다른 사진을 지우고 다시 해 주세요.');return false}
   return true;
 }
 const heroImg=new Image();
@@ -826,6 +828,7 @@ hold($('#gear'),2000,()=>{
 });
 $('#closeSettings').onclick=()=>{$('#settings').hidden=true};
 $('#openStamps').onclick=()=>{$('#settings').hidden=true;go('stamps')};
+$('#openFaces').onclick=()=>{$('#settings').hidden=true;if(window.ML&&ML.Faces)ML.Faces.openManager()};
 $('#openFriendsEdit').onclick=()=>{$('#settings').hidden=true;go('friends');games.friends.setEdit(true)};
 hold($('#resetQuest'),2000,()=>{PROG.cleared=0;PROG.pos=0;saveProg();toast('모험을 처음부터 다시 시작해요. 친구 사진은 그대로 남아 있어요.');games.home.enter()});
 
@@ -1377,11 +1380,12 @@ games.friends=(()=>{
   }
   function render(){
     box.innerHTML='';box.appendChild(card(heroData(),'hero',false));
-    [['mom','👩','엄마','Mommy'],['dad','👨','아빠','Daddy']].forEach(([k,e,ko,en])=>{
-      const ph=CAST.family[k].photo,d=document.createElement(edit?'div':'button');d.className='ccard';
-      d.innerHTML=charaHTML({photo:ph,emoji:e,color:k==='mom'?'var(--grape)':'var(--soda)'})+`<span class="cn">${ko}</span>`+
-        (edit?`<span class="ce"><button class="btn small alt" data-ph="${k}">📷 사진</button>${ph?`<button class="btn small ghost" data-rm="${k}">지우기</button>`:''}</span>`:'');
-      if(!edit)d.onclick=()=>{bounce(d.querySelector('.chara'));sfx.pop();say(ko+'!',en+'!')};
+    /* P4: the family faces (drawn characters made from the cut-out photos; places without a photo are not shown) */
+    const FS=window.ML&&ML.Faces;
+    if(edit){const d=document.createElement('div');d.className='ccard';d.style.gridColumn='1/-1';d.innerHTML='<span class="cn">우리 가족 얼굴</span><span class="ce"><button class="btn small alt" id="openFaceMgr">얼굴 관리</button></span>';box.appendChild(d)}
+    else if(FS)FS.list().forEach(f=>{const d=document.createElement('button');d.className='ccard fc-card';d.dataset.face=f.id;
+      d.innerHTML=ML.Face.card(f,{w:104})+`<span class="cn">${esc(f.ko)}</span>`;
+      d.onclick=()=>{sfx.pop();const mood=['happy','wow','shy','hello'][Math.floor(Math.random()*4)];ML.Face.react(d.querySelector('.fc-fig'),mood,f);say(f.ko+'!',(f.en||f.ko)+'!')};
       box.appendChild(d)});
     FRIEND_DEF.forEach((_,i)=>box.appendChild(card(friendData(i),i,i>=PROG.cleared)));
     /* P16: the text line is for grown-ups only, so it shows while editing (no text hint line on the child screen) */
@@ -1390,6 +1394,7 @@ games.friends=(()=>{
   }
   box.addEventListener('click',e=>{
     const ph=e.target.closest('[data-ph]'),rm=e.target.closest('[data-rm]');
+    if(e.target.closest('#openFaceMgr')){ML.Faces.openManager();return}
     if(ph){const s=ph.dataset.ph;pickPhoto(/^(hero|mom|dad)$/.test(s)?s:+s,render)}
     if(rm){const s=rm.dataset.rm;if(s==='hero')CAST.hero.photo=null;else if(s==='mom'||s==='dad')CAST.family[s].photo=null;else if(CAST.friends[s])CAST.friends[s].photo=null;saveCast();syncHeroImg();render()}
   });
@@ -1402,6 +1407,7 @@ games.friends=(()=>{
   hold($('#editHold'),2000,()=>{if(!edit){edit=true;enteredAt=Date.now();render()}});
   $('#editHold').addEventListener('click',()=>{if(edit&&Date.now()-enteredAt>800){
     const a=document.activeElement;if(a&&a.blur)a.blur();edit=false;render()}});
+  document.addEventListener('ml-faces',()=>{if(current==='friends')render()});
   return{enter(){render();if(!edit)say('우리 친구들이에요! 눌러서 인사해 봐!','Here are our friends! Tap to say hi!')},setEdit(v){edit=v;render()},exit(){edit=false}};
 })();
 
@@ -1607,6 +1613,7 @@ if('serviceWorker' in navigator&&location.protocol==='https:'){
 </script>
 <script src="art.js"></script>
 <script src="alive.js"></script>
+<script src="faces.js"></script>
 <script src="play2.js"></script>
 <script src="play3.js"></script>
 <script src="guide.js"></script>

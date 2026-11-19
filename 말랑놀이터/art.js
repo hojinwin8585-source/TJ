@@ -37,6 +37,8 @@ const KINDS={
   '.hs .hw-drop{opacity:calc((1 - var(--d,1)) * 1.4 - .4)}'+
   /* P19 art.volume.contact: the ground shadow gets smaller and lighter while the character is in the air */
   '.vol-ground{transform-box:fill-box;transform-origin:50% 50%}.alive.al-p-hop .vol-ground{animation:vol-hop .6s ease-in-out var(--al-n,1)}.alive.al-p-clap .vol-ground{animation:vol-hop .6s ease-in-out}'+
+    /* P4: the photo face slides inside its fixed oval (ML.Face.play); a blink is a very small squeeze of the photo */
+  '.pe-photo{transform-box:fill-box;transform-origin:50% 55%;transition:transform .08s ease-out}.alive.al-blink .pe-photo{transform:scaleY(.965) translateY(1px)}'+
   '@keyframes vol-hop{0%,100%{transform:scale(1);opacity:1}15%{transform:scale(1.05,1)}50%{transform:scale(.74);opacity:.5}85%{transform:scale(1.04,1)}}';
   (document.head||document.documentElement).appendChild(st)})();
 /* ---------- P18 fluffyFix: the outline itself turns soft (small half-circles in the fur colour), no white lumps ----------
@@ -208,6 +210,8 @@ const EAR_DROOP={muddy:.3,foamy:.2,rinse1:.6,wet:1,dry1:.5,fluffy:0};
 const EAR_PIVOT={bunny:[[78,74,-24],[122,74,24]],bear:[[56,64,-14],[144,64,14]],cat:[[62,58,-18],[138,58,18]],dog:[[50,72,-9],[150,72,9]],pony:[[66,62,-22],[134,62,22]]};
 /* opt (P18): layer:false = no per-cell drawings (the salon draws them on its own overlay), hairStyle/knots = hairstyle, brushed = neat shiny hair, hairD = how dry the hair is (0..1) */
 function animal(kind='bunny',mood='idle',opt={}){
+  /* P4: a family face drawn as a customer */
+  if((KINDS[kind]||{}).person){const q=KINDS[kind];return person(q.photo,Object.assign({kind,mood,skin:q.skin,hair:q.hair,hairStyle:q.hairStyle,cloth:q.cloth,acc:q.acc,expr:q.expr},opt))}
   const k=KINDS[kind]||KINDS.bunny,id=uid('an'),EYE='#4A2E20';let s='',c=`url(#${id}b)`;
   /* opt.state: one of games.petsalon.petStates (muddy · foamy · rinse1 · wet · dry1 · fluffy). opt.cells: per-cell values (see petLayer) so the look changes where it was touched */
   const state=opt.state||'',droop=EAR_DROOP[state]||0,vals=opt.cells||(state?stateCells(state):null),layer=vals&&opt.layer!==false?petLayer(kind,PET_CELLS(opt.grid),vals):null;
@@ -371,7 +375,9 @@ function petLayer(kind,cells,vals){
   cells.forEach((P,i)=>{const v=vals[i]||{},st=cellState(v);out.states.push(st);
     const rinse=v.rinse||0,dry=v.shaken?0:(v.dry||0),wet=v.shaken?0:rinse*(1-dry)*(1-.6*(v.towel||0)),mud=(v.mud||0)*(1-.6*(v.foam||0))*(1-rinse),lf=(v.leaf||0)*(1-rinse),f=(v.foam||0)*(1-rinse);
     let a='';
-    if(mud>.02)a+=`<path d="${blob(P.dx,P.dy,v.mr||10,.5,7,i+11)}" fill="#8A5A36" opacity="${(mud*.85).toFixed(2)}"/>`;
+    /* P4: a person's hair is only a little dusty (a pale smudge in the hair, none on the face) instead of mud */
+    if(mud>.02&&!K.person)a+=`<path d="${blob(P.dx,P.dy,v.mr||10,.5,7,i+11)}" fill="#8A5A36" opacity="${(mud*.85).toFixed(2)}"/>`;
+    else if(mud>.02&&P.cy<84)a+=`<path d="${blob(P.dx,P.dy,(v.mr||10)*.8,.5,7,i+11)}" fill="#B7A08A" opacity="${(mud*.5).toFixed(2)}"/>`;
     if(lf>.02)a+=PL.leaf(P.dx,P.dy,v.lr||0,.6+.4*lf);
     const tg=(v.tangle||0)*(1-(v.brush||0));
     if(tg>.02)a+=`<g opacity="${Math.min(1,tg*1.2).toFixed(2)}">${PL.knot(P.dx,P.dy,.9+.3*tg,K.dark,i+3)}${PL.knot(P.dx+7,P.dy+5,.6,K.dark,i+9)}</g>`;
@@ -1083,5 +1089,75 @@ const XMAS=(()=>{
   return {C,TREE,FIRE,DOOR,WIN,BULB,tree,ornament,star:topStar,lights,stocking,gift,wreath,fireplace,window:windowArt,door,room,scarf,icon,card};
 })();
 
-window.ART={vol:VOL,paper,OL,animal,animalOverlay,petCells:PET_CELLS,petLayer,petState,cellState,stateCells,fluffSet,fluffOf,HAIR,HAIR_STYLES,hairPlan,KINDS,F,TOPPING,WHOLE,wholeSVG,pieceSVG,pizza,TOOL,oven,BUILD,blob,rng,ACC,accSVG,face,FACE_ZONES,dress,lipstick,polish,star,twinkle,HAND,GIFTS,giftSVG,XMAS};
+/* =========================== P4 가족 얼굴 캐릭터 (ART.person) ===========================
+   오려낸 사진 얼굴(256px, 타원) + 그린 머리카락·몸·옷·손. 동물(animal)과 같은 200×230 그림판에 같은 묶음(al-*)으로 그려서
+   살아 있는 움직임(alive.js)과 미용실 칸 그림(petLayer)을 그대로 씁니다. 눈·입은 사진이라 따로 없습니다.
+   photo: 오려낸 얼굴(PNG 주소) · opt: {skin, hair, hairStyle(short|long|bun|curl), cloth, acc(ACC 이름), mood, expr:{smile,wow}, cap:false, state, cells, grid, layer}
+   얼굴 타원: 가운데 (100,104), 가로 52 세로 62. 사진 한 장 안의 타원은 가로 107 세로 126(256 그림판), 그래서 옷·머리를 같은 비율로 맞춤. */
+const PE={cx:100,cy:104,rx:52,ry:62};
+const PE_SKIN='#F6D5BE',PE_HAIR='#5A3A2A',PE_CLOTH='#A9CFA0';
+const PE_STYLES=['short','long','bun','curl'];
+const HEXRE=/^#[0-9a-f]{6}$/i;
+function person(photo,opt={}){
+  if(!photo)return '';
+  const id=uid('pe'),skin=HEXRE.test(opt.skin||'')?opt.skin:PE_SKIN,hair=HEXRE.test(opt.hair||'')?opt.hair:PE_HAIR,cloth=HEXRE.test(opt.cloth||'')?opt.cloth:PE_CLOTH;
+  const hs=PE_STYLES.includes(opt.hairStyle)?opt.hairStyle:'short',mood=opt.mood||'idle',state=opt.state||'';
+  const ex=opt.expr||{},img=mood==='happy'&&ex.smile?ex.smile:(mood==='wow'||mood==='yum')&&ex.wow?ex.wow:photo;
+  const edge=hexMix(skin,'#C9906E',.5),hairE=hexMix(hair,'#2A1A12',.4),clothE=hexMix(cloth,'#4A2C1E',.22),shoe=hexMix(cloth,'#4A2C1E',.45);
+  const vals=opt.cells||(state?stateCells(state):null),layer=vals&&opt.layer!==false?petLayer(opt.kind||'bunny',PET_CELLS(opt.grid),vals):null;
+  const SK=VOL.ball(skin,edge),HR=VOL.ball(hair,hairE),CL=VOL.ball(cloth,clothE),SH=VOL.ball(shoe,hexMix(shoe,'#2A1A12',.3));
+  let s='';
+  s+=VOL.ground(100,225,58,6);
+  s+=`<g class="al-root" ${AL_VB(100,226)}><g class="al-breathe" ${AL_VB(100,228)}>`;
+  /* feet and body (round shoulders, a soft collar) */
+  s+=`<g class="al-foot al-foot-l" ${AL_FB(60,0)}><ellipse cx="78" cy="220" rx="17" ry="9" fill="${SH}" ${S}/>${VOL.rim(78,220,17,9,0,2)}</g><g class="al-foot al-foot-r" ${AL_FB(40,0)}><ellipse cx="122" cy="220" rx="17" ry="9" fill="${SH}" ${S}/>${VOL.rim(122,220,17,9,0,2)}</g>`;
+  const bodyD='M58 222Q50 178 76 166Q100 160 124 166Q150 178 142 222Q100 232 58 222Z';
+  s+=`<path d="${bodyD}" fill="${CL}" ${S}/>`+VOL.lit(`<path d="${bodyD}" fill="#000"/>`);
+  s+=`<path d="M82 166Q100 186 118 166Q100 160 82 166Z" fill="${SK}" ${S}/><path d="M80 168Q100 192 120 168" stroke="${hexMix(cloth,'#FFFFFF',.45)}" stroke-width="5" fill="none" stroke-linecap="round"/>`;
+  s+=`<path d="M70 200Q100 210 130 200" stroke="${hexMix(cloth,'#4A2C1E',.12)}" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".5"/>`;
+  s+=VOL.rim(100,194,44,34,0,2.2);
+  const armL=`<ellipse cx="52" cy="182" rx="13" ry="21" fill="${CL}" ${S} transform="rotate(28 52 182)"/>`,armR=`<ellipse cx="148" cy="182" rx="13" ry="21" fill="${CL}" ${S} transform="rotate(-28 148 182)"/>`;
+  s+=`<g class="al-arm al-arm-l" ${AL_FB(90,8)}><g class="al-arm-s">${VOL.under(armL)}${armL}<circle cx="42" cy="201" r="8.5" fill="${SK}" ${S}/></g></g>`;
+  s+=`<g class="al-arm al-arm-r" ${AL_FB(10,8)}><g class="al-arm-s"><g>${VOL.under(armR)}${armR}<circle cx="158" cy="201" r="8.5" fill="${SK}" ${S}/></g></g></g>`;
+  if(layer)s+=`<g class="ps-cells" data-state="${state}">${layer.b}</g>`;
+  /* head */
+  s+=`<g class="al-head" ${AL_VB(100,166)}><g class="al-head-s" ${AL_VB(100,166)}>`;
+  s+=`<ellipse cx="100" cy="164" rx="14" ry="11" fill="${SK}" ${S}/>`;
+  const back={short:'<ellipse cx="100" cy="92" rx="63" ry="64"/>',curl:'<ellipse cx="100" cy="96" rx="57" ry="60"/>',
+    bun:'<ellipse cx="100" cy="92" rx="63" ry="64"/><circle cx="100" cy="28" r="21"/>',
+    long:'<path d="M36 98Q32 32 100 30Q168 32 164 98Q172 152 162 186Q132 196 128 162L72 162Q68 196 38 186Q28 152 36 98Z"/>'}[hs];
+  s+=`<g class="pe-hair" fill="${HR}" ${S}>${back}</g>${VOL.lit(`<g fill="#000">${back}</g>`)}`;
+  if(hs==='bun')s+=`<path d="M82 40Q100 50 118 40" stroke="${hexMix(hair,'#FFFFFF',.35)}" stroke-width="3" fill="none" stroke-linecap="round" opacity=".7"/>`;
+  s+=`<ellipse cx="${PE.cx-PE.rx-1}" cy="112" rx="9" ry="12" fill="${SK}" ${S}/><ellipse cx="${PE.cx+PE.rx+1}" cy="112" rx="9" ry="12" fill="${SK}" ${S}/>`;
+  /* face: a skin-coloured base (the soft photo edge melts into it), the photo, a thin outline */
+  s+=`<defs><clipPath id="${id}k"><ellipse cx="${PE.cx}" cy="${PE.cy}" rx="${PE.rx}" ry="${PE.ry}"/></clipPath></defs>`;
+  s+=`<ellipse cx="${PE.cx}" cy="${PE.cy}" rx="${PE.rx}" ry="${PE.ry}" fill="${SK}"/>`;
+  s+=`<g clip-path="url(#${id}k)"><image class="pe-photo" href="${img}" x="${PE.cx-PE.rx}" y="${PE.cy-PE.ry}" width="${PE.rx*2}" height="${PE.ry*2}" preserveAspectRatio="xMidYMid slice"/></g>`;
+  s+=`<ellipse cx="${PE.cx}" cy="${PE.cy}" rx="${PE.rx}" ry="${PE.ry}" fill="none" stroke="${OL}" stroke-width="3"/>`+VOL.low(PE.cx,PE.cy,PE.rx,PE.ry)+VOL.rim(PE.cx,PE.cy,PE.rx,PE.ry,0,2.6);
+  if(mood==='happy'||state==='fluffy')s+=`<circle cx="66" cy="132" r="11" fill="${VOL.cheek('#FF9AA8')}" opacity=".7"/><circle cx="134" cy="132" r="11" fill="${VOL.cheek('#FF9AA8')}" opacity=".7"/>`;
+  /* the hair over the forehead (a thin fringe, so the photo's own hairline and the drawn hair meet) */
+  if(opt.cap!==false&&hs!=='curl'){
+    const cap=hs==='long'?'M47 92Q48 46 100 42Q152 46 153 92Q140 66 100 64Q60 66 47 92Z':'M48 88Q50 46 100 42Q150 46 152 88Q138 62 100 60Q62 62 48 88Z';
+    s+=`<path d="${cap}" fill="${HR}" ${S}/>`+VOL.lit(`<path d="${cap}" fill="#000"/>`)+VOL.shine(78,50,24,8,-18);
+  }
+  if(hs==='curl')s+=`<path d="M100 44Q92 28 104 24Q116 22 112 34Q108 40 102 36" stroke="${OL}" stroke-width="6.5" fill="none" stroke-linecap="round"/><path d="M100 44Q92 28 104 24Q116 22 112 34Q108 40 102 36" stroke="${HR}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+  s+=VOL.shine(70,60,30,16,-28);
+  /* the hair-accessory slot: a small drawn accessory on the head (opt.acc: ribbon, flower, star, heart, crown) */
+  const ac=opt.acc&&ACC[opt.acc];
+  s+=`<g class="pe-acc" data-acc="${opt.acc||''}" transform="translate(${hs==='bun'?100:134} ${hs==='bun'?30:46}) scale(.42) rotate(${hs==='bun'?0:18})">${ac||''}</g>`;
+  if(layer)s+=`<g class="ps-cells" data-state="${state}">${layer.h}</g>`;
+  s+=`</g></g></g></g>`;
+  return `<svg class="ani ani-${mood} pe-person${state?' ps-st-'+state:''}" viewBox="0 0 200 230" style="overflow:visible" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
+}
+/* head and shoulders only (cards, frames) */
+const personHead=(photo,opt)=>person(photo,Object.assign({},opt,{cells:null,state:''})).replace('viewBox="0 0 200 230" style="overflow:visible"','viewBox="22 22 156 160" style="overflow:hidden"');
+/* a family face as a salon customer: the same lookups as animals (KINDS[kind]) with the person's own colours */
+function personKind(kind,f){
+  const skin=f.skin||PE_SKIN,hair=f.hair||PE_HAIR;
+  KINDS[kind]={ko:f.ko||'가족',en:f.en||'family',person:1,photo:f.photo,expr:f.expr||{},skin,hair,hairStyle:f.hairStyle,cloth:f.cloth,acc:f.acc,
+    body:skin,edge:hexMix(skin,'#C9906E',.5),dark:hair,inner:hexMix(skin,'#FFFFFF',.4),cheek:'#FF9AA8'};
+  return KINDS[kind];
+}
+
+window.ART={person,personHead,personKind,PE,vol:VOL,paper,OL,animal,animalOverlay,petCells:PET_CELLS,petLayer,petState,cellState,stateCells,fluffSet,fluffOf,HAIR,HAIR_STYLES,hairPlan,KINDS,F,TOPPING,WHOLE,wholeSVG,pieceSVG,pizza,TOOL,oven,BUILD,blob,rng,ACC,accSVG,face,FACE_ZONES,dress,lipstick,polish,star,twinkle,HAND,GIFTS,giftSVG,XMAS};
 })();
