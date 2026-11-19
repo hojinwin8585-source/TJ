@@ -528,12 +528,12 @@ function arrive(i){
   const fromLeft=i<WAITING-1,dx=fromLeft?-(sr.right-lr.left+10):(lr.right-sr.left+10);
   b.classList.add('arriving');b.style.transition='none';b.style.transform=`translateX(${dx}px)`;void b.offsetWidth;b.style.transition='';b.classList.add('walk');b.style.transform='translateX(0)';
   tone(523,.12,'sine',.08);tone(659,.12,'sine',.08,.25);
-  L.later(()=>{b.classList.remove('arriving','walk');const a=kindOf(c.kind),hl=isFace(c.kind)?LINE.here(a):[a.ko+'!',cap(a.en)+'!'];say(hl[0],hl[1]);lobbyAlive();greet()},2050);
+  L.later(()=>{b.classList.remove('arriving','walk');const a=kindOf(c.kind),hl=isFace(c.kind)?LINE.here(a):[a.ko+'!',cap(a.en)+'!'];say(hl[0],hl[1]);if(isFace(c.kind))LOG.push('here:'+hl[0]);lobbyAlive();greet()},2050);
 }
 function pickCustomer(i,btn){
   if(phase!=='lobby'||view!=='lobby')return;const c=lobby[i];if(!c)return;
   phase='pick';G.touch();G.stop();actx();sfx.pop();
-  const a=kindOf(c.kind),l=isFace(c.kind)?LINE.here(a):LINE.comeIn(a);say(l[0],l[1]);LOG.push('pick:'+c.kind);
+  const a=kindOf(c.kind),l=isFace(c.kind)?LINE.here(a):LINE.comeIn(a);say(l[0],l[1]);LOG.push('pick:'+c.kind);if(isFace(c.kind))LOG.push('here:'+l[0]);
   const lr=lobbyEl.getBoundingClientRect(),dr=doorEl.getBoundingClientRect(),br=btn.getBoundingClientRect();
   const dx=dr.left+dr.width/2-(br.left+br.width/2),dy=dr.bottom-dr.height*.25-(br.top+br.height/2);
   btn.style.transition='none';

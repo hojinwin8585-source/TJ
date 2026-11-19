@@ -38,7 +38,12 @@ const KIND={
   gift:{ko:'선물',en:'present',cards:3,pal:['pink','sky','yellow','purple','mint','orange']},
   wreath:{ko:'리스',en:'wreath',cards:2,pal:['red','pink','purple','blue']}
 };
-const TASKS={1:['orn','orn','orn'],2:['star','light','light','light'],3:['stock','stock','gift','gift'],4:['wreath','snow','snow','snow']};
+/* P4: with a family face saved, level 4 ends with one more decoration: a picture frame on the wall */
+const famFaces=()=>{try{return M.Faces?M.Faces.list():[]}catch(e){return[]}};
+const FRAME_AT=[8,16];
+const TASKS_BASE={1:['orn','orn','orn'],2:['star','light','light','light'],3:['stock','stock','gift','gift'],4:['wreath','snow','snow','snow']};
+const taskList=lv=>{const b=TASKS_BASE[lv]||[];return lv===4&&famFaces().length?b.concat(['frame']):b};
+const TASKS=new Proxy({},{get:(_,k)=>TASKS_BASE[k]?taskList(+k):undefined});
 const TREE_AT=[68,26],FIRE_AT=[200,184],WIN_AT=[207,36],DOOR_AT=[6,92];
 const GIFT_AT=[[110,338],[188,340],[150,360]];
 const ORN_PLAN=[[1,5,0],[2,3,0],[1,4,2],[3,5,0],[2,4,1],[0,3,5]];
@@ -47,7 +52,7 @@ const tp=(p,at)=>[p[0]+at[0],p[1]+at[1]];
 const ribbon=en=>/yellow|mint|orange/.test(en)?X.C.berry:X.C.snow;
 
 /* ---------------- saved state ---------------- */
-const emptyTree=()=>({orn:[],star:null,lights:0,stock:[],gifts:[],wreath:null,snow:0});
+const emptyTree=()=>({orn:[],star:null,lights:0,stock:[],gifts:[],wreath:null,snow:0,frame:null});
 const fresh=()=>({tree:emptyTree(),lv:0,done:false,plan:null});
 let ST=Object.assign(fresh(),store.get(KEY,{}));
 const fix=()=>{if(!ST.tree||typeof ST.tree!=='object')ST.tree=emptyTree();ST.tree=Object.assign(emptyTree(),ST.tree);['orn','stock','gifts'].forEach(k=>{if(!Array.isArray(ST.tree[k]))ST.tree[k]=[]});
@@ -147,6 +152,7 @@ function targetOf(k){
   if(k==='stock'){const h=(P.hook||[0,1])[t.stock.length]??0;const p=hookAt(h);return{p:[p[0]+5,p[1]+26],h}}
   if(k==='gift'){const g=(P.gift||[0,1,2])[t.gifts.length]??0;const p=GIFT_AT[g];return{p:[p[0],p[1]-18],g}}
   if(k==='wreath')return{p:wreathAt()};
+  if(k==='frame')return{p:[FRAME_AT[0]+27,FRAME_AT[1]+30]};
   return null;
 }
 
@@ -156,12 +162,19 @@ function itemG(key,html,veil,cls){
   const isNew=key===freshKey;
   return `<g class="xm-item${isNew?' pop':''}${cls?' '+cls:''}" data-k="${key}">${html}${isNew&&veil?`<g class="xm-veil">${veil}</g>`:''}</g>`;
 }
+/* a small wall frame (54 x 60) with the face of the family member (head and shoulders drawn as a character) */
+function frameG(id,card){
+  const r=M.Faces&&M.Faces.get(id);if(!r||!r.photo)return'';const L=M.Faces.look(r);
+  const pic=A.personHead(r.photo,L).replace('<svg ','<svg x="5" y="5" width="44" height="50" ');
+  return `<rect x="0" y="0" width="54" height="60" rx="5" fill="#DDBB94" stroke="${OL}" stroke-width="2.4"/><rect x="4" y="4" width="46" height="52" rx="3" fill="#FBF3E4"/>${pic}<rect x="0" y="0" width="54" height="60" rx="5" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="2"/>`;
+}
 function draw(){
   const t=ST.tree;let s=X.room();
   /* window and door, the wreath, the fireplace and its stockings: behind the tree */
   s+=`<g transform="translate(${WIN_AT[0]} ${WIN_AT[1]})">${itemG('snow',X.window(t.snow),'',t.snow&&freshKey==='snow'?'xm-on':'')}</g>`;
   s+=`<g transform="translate(${DOOR_AT[0]} ${DOOR_AT[1]})">${X.door()}</g>`;
   if(t.wreath){const [x,y]=wreathAt();s+=`<g transform="translate(${x} ${y})">${itemG('wreath',X.wreath(vividOf(t.wreath)),X.wreath(hexOf(t.wreath)))}</g>`}
+  if(t.frame){const f=frameG(t.frame);if(f)s+=`<g transform="translate(${FRAME_AT[0]} ${FRAME_AT[1]})">${itemG('frame',f,'')}</g>`}
   s+=`<g transform="translate(${FIRE_AT[0]} ${FIRE_AT[1]})">${X.fireplace()}</g>`;
   t.stock.forEach((o,i)=>{const [x,y]=hookAt(o.h);s+=`<g transform="translate(${x} ${y+2})">${itemG('stock:'+i,X.stocking(vividOf(o.c)),X.stocking(hexOf(o.c)))}</g>`});
   /* the room dims when the tree is done; a soft glow behind the tree */
@@ -177,10 +190,11 @@ function draw(){
   scene.classList.toggle('night',!!ST.done);
 }
 function drawToto(mood){totoEl.innerHTML=A.animal('bunny',mood||'idle',{})+X.scarf}
+const FRAME_ICON=`<svg viewBox="0 0 60 66" style="overflow:visible"><rect x="6" y="6" width="48" height="54" rx="6" fill="#DDBB94" stroke="${OL}" stroke-width="3"/><rect x="12" y="12" width="36" height="42" rx="3" fill="#FBF3E4"/><circle cx="30" cy="30" r="9" fill="#F6D5BE" stroke="${OL}" stroke-width="2"/><path d="M16 52Q30 38 44 52Z" fill="#A9CFA0" stroke="${OL}" stroke-width="2"/></svg>`;
 const STEP_HEX={orn:'#E0786F',star:'#EBCB6B',stock:'#7D9BE0',gift:'#E89AAE',wreath:'#E0786F',light:'#EBCB6B'};
 function strip(){
   const lv=ST.lv||level(),list=TASKS[lv]||[],n=doneCount();
-  stripEl.innerHTML=list.map((k,i)=>`<span class="xs${i<n?' done':''}${i===n&&!ST.done?' on':''}" data-k="${k}">${X.card(k==='light'?'bulb':k,STEP_HEX[k]||'#E0786F')}</span>`).join('');
+  stripEl.innerHTML=list.map((k,i)=>`<span class="xs${i<n?' done':''}${i===n&&!ST.done?' on':''}" data-k="${k}">${k==='frame'?FRAME_ICON:X.card(k==='light'?'bulb':k,STEP_HEX[k]||'#E0786F')}</span>`).join('');
 }
 function stars(n){const pr=PRG();starsEl.innerHTML=pr?pr.stars(GID,n):''}
 
@@ -188,7 +202,7 @@ function stars(n){const pr=PRG();starsEl.innerHTML=pr?pr.stars(GID,n):''}
 const tasks=()=>TASKS[ST.lv]||TASKS[1];
 function doneCount(){
   const t=ST.tree;
-  switch(ST.lv){case 1:return Math.min(3,t.orn.length);case 2:return(t.star?1:0)+Math.min(3,t.lights);case 3:return Math.min(2,t.stock.length)+Math.min(2,t.gifts.length);case 4:return(t.wreath?1:0)+Math.min(3,t.snow);default:return 0}
+  switch(ST.lv){case 1:return Math.min(3,t.orn.length);case 2:return(t.star?1:0)+Math.min(3,t.lights);case 3:return Math.min(2,t.stock.length)+Math.min(2,t.gifts.length);case 4:return(t.wreath?1:0)+Math.min(3,t.snow)+(t.frame&&taskList(4).includes('frame')?1:0);default:return 0}
 }
 const pickN=(arr,n)=>{const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a.slice(0,n)};
 /* the decorations of the levels below stay; if they are missing (a parent moved the level, or a fresh tree), they are hung quietly first */
@@ -203,7 +217,7 @@ function clearFrom(lv){
   if(lv<=1)t.orn=[];
   if(lv<=2){t.star=null;t.lights=0}
   if(lv<=3){t.stock=[];t.gifts=[]}
-  if(lv<=4){t.wreath=null;t.snow=0}
+  if(lv<=4){t.wreath=null;t.snow=0;t.frame=null}
 }
 function startRound(lv){
   T0++;G.stop();
@@ -220,9 +234,18 @@ function next(first){
   const list=tasks(),i=doneCount();strip();
   if(i>=list.length){finishRound();return}
   task=list[i];
-  if(KIND[task])showCards(task,first);
+  if(task==='frame')showFaceCards();
+  else if(KIND[task])showCards(task,first);
   else if(task==='light')askTap('light',first);
   else if(task==='snow')askTap('snow',first);
+}
+/* --- P4: choose whose face goes in the frame (up to 3 cards, each a character) --- */
+function showFaceCards(){
+  phase='cards';const fs=pickN(famFaces(),3);
+  const items=fs.map(r=>({v:r.id,ko:r.ko+'!',en:(r.en||r.ko)+'!',svg:A.personHead(r.photo,M.Faces.look(r))}));
+  tray.innerHTML='';tray.appendChild(SHL.cards(items,it=>pick('frame',it.v)));
+  const line=['액자에 누구를 넣을까? 골라 봐!','Who goes in the frame? Pick one!'];say(line[0],line[1]);
+  G.start({type:'tap',wait:true,after:5000,ko:line[0],en:line[1],at:()=>{const c=tray.querySelector('.sh-card');if(!c)return[stage.clientWidth/2,stage.clientHeight];const r=c.getBoundingClientRect(),s=stage.getBoundingClientRect();return[r.left-s.left+r.width/2,r.top-s.top+r.height/2]}});
 }
 /* --- choose a card --- */
 let lastCols={};
@@ -248,7 +271,7 @@ function pick(k,c){
   if(phase!=='cards'||busy)return;
   held={k,c};phase='place';LOG.push('pick:'+k+':'+c);
   if(al){al.setMood('wow');al.play('hop')}
-  tray.innerHTML='';tray.appendChild(SHL.tool(X.card(k,hexOf(c),ribbon(c)),{cls:'xm-held'}));
+  tray.innerHTML='';tray.appendChild(SHL.tool(k==='frame'?(()=>{const r=M.Faces.get(c);return A.personHead(r.photo,M.Faces.look(r))})():X.card(k,hexOf(c),ribbon(c)),{cls:'xm-held'}));
   const tg=targetOf(k);spotsEl.innerHTML='';
   const b=document.createElement('button');b.type='button';b.className='xm-spot';b.setAttribute('aria-label','반짝이는 자리');
   b.innerHTML=`<svg viewBox="-12 -12 24 24">${A.twinkle(0,0,11,'#F2D06B')}${A.twinkle(0,0,5,'#fff')}</svg>`;
@@ -266,6 +289,7 @@ function hang(){
   else if(k==='stock'){t.stock.push({h:tg.h,c});freshKey='stock:'+(t.stock.length-1)}
   else if(k==='gift'){t.gifts.push({g:tg.g,c});freshKey='gift:'+(t.gifts.length-1)}
   else if(k==='wreath'){t.wreath=c;freshKey='wreath'}
+  else if(k==='frame'){t.frame=c;freshKey='frame'}
   save();held=null;phase='hung';spotsEl.innerHTML='';G.stop();LOG.push('hang:'+k+':'+c);
   pop();tone(1046,.5,'sine',.1,.06);tone(1568,.35,'sine',.05,.16);
   draw();strip();
