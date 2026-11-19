@@ -400,7 +400,7 @@ body{background:linear-gradient(180deg,var(--bg),color-mix(in srgb,var(--bg) 82%
       <button class="tile" data-go="trace" data-en="Lines" style="--c:var(--banana)"><span class="ic">✏️</span><b>선 긋기</b></button>
       <button class="tile" data-go="shapes" data-en="Shapes" style="--c:var(--soda)"><span class="ic">🔺</span><b>모양</b></button>
       <button class="tile" data-go="jelly" data-en="Counting" style="--c:var(--grape)"><span class="ic">🍬</span><b>젤리 세기</b></button>
-      <button class="tile" data-go="music" data-en="Music" style="--c:var(--peach)"><span class="ic">🎹</span><b>음악회</b></button>
+      <button class="tile" data-go="music" data-en="Music" style="--c:var(--peach)"><span class="ic">🎹</span><b>악기</b></button>
       <button class="tile" data-go="rhythm" data-en="Rhythm" style="--c:var(--soda)"><span class="ic">🥁</span><b>리듬 박수</b></button>
       <button class="tile" data-go="draw" data-en="Drawing" style="--c:var(--banana)"><span class="ic">🎨</span><b>그림</b></button>
       <button class="tile" data-go="words" data-en="Words" style="--c:var(--lime)"><span class="ic">🍎</span><b>낱말 카드</b></button>
@@ -450,13 +450,6 @@ body{background:linear-gradient(180deg,var(--bg),color-mix(in srgb,var(--bg) 82%
       <div class="treat" id="treat"></div>
     </div>
     <div class="tray" id="iceTray"></div>
-  </section>
-
-  <!-- MUSIC -->
-  <section id="music" class="screen" hidden>
-    <div class="bar"><button class="round" data-go="home" aria-label="처음으로">🏠</button><h2>동물 음악회</h2>
-      <button class="round" id="musicListen" aria-label="노래 들어보기" hidden>▶️</button></div>
-    <div class="keys" id="keys"></div>
   </section>
 
   <!-- DRAW -->
@@ -730,7 +723,7 @@ $('#cropSave').onclick=()=>{
 /* =================================================================
    navigation, stats, timer
    ================================================================= */
-const NAMES={map:'모험 지도',stage:'모험',friends:'친구들',animals:'동물 친구',ice:'아이스크림 가게',trace:'선 긋기',shapes:'모양 맞추기',jelly:'젤리 세기',music:'동물 음악회',draw:'그림 그리기',words:'낱말 카드'};
+const NAMES={map:'모험 지도',stage:'모험',friends:'친구들',animals:'동물 친구',ice:'아이스크림 가게',trace:'선 긋기',shapes:'모양 맞추기',jelly:'젤리 세기',music:"악기",draw:'그림 그리기',words:'낱말 카드'};
 const games={};
 let current='home',sessionStart=0;
 const pad=n=>String(n).padStart(2,'0');
@@ -1524,39 +1517,6 @@ games.ice=(()=>{
 })();
 
 
-/* =================================================================
-   FREE PLAY 6. ANIMAL MUSIC
-   ================================================================= */
-games.music=(()=>{
-  const wrap=$('#keys');let mode='free',idx=0,last={},playing=false;
-  wrap.innerHTML=keysHTML();const keys=[...wrap.querySelectorAll('.key')];
-  function mark(){keys.forEach((k,i)=>k.classList.toggle('next',mode==='song'&&!playing&&i===TWINKLE[idx]))}
-  function press(i){
-    if(playing)return;
-    if(mode==='free'){hitKey(keys[i],i);return}
-    hitKey(keys[TWINKLE[idx]],TWINKLE[idx]);idx++;
-    if(idx>=TWINKLE.length){idx=0;mark();setTimeout(()=>cheer('반짝반짝 작은 별 완성!','You played Twinkle Twinkle!'),500);return}
-    mark();
-  }
-  function keyAt(e){const el=document.elementFromPoint(e.clientX,e.clientY);const k=el&&el.closest('#keys .key');return k?+k.dataset.i:-1}
-  wrap.addEventListener('pointerdown',e=>{e.preventDefault();actx();const i=keyAt(e);last[e.pointerId]=i;if(i>=0)press(i)});
-  wrap.addEventListener('pointermove',e=>{if(!(e.pointerId in last)||mode!=='free')return;const i=keyAt(e);if(i>=0&&i!==last[e.pointerId]){last[e.pointerId]=i;press(i)}});
-  ['pointerup','pointercancel','pointerleave'].forEach(ev=>wrap.addEventListener(ev,e=>{delete last[e.pointerId]}));
-  /* P16: no 마음대로 / 작은 별 text tab; picture cards at the start (shell.insteadOfTabs) */
-  function setMode(m){
-    mode=m;idx=0;$('#musicListen').hidden=mode!=='song';mark();
-    if(mode==='song')say('반짝이는 건반을 눌러 봐! 어떤 건반을 눌러도 노래가 나와요.','Tap the glowing key to play the song!');
-    else say('건반을 눌러 봐! 동물 친구들이 노래해요.','Tap the keys and make music!')}
-  $('#musicListen').onclick=()=>{
-    if(playing)return;playing=true;mark();
-    TWINKLE.forEach((n,i)=>setTimeout(()=>{if(current==='music')hitKey(keys[n],n)},i*480+(i>=7?240:0)));
-    setTimeout(()=>{playing=false;idx=0;mark()},TWINKLE.length*480+500);
-  };
-  return{enter:()=>{idx=0;playing=false;mode='free';$('#musicListen').hidden=true;mark();const SHL=window.ML&&window.ML.Shell;
-      if(!SHL){say('건반을 눌러 봐! 동물 친구들이 노래해요.','Tap the keys and make music!');return}
-      SHL.start('music',[{svg:SHL.art('keys'),ko:'마음대로',en:'Free play',v:'free'},{svg:SHL.art('song'),ko:'작은 별',en:'Twinkle twinkle',v:'song'}],it=>{if(current==='music')setMode(it.v)},{ko:'무엇을 연주할까?',en:'What shall we play?'})},
-    exit:()=>document.querySelectorAll('#music > .sh-start').forEach(x=>x.remove())};
-})();
 
 /* =================================================================
    FREE PLAY 7. DRAWING
@@ -1657,6 +1617,7 @@ if('serviceWorker' in navigator&&location.protocol==='https:'){
 <script src="nailshop.js"></script>
 <script src="maze.js"></script>
 <script src="learn.js"></script>
+<script src="explore.js"></script>
 <script src="dishes.js"></script>
 <script src="chores.js"></script>
 <script src="bakery.js"></script>

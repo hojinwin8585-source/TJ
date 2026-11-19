@@ -77,7 +77,7 @@ const art=k=>{const v=I[k];return typeof v==='function'?v():(v||'')};
    not in config: which screen each game name in home.places / catalog opens (screen ids are code) */
 const SCREEN_OF={pizza:'pizza',bread:'bakery',cake:'bakery',bakery:'bakery',chef:'restaurant',restaurant:'restaurant',icecream:'icecream2',dishes:'dishes2',
   petsalon:'petsalon',nailshop:'nailshop',dressup:'clothes',clothes:'clothes',makeup:'makeup2',coloring:'draw',drawing:'draw',
-  photoCards:'words',words:'words',maze:'maze',jobs:'jobs',animals:'animals',counting:'jelly',shapes:'shapes',trace:'trace',quest:'map',explore:'map',
+  photoCards:'words',words:'words',maze:'maze',jobs:'jobs',animals:'animals',counting:'jelly',shapes:'shapes',trace:'trace',quest:'map',explore:'explore',
   xmasHouse:'xmashouse',rhythmClap:'rhythm',music:'music',instruments:'music',songs:'videos',chores:'chores2',routine:'routine2','가족':'friends','도장':'stamps'};
 /* not in config: the place screen ids (kept from the earlier building screens so old links still work) and their pictures */
 const PLACE_ID={cook:'zone-cook',salon:'zone-salon',learn:'zone-school',music:'zone-music',myroom:'zone-myroom'};
@@ -97,7 +97,7 @@ const PLACE_OF={};
 Object.keys(PLACES).forEach(k=>PLACES[k].games.forEach(s=>{if(!PLACE_OF[s])PLACE_OF[s]=k}));
 Object.keys(EXTRA_PLACE).forEach(s=>{if(!PLACE_OF[s])PLACE_OF[s]=EXTRA_PLACE[s]});
 /* catalog.retired: old screens that a newer game replaced. Nothing on the home screen opens them any more; going there opens the new game */
-const RETIRED={nails:'nailshop',dressup:'clothes',jobdress:'jobs',dispatch:'jobs',makeup:'makeup2',ice:'icecream2',cake:'bakery'};
+const RETIRED={map:'explore',nails:'nailshop',dressup:'clothes',jobdress:'jobs',dispatch:'jobs',makeup:'makeup2',ice:'icecream2',cake:'bakery'};
 const route=id=>RETIRED[id]&&document.getElementById(RETIRED[id])?RETIRED[id]:id;
 const backOf=id=>{if(/^zone-/.test(id))return 'home';const k=PLACE_OF[id];return k?PLACE_ID[k]:'home'};
 
@@ -292,8 +292,8 @@ function start(sec,items,onPick,o={}){
 
 /* ============================== Shell.place: a place screen (2×2 drawn tiles, big next-page arrow) ============================== */
 const TILE_ART={animals:'dog',trace:'trace',shapes:'shapes',jelly:'jelly',music:'keys',rhythm:'drum',draw:'palette',words:'apple',sounds:'sounds',videos:'tv',
-  map:'castle',friends:'friends',stamps:'stamp',maze:'maze',xmashouse:'xmtree'};
-const TILE_NAME={map:['공주 모험','Princess adventure'],friends:['우리 가족','Our family'],stamps:['칭찬 도장','Praise stamps'],sounds:['소리 놀이','Sounds'],videos:['노래 영상','Songs'],xmashouse:['크리스마스 집','Christmas house']};
+  explore:'find',map:'castle',friends:'friends',stamps:'stamp',maze:'maze',xmashouse:'xmtree'};
+const TILE_NAME={explore:['탐험대','Explorers'],map:['공주 모험','Princess adventure'],friends:['우리 가족','Our family'],stamps:['칭찬 도장','Praise stamps'],sounds:['소리 놀이','Sounds'],videos:['노래 영상','Songs'],xmashouse:['크리스마스 집','Christmas house']};
 const TILE_COL={map:'var(--berry)',friends:'var(--peach)',stamps:'var(--banana)',xmashouse:'var(--lime)'};
 const EMO=/\p{Extended_Pictographic}/u;
 function tileFor(gid){

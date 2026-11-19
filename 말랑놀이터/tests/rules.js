@@ -141,7 +141,7 @@ const TOL=.01;   // measuring tolerance on the height ratios
   const ns=(CFG.games||{}).nailshop||{},lvls=ns.levels||[],nl=lvls.length?lvls[lvls.length-1].steps:[],nf=lvls.length?lvls[0].steps:[];
   rows.push({g:`nailshop (1~${lvls.length}단계)`,proc:`${new Set(nf).size}~${new Set(nl).size}`,hands:['rub(도구 따라옴)','tap','card'],someone:true,choice:true,ending:'거울·액자',src:'config levels'});
   /* the games' own depth hooks (P16): use what the game says about itself; guess from the first screen only when there is no hook */
-  const HOOKS={dishes2:'__dishDepth',chores2:'__choreDepth',bakery:'__bakeDepth',routine2:'__routineDepth',makeup2:'__mkDepth',clothes:'__clDepth',restaurant:'__rsDepth',icecream2:'__icDepth',jobs:'__jbDepth',xmashouse:'__xmDepth',maze:'__mzDepth',jelly:'__jlDepth',shapes:'__shDepth',trace:'__trDepth'};
+  const HOOKS={dishes2:'__dishDepth',chores2:'__choreDepth',bakery:'__bakeDepth',routine2:'__routineDepth',makeup2:'__mkDepth',clothes:'__clDepth',restaurant:'__rsDepth',icecream2:'__icDepth',jobs:'__jbDepth',xmashouse:'__xmDepth',maze:'__mzDepth',jelly:'__jlDepth',shapes:'__shDepth',trace:'__trDepth',explore:'__expDepth',rhythm:'__rhDepth',music:'__muDepth'};
   const hooked=await p.evaluate(H=>{const out={};Object.keys(H).forEach(g=>{const f=window.ML[H[g]];if(typeof f!=='function')return;try{let v=f();if(!Array.isArray(v))v=[v];
       out[g]=v.map(d=>({level:d.level,processes:d.processes,hands:(d.hands||d.handActions||[]).filter(Boolean),someone:!!(d.someone!=null?d.someone:d.customer),choice:d.choice,ending:d.ending}))}catch(e){out[g]={err:e.message}}});return out},HOOKS);
   for(const g of others){const q=probe[g];if(!q||/^zone-|^map$|^stage$|^friends$|^stamps$|^videos$/.test(g))continue;

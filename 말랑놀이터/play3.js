@@ -37,18 +37,6 @@ const css=`
 .rs.done{opacity:.9}
 .rs.done::after{content:"✓";font-size:12px;color:var(--lime)}
 .ovtimer{position:absolute;left:50%;top:22%;transform:translate(-50%,-50%);font-size:clamp(40px,12vw,64px);color:var(--berry);z-index:5;text-shadow:0 3px 0 #fff;pointer-events:none}
-/* rhythm */
-.rcards{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;padding:8px}
-.rcard{width:clamp(64px,19vw,90px);height:clamp(84px,24vw,112px);border-radius:20px;background:var(--paper);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-  box-shadow:inset 0 4px 0 #fff,0 6px 0 rgba(46,42,79,.12);transition:transform .12s}
-.rcard .rv{font-size:34px;line-height:1}
-.rcard .rv.sm{font-size:22px;letter-spacing:-4px}
-.rcard b{font-weight:400;font-size:18px}
-.rcard.hit{transform:translateY(-10px) scale(1.08);box-shadow:0 0 0 4px var(--banana),0 10px 0 rgba(46,42,79,.12)}
-.rcard.rest{background:#EEF0F6}
-.drum{border:0;background:none;padding:0;font-size:clamp(120px,36vw,190px);line-height:1;filter:drop-shadow(0 8px 0 rgba(46,42,79,.18));touch-action:none;transition:transform .08s}
-.drum.hit{transform:scale(.9) translateY(6px)}
-.rstage{--kbg:radial-gradient(circle at 50% 70%,#FFF4D6,#FFE2EE 70%);display:flex;flex-direction:column;align-items:center;justify-content:space-around}
 /* stamps */
 .stp{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:12px;padding:2px 2px 18px}
 .stpcard{background:var(--paper);border-radius:26px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:inset 0 4px 0 #fff,0 7px 0 rgba(46,42,79,.1),0 12px 16px rgba(46,42,79,.08)}
@@ -450,53 +438,6 @@ makeBakery('cake','케이크 만들기',[
   {type:'blow',icon:'🕯️',ko:'촛불 끄기',hint:'촛불을 콕 눌러 후~'},
   {type:'cut',icon:'🔪',ko:'자르기',tool:'🔪',hint:'칼로 잘라요'}
 ],{emoji:'🎂',temp:'170도',tempEn:'170 degrees',introKo:'케이크 가게! 진짜 케이크처럼 달걀부터 시작해요!',introEn:'Cake shop! Let\'s start with eggs like real bakers!',endKo:'다 같이 나눠 먹어요! 냠냠!',endEn:'We share it together! Yummy!'});
-
-/* =================================================================
-   RHYTHM ECHO (따라 치기)
-   ================================================================= */
-(()=>{
-  const id='rhythm',L=life(id);
-  const sec=screen(id,'리듬 박수','',
-    '<div class="kstage rstage" id="rhStage"><div class="rcards" id="rhCards"></div><button class="drum" id="rhDrum" aria-label="치기">🥁</button></div><div class="ktray" id="rhTray"></div>');
-  const cards=sec.querySelector('#rhCards'),drum=sec.querySelector('#rhDrum'),tray=sec.querySelector('#rhTray'),stage=sec.querySelector('#rhStage');
-  const PAT=[['ta','ta','ta','z'],['ta','ta','ti','ta'],['ti','ti','ta','z'],['ta','z','ta','ta'],['ti','ta','ti','ta'],['ta','ti','ti','ta']];
-  let inst='drum',pi=0,mode='listen',hits=[],hk=0,timers=[];
-  const SOUND={drum:()=>{sweepTone(150,55,.3,'sine',.55);noise(.05,{freq:200,vol:.2})},clap:()=>noise(.09,{freq:1800,q:.6,vol:.45}),bell:()=>{tone(1318,.5,'sine',.2);tone(2637,.3,'sine',.05)}};
-  const EMO={drum:'🥁',clap:'👏',bell:'🔔'};
-  function render(){
-    const p=PAT[pi];cards.innerHTML=p.map((t,k)=>`<div class="rcard ${t==='z'?'rest':''}" data-k="${k}">${t==='ta'?`<span class="rv">${EMO[inst]}</span><b>따</b>`:t==='ti'?`<span class="rv sm">${EMO[inst]}${EMO[inst]}</span><b>띠띠</b>`:'<span class="rv">🤫</span><b>쉼</b>'}</div>`).join('');
-    drum.textContent=EMO[inst];
-  }
-  function lit(k){const c=cards.children[k];if(!c)return;c.classList.add('hit');setTimeout(()=>c.classList.remove('hit'),220)}
-  function listen(){
-    L.begin();mode='listen';render();tray.innerHTML='';hint(stage,'잘 들어 봐요!');say('잘 들어 봐!','Listen!');
-    const beat=.62;let t=1.1;
-    PAT[pi].forEach((tk,k)=>{
-      if(tk==='ta')L.later(()=>{SOUND[inst]();lit(k)},t*1000);
-      if(tk==='ti'){L.later(()=>{SOUND[inst]();lit(k)},t*1000);L.later(()=>{SOUND[inst]();lit(k)},(t+beat/2)*1000)}
-      if(tk==='z')L.later(()=>lit(k),t*1000);
-      t+=beat;
-    });
-    L.later(yourTurn,(t+.4)*1000);
-  }
-  function yourTurn(){
-    mode='play';hits=[];PAT[pi].forEach((tk,k)=>{if(tk==='ta')hits.push(k);if(tk==='ti')hits.push(k,k)});hk=0;
-    hint(stage,'이제 네 차례! 똑같이 쳐 봐요');say('이제 네 차례! 똑같이 쳐 봐!','Your turn! Copy the rhythm!');
-    tray.innerHTML='';bigBtn(tray,'다시 듣기 👂',listen,true);
-  }
-  drum.addEventListener('pointerdown',e=>{
-    e.preventDefault();actx();drum.classList.add('hit');setTimeout(()=>drum.classList.remove('hit'),90);SOUND[inst]();
-    if(mode!=='play')return;const k=hits[hk++];lit(k);
-    if(hk>=hits.length){mode='done';PAT[pi].forEach((tk,j)=>{if(tk==='z')lit(j)});L.later(()=>{cheer('리듬을 똑같이 쳤어요!','You copied the rhythm!');L.later(()=>{pi=(pi+1)%PAT.length;listen()},2600)},400)}
-  });
-  /* P16: the instrument is picked with picture cards at the start (shell.insteadOfTabs), not with text tabs in the header */
-  function begin(){pi=0;say('선생님이 먼저 치면 똑같이 따라 쳐요!','I play first, then you copy!');L.later(listen,1500)}
-  games[id]={enter:()=>{L.begin();const SHL=M.Shell;if(!SHL){begin();return}cards.innerHTML='';tray.innerHTML='';
-      SHL.start(sec,[{svg:SHL.art('drum'),ko:'북',en:'Drum',v:'drum'},{svg:SHL.art('clap'),ko:'박수',en:'Clap',v:'clap'},{svg:SHL.art('bell'),ko:'종',en:'Bell',v:'bell'}],
-        it=>{if(M.current()!==id)return;inst=it.v;render();SOUND[inst]();L.later(begin,500)},{ko:'무엇으로 칠까?',en:'What shall we play?'})},
-    exit:()=>{L.begin();sec.querySelectorAll(':scope > .sh-start').forEach(x=>x.remove())}};
-  void timers;
-})();
 
 /* =================================================================
    PRAISE STAMPS (칭찬 도장판) + DAILY MISSIONS + REAL-DRESS CLOSET

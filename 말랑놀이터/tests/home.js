@@ -58,7 +58,7 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
   }
   const where=await p.evaluate(()=>{const o={};Object.entries(window.ML.Shell.places).forEach(([k,P])=>{const el=document.getElementById(P.id);o[k]=el?[...el.querySelectorAll('.tile[data-go]')].map(t=>t.dataset.go):[]});
     o.myroomCards=[...document.querySelectorAll('#zone-myroom .sh-card')].map(c=>c.getAttribute('aria-label'));return o});
-  const want={cook:['pizza','bakery','restaurant','dishes2','icecream2'],salon:['petsalon','nailshop','clothes','makeup2','draw'],learn:['words','maze','jobs','animals','jelly','shapes','trace','map'],music:['rhythm','music','videos']};
+  const want={cook:['pizza','bakery','restaurant','dishes2','icecream2'],salon:['petsalon','nailshop','clothes','makeup2','draw'],learn:['words','maze','jobs','animals','jelly','shapes','trace','explore'],music:['rhythm','music','videos']};
   const misplaced=[];Object.entries(want).forEach(([k,list])=>list.forEach(g=>{if(!where[k].includes(g))misplaced.push(g+'→'+k)}));
   const twice=[].concat(...Object.keys(want).map(k=>where[k])).filter((g,i,a)=>a.indexOf(g)!==i);
   ok('2. 놀이가 제자리에 (아이스크림은 요리 마을, 직업·미로는 배움, 집안일·하루 일과는 내 방), 두 군데 나오는 놀이 없음',!misplaced.length&&!twice.length&&!where.learn.includes('icecream2'),
