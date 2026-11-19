@@ -76,7 +76,7 @@ const art=k=>{const v=I[k];return typeof v==='function'?v():(v||'')};
 /* ============================== places: config home.places + catalog → screen ids ==============================
    not in config: which screen each game name in home.places / catalog opens (screen ids are code) */
 const SCREEN_OF={pizza:'pizza',bread:'bakery',cake:'bakery',bakery:'bakery',chef:'restaurant',restaurant:'restaurant',icecream:'icecream2',dishes:'dishes2',
-  petsalon:'petsalon',nailshop:'nailshop',dressup:'clothes',clothes:'clothes',makeup:'makeup2',coloring:'draw',drawing:'draw',
+  petsalon:'petsalon',nailshop:'nailshop',dressup:'clothes',clothes:'clothes',makeup:'makeup2',coloring:'coloring',drawing:'draw',
   photoCards:'words',words:'words',maze:'maze',jobs:'jobs',animals:'animals',counting:'jelly',shapes:'shapes',trace:'trace',quest:'map',explore:'explore',
   xmasHouse:'xmashouse',rhythmClap:'rhythm',music:'music',instruments:'music',songs:'videos',chores:'chores2',routine:'routine2','가족':'friends','도장':'stamps'};
 /* not in config: the place screen ids (kept from the earlier building screens so old links still work) and their pictures */

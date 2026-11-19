@@ -216,13 +216,17 @@ function praise(o={}){
   const d=document.createElement('div');d.className='fc-praise';d.setAttribute('aria-hidden','true');d.dataset.who=f?f.id:'toto';
   d.innerHTML=f?A.person(f.photo,Object.assign({mood:'happy',cells:null},look(f))):A.animal('bunny','happy',{});
   document.body.appendChild(d);praiseEl=d;
-  let h=null;try{if(M.Alive)h=M.Alive.attach(d,{kind:f?'person':'bunny',follow:false})}catch(e){}
+  /* the clap is drawn here (no ML.Alive instance, so nothing keeps running once the screen is left) */
   requestAnimationFrame(()=>{d.classList.add('on');
-    if(h){try{h.play('clap')}catch(e){}}
+    if(!REDUCED){
+      const root=d.querySelector('.al-root');if(root&&root.animate)root.animate([{transform:'translateY(0)'},{transform:'translateY(-9px)',offset:.5},{transform:'translateY(0)'}],{duration:600,delay:200,easing:'ease-in-out'});
+      [['.al-arm-l',-20,-58],['.al-arm-r',20,58]].forEach(([sel,a0,a1])=>{const e=d.querySelector(sel);if(!e||!e.animate)return;e.style.transformBox='fill-box';
+        e.animate([{transform:`rotate(${a0}deg)`},{transform:`rotate(${a1}deg)`},{transform:`rotate(${a0}deg)`}],{duration:600,delay:300,iterations:3,easing:'ease-in-out'})});
+    }
     if(f)setTimeout(()=>{try{play(d,'bounce',{fx:'heart'})}catch(e){}},300);
   });
   try{M.sfx&&M.sfx.pop&&M.sfx.pop()}catch(e){}
-  praiseT=setTimeout(()=>{d.classList.remove('on');setTimeout(()=>{try{if(h)h.detach()}catch(e){}d.remove();if(praiseEl===d)praiseEl=null},450)},2600);
+  praiseT=setTimeout(()=>{d.classList.remove('on');setTimeout(()=>{d.remove();if(praiseEl===d)praiseEl=null},450)},2600);
   return d;
 }
 document.addEventListener('ml-round',()=>{setTimeout(()=>{try{praise()}catch(e){}},900)});
