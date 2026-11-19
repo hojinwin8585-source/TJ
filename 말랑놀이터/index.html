@@ -452,26 +452,6 @@ body{background:linear-gradient(180deg,var(--bg),color-mix(in srgb,var(--bg) 82%
     <div class="tray" id="iceTray"></div>
   </section>
 
-  <!-- TRACE -->
-  <section id="trace" class="screen" hidden>
-    <div class="bar"><button class="round" data-go="home" aria-label="처음으로">🏠</button><h2>선 긋기</h2><div class="dots" id="traceDots"></div></div>
-    <canvas id="traceCanvas"></canvas>
-  </section>
-
-  <!-- SHAPES -->
-  <section id="shapes" class="screen" hidden>
-    <div class="bar"><button class="round" data-go="home" aria-label="처음으로">🏠</button><h2>모양 맞추기</h2><div class="dots" id="shapeDots"></div></div>
-    <div class="board" id="board"></div>
-  </section>
-
-  <!-- JELLY -->
-  <section id="jelly" class="screen" hidden>
-    <div class="bar"><button class="round" data-go="home" aria-label="처음으로">🏠</button><h2>젤리 세기</h2>
-</div>
-    <div class="jelly-num" id="jellyNum"></div>
-    <div class="plate" id="plate"></div>
-  </section>
-
   <!-- MUSIC -->
   <section id="music" class="screen" hidden>
     <div class="bar"><button class="round" data-go="home" aria-label="처음으로">🏠</button><h2>동물 음악회</h2>
@@ -1543,59 +1523,6 @@ games.ice=(()=>{
   return{enter:()=>{busy=false;reset()},resize:fit};
 })();
 
-/* =================================================================
-   FREE PLAY 3. LINE TRACING
-   ================================================================= */
-games.trace=(()=>{
-  const LV=[
-    {a:'🐶',b:'🦴',shape:'line',ko:'강아지가 뼈다귀를 먹고 싶대. 쭉 따라가 볼까?',en:'Help the dog get the bone!',dk:'뼈다귀 냠냠!',de:'Yummy bone!'},
-    {a:'🐰',b:'🥕',shape:'diag',ko:'토끼가 당근을 먹고 싶대. 비스듬히 따라가 볼까?',en:'Help the bunny get the carrot!',dk:'당근 아삭아삭!',de:'Crunchy carrot!'},
-    {a:'🐝',b:'🌸',shape:'wave',ko:'꿀벌이 꽃으로 날아가요. 꼬불꼬불!',en:'Fly the bee to the flower!',dk:'꽃에 도착!',de:'Hello, flower!'},
-    {a:'🐵',b:'🍌',shape:'zig',ko:'원숭이가 바나나를 찾아요. 뾰족뾰족!',en:'Help the monkey find the banana!',dk:'바나나 냠냠!',de:'Yummy banana!'},
-    {a:'🐭',b:'🧀',shape:'circle',ko:'생쥐가 치즈를 찾아 동글동글 돌아요.',en:'Go round and round to the cheese!',dk:'치즈 냠냠!',de:'Yummy cheese!'}
-  ];
-  let level=0,t=0;
-  const T=makeTracer($('#traceCanvas'),()=>{t=setTimeout(()=>{if(current!=='trace')return;level=(level+1)%LV.length;run(true)},3000)});
-  function run(intro){
-    clearTimeout(t);
-    $('#traceDots').innerHTML=LV.map((_,i)=>`<i class="${i===level?'on':i<level?'done':''}"></i>`).join('');
-    T.start(Object.assign({style:'path'},LV[level]));if(intro)say(LV[level].ko,LV[level].en);
-  }
-  return{enter:()=>run(true),resize:T.resize,exit:()=>{clearTimeout(t);T.stop()}};
-})();
-
-/* =================================================================
-   FREE PLAY 4. SHAPES
-   ================================================================= */
-games.shapes=(()=>{
-  const LEVELS=[['circle','square'],['circle','square','triangle'],['circle','square','triangle','star'],['circle','square','triangle','star','heart']];
-  let level=0,t=0;
-  const Sx=makeSorter($('#board'),()=>{t=setTimeout(()=>{if(current==='shapes'){level=Math.min(LEVELS.length-1,level+1);run(false)}},2600)});
-  function run(intro){
-    clearTimeout(t);
-    $('#shapeDots').innerHTML=LEVELS.map((_,i)=>`<i class="${i===level?'on':i<level?'done':''}"></i>`).join('');
-    Sx.start({types:LEVELS[level]});if(intro)say('모양을 같은 자리에 쏙 넣어 봐!','Put each shape in its home!');
-  }
-  return{enter:()=>run(true),resize:Sx.resize,exit:()=>{clearTimeout(t);Sx.stop()}};
-})();
-
-/* =================================================================
-   FREE PLAY 5. JELLY COUNTING
-   ================================================================= */
-games.jelly=(()=>{
-  let n=1,max=5,first=true,t=0;
-  /* P16: no 1~5 / 1~10 tab. The level engine picks it (ML.Progress 'jelly': 1단계 1~5, 2단계 1~10); grown-ups can change it in the settings */
-  const PRG=()=>window.ML&&window.ML.Progress;
-  setTimeout(()=>{const p=PRG();if(p)p.register('jelly',{max:2,name:'젤리 세기'})},0);
-  const lvMax=()=>{const p=PRG();return p&&p.get('jelly').level>=2?10:5};
-  const C=makeCounter($('#plate'),$('#jellyNum'),()=>{const round=max===10||n>=5;if(round)try{const p=PRG();if(p)p.clear('jelly')}catch(e){}
-    t=setTimeout(()=>{if(current!=='jelly')return;const m=lvMax();if(m!==max){max=m;n=max===5?1:3+rand(8)}else n=max===5?(n>=5?1:n+1):3+rand(8);run()},2800)});
-  function run(){
-    clearTimeout(t);C.start({n,item:'jelly',ko:'젤리',en:'jelly',ens:'jellies'});
-    if(first){say('젤리를 하나씩 눌러서 세어 봐!','Tap each jelly and count!');first=false}else say('젤리가 몇 개일까?','How many jellies?');
-  }
-  return{enter:()=>{const m=lvMax();if(m!==max){max=m;n=max===5?1:3+rand(8)}first=true;run()},exit:()=>{clearTimeout(t);C.stop()}};
-})();
 
 /* =================================================================
    FREE PLAY 6. ANIMAL MUSIC
@@ -1729,6 +1656,7 @@ if('serviceWorker' in navigator&&location.protocol==='https:'){
 <script src="salon.js"></script>
 <script src="nailshop.js"></script>
 <script src="maze.js"></script>
+<script src="learn.js"></script>
 <script src="dishes.js"></script>
 <script src="chores.js"></script>
 <script src="bakery.js"></script>
