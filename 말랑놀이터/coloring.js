@@ -125,9 +125,9 @@ const PICS={
     <g class="co-skirt">${R('M120 164Q150 176 180 164C206 196 222 220 232 240Q150 258 68 240C78 220 94 196 120 164Z')}
       ${R('M68 240Q150 258 232 240C246 254 246 270 234 278Q214 290 194 284Q172 294 150 286Q128 294 106 284Q86 290 66 278Q54 270 68 240Z')}</g>
     ${R('M126 116Q150 108 174 116L182 166Q150 176 118 166Z')}
-    ${R('M150 174C130 144 98 146 100 174C102 202 132 200 150 182C168 200 198 202 200 174C202 146 170 144 150 174Z')}<circle cx="150" cy="174" r="8" fill="${V.ball('#FFF8EE')}" ${STK(3)}/>
     ${R('M130 116C102 98 80 118 84 142C88 164 114 164 128 150Z')}
     ${R('M170 116C198 98 220 118 216 142C212 164 186 164 172 150Z')}
+    ${R('M150 178C134 152 108 154 110 178C112 202 136 200 150 186C164 200 188 202 190 178C192 154 166 152 150 178Z')}<circle cx="150" cy="179" r="8" fill="${V.ball('#FFF8EE')}" ${STK(3)}/>
     ${R('M120 52L124 24L138 40L150 16L162 40L176 24L180 52Q150 60 120 52Z')}
     ${V.shine(132,62,10,6,-25)}</g>`},
   bear:{ko:'동물 친구',en:'animal friend',motion:'wave',build:R=>`${V.ground(140,282,96,8)}<g class="co-move">
@@ -434,10 +434,10 @@ function fill(i,cx,cy,quick){
   const NS='http://www.w3.org/2000/svg',ci=document.createElementNS(NS,'circle');
   ci.setAttribute('cx',q.x.toFixed(1));ci.setAttribute('cy',q.y.toFixed(1));ci.setAttribute('r','0');ci.setAttribute('fill',c.hex);r.paint.appendChild(ci);
   /* the soft fill (FILL_MS) in the calm colour, then it blooms to the vivid colour (calm.colorPolicy.bloomMs) */
-  const T=quick?FILL_MS*.55:FILL_MS,t0=performance.now();let fin=false;
-  const end=()=>{if(fin)return;fin=true;ci.setAttribute('r',far.toFixed(1));ci.setAttribute('fill',c.vivid);r.base.setAttribute('fill',c.vivid);
+  const T=quick?FILL_MS*.55:FILL_MS,t0=performance.now(),my=st;let fin=false;
+  const end=()=>{if(fin)return;fin=true;if(st!==my)return;ci.setAttribute('r',far.toFixed(1));ci.setAttribute('fill',c.vivid);r.base.setAttribute('fill',c.vivid);
     ci.remove();r.base.setAttribute('fill',V.ball(c.vivid));r.dabs.innerHTML='';afterFill(r)};
-  const step=t=>{if(fin)return;const k=Math.max(0,Math.min(1,(t-t0)/T)),e=1-Math.pow(1-k,3);ci.setAttribute('r',(far*e).toFixed(1));
+  const step=t=>{if(fin)return;if(st!==my){fin=true;return}const k=Math.max(0,Math.min(1,(t-t0)/T)),e=1-Math.pow(1-k,3);ci.setAttribute('r',(far*e).toFixed(1));
     const kb=Math.max(0,Math.min(1,(t-t0-T*.55)/BLOOM_MS));ci.setAttribute('fill',mix(c.hex,c.vivid,kb));
     if(t-t0>=T*.55+BLOOM_MS)end();else requestAnimationFrame(step)};
   requestAnimationFrame(step);L.later(end,T*.55+BLOOM_MS+400);
@@ -596,7 +596,7 @@ window.addEventListener('resize',()=>{if(cur()===id&&st&&st.g&&!st.busy&&st.phas
 /* home tile picture (no emoji): a painted apple and a brush */
 document.querySelectorAll('.tile[data-go="coloring"] .ic').forEach(ic=>{
   const ap=render('apple',{pre:[(CHOICE[1]||{}).vivid||'#FF5A5F']}).svg;
-  ic.innerHTML=`<svg viewBox="0 0 300 300" style="overflow:visible"><g transform="translate(-6 6) scale(.9)">${inner(ap)}</g><g transform="translate(206 70) rotate(28 30 70) scale(1.3)">${inner(brushSVG(PAL.sky||'#A7CFE8'))}</g></svg>`;
+  ic.innerHTML=`<svg class="co-pic" viewBox="0 0 300 300" style="overflow:visible"><g transform="translate(-6 6) scale(.9)">${inner(ap)}</g><g transform="translate(206 70) rotate(28 30 70) scale(1.3)">${inner(brushSVG(PAL.sky||'#A7CFE8'))}</g></svg>`;
 });
 
 /* ---------- test and parent hooks ---------- */

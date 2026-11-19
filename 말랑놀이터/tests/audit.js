@@ -6,7 +6,7 @@
 const {chromium}=require('playwright');
 const path=require('path');
 const URL='file://'+path.resolve(__dirname,'..','index.html');
-const SCREENS=['home','zone-cook','zone-salon','zone-school','zone-music','zone-myroom','petsalon','nailshop','pizza','bread','cake','dishes','chores','routine','dressup','makeup','nails','jobdress','jobmatch','dispatch','animals','ice','jelly','shapes','words','map','explore','rhythm','music','xmashouse'];
+const SCREENS=['home','zone-cook','zone-salon','zone-school','zone-music','zone-myroom','petsalon','nailshop','pizza','bread','cake','dishes','chores','routine','dressup','makeup','nails','jobdress','jobmatch','dispatch','animals','ice','jelly','shapes','words','map','explore','rhythm','music','xmashouse','coloring'];
 const MIN=110,MAXN=3;
 (async()=>{
   const b=await chromium.launch();const p=await b.newPage({viewport:{width:390,height:780},hasTouch:true});
