@@ -83,13 +83,20 @@ const css=`
 #pizza .pz-head{flex:none;height:${HEAD_PX}px;gap:8px}
 #pizza .pz-back{width:${BACK_PX}px;height:${BACK_PX}px;padding:10px}
 #pizza .pz-back svg{width:100%;height:100%;display:block}
-.pz-strip{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;pointer-events:none;padding-right:8px}
-.pz-strip span{flex:none;width:40px;height:40px;border-radius:50%;background:var(--paper);display:grid;place-items:center;position:relative;opacity:.55;transition:width .3s,height .3s,opacity .3s;box-shadow:0 2px 6px rgba(91,74,66,.12)}
-.pz-strip span svg{width:72%;height:72%;display:block}
-.pz-strip span.on{width:58px;height:58px;opacity:1;box-shadow:0 0 0 4px color-mix(in srgb,var(--berry) 55%,#fff),0 2px 6px rgba(91,74,66,.14)}
-.pz-strip span.done{opacity:.9}
-.pz-strip span .st{position:absolute;right:-5px;top:-5px;width:22px;height:22px}
-.pz-strip span .st svg{width:100%;height:100%}
+.pz-strip{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;pointer-events:none}
+.pzstars{display:flex;flex:none;margin-left:auto}
+/* P12-나 shop front inside the stage: up to 3 customers, each bubble shows the pizza (rules.depth: a choice at every level) */
+.pz-lobby{inset:0;z-index:30;overflow:hidden;touch-action:none;background:#F3E7DC}
+.pz-lobby[hidden]{display:none}
+.pz-lobby>.pz-lbg{position:absolute;inset:0;pointer-events:none}
+.pz-lobby>.pz-lbg svg{width:100%;height:100%;display:block}
+.pz-lc{position:absolute;border:0;padding:0;background:none;touch-action:none;transition:transform .5s ease-out,opacity .5s}
+.pz-lc .lc-ani{position:absolute;left:3%;right:3%;bottom:0;aspect-ratio:200/230;pointer-events:none}
+.pz-lc .lc-ani svg{width:100%;height:100%;display:block;overflow:visible}
+.pz-lc .lc-bub{position:absolute;right:-8%;top:-16%;width:50%;aspect-ratio:1;border-radius:50%;background:var(--paper);border:3px solid ${OL};display:grid;place-items:center;padding:5%;box-shadow:0 3px 8px rgba(91,74,66,.14);pointer-events:none}
+.pz-lc .lc-bub svg{width:100%;height:100%;display:block;overflow:visible}
+.pz-lc.sel{transform:translateY(-12px) scale(1.06)}
+.pz-lc.gone{opacity:0;pointer-events:none}
 .pz-stage{flex:1;min-height:0;position:relative;border-radius:30px;overflow:hidden;touch-action:none;box-shadow:0 6px 14px rgba(91,74,66,.12);background:#F3E7DC}
 .pz-stage>div{position:absolute}
 .pz-wall{left:0;right:0;top:0;height:34%;pointer-events:none}
@@ -161,11 +168,16 @@ const stEl=document.createElement('style');stEl.textContent=css;document.head.ap
 const WALL=`<svg viewBox="0 0 100 34" preserveAspectRatio="none"><rect width="100" height="34" fill="#F3E7DC"/><rect y="24" width="100" height="10" fill="#EEDFD1"/>
   <rect x="34" y="4" width="22" height="15" rx="2.5" fill="#DCEBF0" stroke="#D9BFA6" stroke-width="1.4"/><path d="M45 4V19M34 11.5H56" stroke="#D9BFA6" stroke-width="1.2"/></svg>`;
 /* P16: the screen and its header come from the common shell (ML.Shell.screen): same back picture, size and place on every screen */
-const sec=M.Shell.screen(id,{title:'피자가게',headClass:'pz-head',backClass:'pz-back',stripClass:'pz-strip',stripId:'pzStrip',body:`<div class="pz-stage" id="pzStage"><div class="pz-wall">${WALL}</div><div class="pz-shelf" id="pzShelf"></div><div class="pz-table"></div>
-<div class="pz-cust" id="pzCust"></div><div class="pz-bub" id="pzBub" hidden></div><div class="pz-main" id="pzMain"></div><div class="pz-plate" id="pzPlate" hidden></div><div class="pz-fx" id="pzFx"></div></div>
-<div class="pz-tray" id="pzTray"></div>`}).sec;
+const LOBBY_BG=`<svg viewBox="0 0 100 130" preserveAspectRatio="xMidYMax slice"><defs><filter id="pzLp" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="1.2" stdDeviation="1" flood-color="#5B3A29" flood-opacity=".2"/></filter></defs>
+  <rect width="100" height="130" fill="#F3E7DC"/><g filter="url(#pzLp)"><rect y="0" width="100" height="11" fill="#E39A86"/></g>${Array.from({length:10},(_,i)=>`<path d="M${i*10} 10Q${i*10+5} 17 ${i*10+10} 10Z" fill="${i%2?'#FFF6EA':'#E39A86'}"/>`).join('')}
+  <g filter="url(#pzLp)"><rect x="12" y="24" width="46" height="34" rx="6" fill="#D9BFA6"/></g><rect x="16" y="28" width="38" height="26" rx="4" fill="#F6D7B0"/><path d="M18 52Q35 34 52 52Z" fill="#E9A06B"/><circle cx="35" cy="46" r="7" fill="#F0C27A"/><circle cx="33" cy="45" r="1.6" fill="#D2412A"/><circle cx="37.5" cy="47" r="1.4" fill="#D2412A"/>
+  <g filter="url(#pzLp)"><path d="M66 70V34Q66 22 78 22Q90 22 90 34V70Z" fill="#B9D3B0"/></g><circle cx="78" cy="36" r="5.5" fill="#DCEBF0"/><circle cx="86" cy="52" r="1.6" fill="#F0D58A"/>
+  <g filter="url(#pzLp)"><rect y="70" width="100" height="60" fill="#E7D2B8"/></g><path d="M0 86H100M0 104H100" stroke="#DCC3A4" stroke-width=".6"/></svg>`;
+const SCR=M.Shell.screen(id,{title:'피자가게',headClass:'pz-head',backClass:'pz-back',stripClass:'pz-strip',stripId:'pzStrip',after:'<div class="pzstars" id="pzStars"></div>',body:`<div class="pz-stage" id="pzStage"><div class="pz-wall">${WALL}</div><div class="pz-shelf" id="pzShelf"></div><div class="pz-table"></div>
+<div class="pz-cust" id="pzCust"></div><div class="pz-bub" id="pzBub" hidden></div><div class="pz-main" id="pzMain"></div><div class="pz-plate" id="pzPlate" hidden></div><div class="pz-fx" id="pzFx"></div><div class="pz-lobby" id="pzLobby" hidden><div class="pz-lbg">${LOBBY_BG}</div></div></div>
+<div class="pz-tray" id="pzTray"></div>`}),sec=SCR.sec;
 const $=s=>sec.querySelector(s);
-const stage=$('#pzStage'),stripEl=$('#pzStrip'),custEl=$('#pzCust'),bubEl=$('#pzBub'),mainEl=$('#pzMain'),plateEl=$('#pzPlate'),fxEl=$('#pzFx'),tray=$('#pzTray'),shelfEl=$('#pzShelf');
+const stage=$('#pzStage'),stripEl=$('#pzStrip'),custEl=$('#pzCust'),bubEl=$('#pzBub'),mainEl=$('#pzMain'),plateEl=$('#pzPlate'),fxEl=$('#pzFx'),tray=$('#pzTray'),shelfEl=$('#pzShelf'),lobbyEl=$('#pzLobby');
 const G=M.Guide.make(stage,{say});
 /* ---------- P18-나 motion kit (the salon.js pattern copied here, not shared): particle pool, three beats, squash, the customer eating ----------
    motion.particles: at most max at once, each one gone within fadeMs, calm colours · motion.threeBeats: ready 0.15 s → act → after 0.4 s ·
@@ -300,7 +312,7 @@ function size(){
     Object.assign(plateEl.style,{left:px+'px',top:py+'px',width:pw+'px',height:ph+'px'});Object.assign(geo,{px,py,pw,ph});
   }else{m=Math.min(tH*.96,W*.84);mx=(W-m)/2;my=tTop+(tH-m)/2}
   Object.assign(mainEl.style,{left:mx+'px',top:my+'px',width:m+'px',height:m+'px'});Object.assign(geo,{m,mx,my});
-  layoutPlate();
+  layoutPlate();layoutLobby();
 }
 /* plate slots: 2 columns × 3 rows (up to 6 pieces) */
 function slotRect(i){const c=i%2,r=Math.floor(i/2),cw=geo.pw/2,rh=geo.ph/3,sz=Math.min(cw,rh)*.78;return{x:cw*(c+.5)-sz/2,y:rh*(r+.5)-sz/2,sz}}
@@ -359,9 +371,9 @@ function renderPlate(fresh){
 }
 function shelf(){shelfEl.innerHTML=Array.from({length:Math.min(5,DATA.served)},()=>`<i>${ICON.heart}</i>`).join('')}
 function strip(){
-  const items=plan.map((s,i)=>({s,i})).filter(o=>o.s.k!=='serve');const at=Math.max(0,items.findIndex(o=>o.i===pi));const idx=items.findIndex(o=>o.i>=pi);const c=idx<0?items.length-1:idx;
-  const from=Math.max(0,Math.min(items.length-5,c-2)),win=items.slice(from,from+5);
-  stripEl.innerHTML=win.map(o=>`<span class="${o.i<pi?'done':o.i===pi?'on':''}">${stepIcon(o.s)}${o.i<pi?`<i class="st">${ICON.star}</i>`:''}</span>`).join('');void at;
+  const items=plan.map((s,i)=>({s,i})).filter(o=>o.s.k!=='serve');const at=Math.max(0,items.findIndex(o=>o.i===pi));const idx=items.findIndex(o=>o.i>=pi);const c=idx<0?items.length:idx;
+  /* P12-나: the common step strip (ML.Shell.steps: 4 at a time, the current one big, finished ones get a star) */
+  M.Shell.steps(stripEl,items.map(o=>stepIcon(o.s)),c);void at;
 }
 function toolTray(html){tray.innerHTML=`<div class="pz-tool in">${html}</div>`;return tray.querySelector('.pz-tool')}
 function bubble(){
@@ -647,26 +659,76 @@ function give(){
     L.later(()=>{if(g!==gen)return;heart()},2500)};
 }
 function heart(){
-  const cr=custEl.getBoundingClientRect(),sr=shelfEl.getBoundingClientRect(),g=gen,n=Math.min(5,DATA.served+1)-1;
-  fly(ICON.heart,[cr.left+cr.width*.4,cr.top+cr.height*.6],[sr.left+11+n*24,sr.top+11],60,22,900,()=>{if(g!==gen)return;DATA.served++;save();shelf();SFX.sparkle();const pr=PRG();if(pr)pr.clear(id)});
+  const cr=custEl.getBoundingClientRect(),sr=shelfEl.getBoundingClientRect(),g=gen,n=Math.min(5,DATA.served+1)-1;let R=null;
+  fly(ICON.heart,[cr.left+cr.width*.4,cr.top+cr.height*.6],[sr.left+11+n*24,sr.top+11],60,22,900,()=>{if(g!==gen)return;DATA.served++;save();shelf();SFX.sparkle();const pr=PRG();if(pr)R=pr.clear(id);
+    /* P12-나: one star of the row fills slowly (ML.Progress.after); a full row → the level-up moment once the customer has gone */
+    if(R&&pr.after){LOG.push('star:'+R.filled);stars(Math.max(0,R.filled-1));L.later(()=>{if(g===gen)pr.fillStars($('#pzStars'),R.filled)},300)}});
   L.later(()=>{if(g!==gen)return;alPlay('wave');say('안녕! 또 올게!','Bye! See you again!');
     L.later(()=>{if(g!==gen)return;custEl.classList.remove('enter');void custEl.offsetWidth;custEl.classList.add('leave');bubEl.hidden=true;mainEl.classList.add('out');
-      L.later(()=>{if(g===gen)newCustomer()},1400)},1500)},1000);
+      L.later(()=>{if(g!==gen)return;const pr=PRG();
+        if(R&&R.up&&pr&&pr.moment){phase='levelup';const t=newThing(R.level);LOG.push('levelup:'+R.level+':'+t.what);
+          const stop=pr.moment(stage,t,()=>{if(g!==gen)return;LOG.push('levelup:done');stars(0);newCustomer()});L.onEnd(stop);return}
+        if(R&&R.full)stars(0);newCustomer()},1400)},1500)},1000);
 }
+/* progress.levelUpMoment: the new topping (or the new step) of the new level, big, with its name */
+function newThing(n){
+  const a=levelInfo(n),b=levelInfo(Math.max(1,n-1)),t=a.pool.find(x=>!b.pool.includes(x));
+  if(t)return{art:pieceIcon(t),ko:T(t).ko+'!',en:cap(T(t).en)+'!',what:'top:'+t};
+  if(a.order&&!b.order)return{art:`<svg viewBox="-120 -120 240 240">${A.pizza({r:100,sauce:true,cheese:[],tops:[],baked:true})}</svg>`,ko:'주문 받기!',en:'Taking orders!',what:'order'};
+  return{art:`<svg viewBox="-120 -120 240 240">${A.pizza({r:100,sauce:true,cheese:[],tops:[],baked:true})}</svg>`,ko:'잘했어요!',en:'Well done!',what:'level'};
+}
+/* the 3-star row of the level engine in the header */
+function stars(n){const pr=PRG();$('#pzStars').innerHTML=pr&&pr.stars?pr.stars(id,n):''}
+
+/* ---------- P12-나 shop front: up to 3 customers wait, the child picks one (rules.depth: a choice at every level) ---------- */
+let lob=[],lobbyAl=[],turns=null;
+function lobbyOff(){lobbyAl.forEach(h=>h.detach());lobbyAl=[];if(turns){turns.stop();turns=null}}
+/* the pizza a customer wants, small in the bubble: the toppings they asked for (or a plain one when the child will choose them) */
+const BUB_PTS=[[-44,-30],[40,-38],[-6,46],[46,30],[-48,30],[4,-62]];
+function wantPizza(want){const tops=want&&want.length?BUB_PTS.map((p,i)=>topSVG(want[i%want.length],p[0],p[1],i*47,true)).join(''):'';
+  return `<svg viewBox="-120 -120 240 240">${svgInner(`<svg>${A.pizza({r:100,sauce:true,cheese:[],tops:[],baked:true})}</svg>`)}${tops}</svg>`}
+function layoutLobby(){
+  if(lobbyEl.hidden)return;const r=stage.getBoundingClientRect(),W=r.width,Hh=r.height;if(!W)return;
+  const bw=Math.round(Math.max(112,Math.min(W*.3,150))),gap=(W-3*bw)/4,bh=Math.round(bw*1.32);
+  lobbyEl.querySelectorAll('.pz-lc').forEach((b,i)=>Object.assign(b.style,{left:(gap+i*(bw+gap))+'px',bottom:Math.round(Hh*.05)+'px',width:bw+'px',height:bh+'px'}));
+}
+function newCustomer(){
+  L.begin();gen++;H={};act=null;killTool();G.stop();fxEl.innerHTML='';K.clear();custEl.classList.remove('pz-hold','enter','leave');custEl.getAnimations().forEach(a=>a.cancel());tray.innerHTML='';tray.onpointerdown=null;busy=false;flying=0;rub(false);
+  if(al){al.detach();al=null}lobbyOff();
+  lv=levelInfo(levelNo());const prev=cust&&cust.kind,others=shuffle(KINDS.filter(x=>x.id!==prev));while(others.length<3&&KINDS.length)others.push(pick(KINDS));
+  const fixed=lv.choose?null:lv.pool.slice(0,lv.count);
+  lob=others.slice(0,3).map(k=>({kind:k.id,name:k.name||k.ko,en:k.en,want:lv.order?shuffle(lv.pool.slice()).slice(0,lv.count):fixed}));
+  cust=null;S=null;plan=[];pi=0;phase='lobby';kind='tap';LOG.push('level:'+lv.level,'lobby:'+lob.map(c=>c.kind).join('+'));
+  mainEl.innerHTML='';mainEl.classList.remove('out');plateEl.hidden=true;bubEl.hidden=true;custEl.innerHTML='';
+  lobbyEl.querySelectorAll('.pz-lc').forEach(b=>b.remove());
+  lob.forEach((c,i)=>{const b=document.createElement('button');b.type='button';b.className='pz-lc';b.dataset.i=i;b.setAttribute('aria-label',c.name);
+    b.innerHTML=`<span class="lc-ani">${A.animal(c.kind,'idle',{})}</span><span class="lc-bub">${wantPizza(c.want)}</span>`;lobbyEl.appendChild(b)});
+  lobbyEl.hidden=false;M.Shell.steps(stripEl,[]);stars();shelf();size();
+  if(M.Alive){lobbyEl.querySelectorAll('.lc-ani').forEach((e,i)=>lobbyAl.push(M.Alive.attach(e,{kind:lob[i].kind,waiting:true})));turns=M.Alive.takeTurns(lobbyAl);L.onEnd(lobbyOff)}
+  say('어서 오세요! 누구에게 피자를 만들어 줄까? 친구를 콕!','Welcome! Who wants a pizza? Tap a friend!',true);
+  H={down:e=>{const bs=[...lobbyEl.querySelectorAll('.pz-lc')];const i=bs.findIndex(b=>inRect(e,b.getBoundingClientRect(),4));if(i<0)return false;if(busy)return;busy=true;chooseCust(i)}};
+  const g=gen;L.later(()=>{if(g===gen&&phase==='lobby')G.start({type:'tap',at:()=>lobbyAim(),ko:'친구를 콕 눌러 봐!',en:'Tap a friend!'})},800);
+}
+const lobbyAim=()=>{const b=lobbyEl.querySelector('.pz-lc:nth-child(3)')||lobbyEl.querySelector('.pz-lc');if(!b)return[0,0];const r=b.getBoundingClientRect();return stXY(r.left+r.width/2,r.top+r.height*.55)};
+function chooseCust(i){
+  const g=gen,c=lob[i],bs=[...lobbyEl.querySelectorAll('.pz-lc')];if(!c)return;G.stop();H={};kind='wait';LOG.push('pick:'+c.kind);actx();sfx.pop();
+  bs.forEach((b,j)=>b.classList.add(j===i?'sel':'gone'));const a=lobbyAl[i];if(a)a.play('hop');
+  say(`${c.name}, 들어와요!`,`Come in, ${c.name}!`);
+  L.later(()=>{if(g!==gen)return;lobbyOff();lobbyEl.hidden=true;serve(c)},1000);
+}
+/* the chosen customer comes to the counter and orders */
+function serve(c){
+  const g0=gen;H={};act=null;busy=false;
+  Object.keys(counts).forEach(k=>delete counts[k]);cust={kind:c.kind,name:c.name,en:c.en};
+  const fixed=lv.choose?null:lv.pool.slice(0,lv.count),want=c.want;
 
 /* ---------- a customer comes in ---------- */
-function newCustomer(){
-  L.begin();gen++;H={};act=null;killTool();G.stop();fxEl.innerHTML='';K.clear();custEl.classList.remove('pz-hold');custEl.getAnimations().forEach(a=>a.cancel());tray.innerHTML='';tray.onpointerdown=null;busy=false;flying=0;rub(false);
-  lv=levelInfo(levelNo());Object.keys(counts).forEach(k=>delete counts[k]);
-  const prev=cust&&cust.kind,k=pick(KINDS.filter(x=>x.id!==prev).length?KINDS.filter(x=>x.id!==prev):KINDS);cust={kind:k.id,name:k.name||k.ko,en:k.en};
-  const fixed=lv.choose?null:lv.pool.slice(0,lv.count);
-  const want=lv.order?shuffle(lv.pool.slice()).slice(0,lv.count):fixed;
   S={main:'none',pz:{r:lv.dough?0:PZR,sauce:false,cheese:[],tops:[],baked:false,flour:!lv.dough},plate:[],want:want&&want.length?want:null,spin:Math.random()*6.28,lines:null,sauceV:null};
   if(fixed)fixed.forEach(t=>{counts[t]={made:0,placed:0}});
   plan=planFor(lv,fixed);pi=0;phase='enter';kind='wait';LOG.push('level:'+lv.level,'customer:'+cust.kind);
   plateEl.hidden=true;renderPlate();mainEl.innerHTML='';mainEl.classList.remove('out');mainEl.style.opacity='';
   if(lv.dough){S.main='bowl';S.bowl={flour:0,water:0,swirl:0,ball:false}}else S.main='pizza';
-  size();draw();strip();shelf();
+  size();draw();strip();shelf();void g0;
   if(al){al.detach();al=null}drawCust('idle');
   if(M.Alive){al=M.Alive.attach(custEl,{kind:cust.kind});const me=al;L.onEnd(()=>{me.detach();if(al===me)al=null})}
   custEl.classList.remove('leave','enter');void custEl.offsetWidth;custEl.classList.add('enter');bubEl.hidden=true;
@@ -679,6 +741,7 @@ function newCustomer(){
 
 /* ---------- parent settings: pizza level (ML.Progress가 있으면 그 '놀이별 단계' 줄, 없을 때만 이 줄) ---------- */
 M.__pzLevel=n=>{if(PRG())PRG().set(id,n);else{DATA.level=n;save()}if(cur()===id)newCustomer();return levelNo()};
+/* rules.depth hook below; tests: the waiting customers */
 (()=>{const sh=document.querySelector('#settings .sheet'),h4=sh&&sh.querySelector('h4');if(!h4||PRG())return;
   const row=document.createElement('div');row.className='row';row.innerHTML=`<span>피자가게 단계</span><div class="seg" id="setPizzaLv">${LEVELS.map(l=>`<button data-v="${l.level}">${l.level}</button>`).join('')}</div>`;sh.insertBefore(row,h4);
   const seg=row.querySelector('.seg'),sync=()=>seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on',+b.dataset.v===levelNo()));
@@ -689,13 +752,14 @@ M.__pzLevel=n=>{if(PRG())PRG().set(id,n);else{DATA.level=n;save()}if(cur()===id)
 const HAND={dough:'tap',knead:'rub',sauce:'rub',cheese:'rub',choose:'choose',top:'tap',bake:'tap',slice:'move',serve:'tap'};
 M.__pzDepth=()=>LEVELS.map((l,i)=>{const v=levelInfo(i+1),p=planFor(v,v.choose?[]:v.pool.slice(0,v.count)).filter(s=>s.k!=='serve');
   const steps=v.choose?planFor(v,null).filter(s=>s.k!=='serve'):p,hands=new Set();steps.forEach(s=>{if(s.k==='prep'){const pool=v.choose?v.pool:v.pool.slice(0,v.count);pool.forEach(t=>hands.add(PREP[t]==='rub'?'rub':'tap'))}else hands.add(HAND[s.k])});
-  return{level:i+1,processes:new Set(steps.map(s=>s.k)).size,steps:steps.length,hands:[...hands],someone:!!M.Alive,choice:v.choose,ending:true,order:v.order}});
+  return{level:i+1,processes:new Set(steps.map(s=>s.k)).size,steps:steps.length,hands:[...hands],someone:!!M.Alive,choice:true,choices:['customer'].concat(v.choose?['toppings']:[]),ending:true,order:v.order}});
 M.__pzPrep=()=>({prep:Object.assign({},PREP),tops:ALLTOPS.slice(),pieceR:Object.assign({},PR,{corn:'4알 묶음'}),pizzaR:PZR});
 /* every topping drawn as it sits on the pizza: its size against the pizza diameter (rules.everyIngredientPrepared.minPieceSize) */
 M.__pzPieceSizes=()=>{const NS='http://www.w3.org/2000/svg',sv=document.createElementNS(NS,'svg');sv.setAttribute('viewBox','-120 -120 240 240');sv.style.cssText='position:fixed;left:-500px;top:0;width:240px;height:240px';document.body.appendChild(sv);
   const out={};ALLTOPS.forEach(t=>{sv.innerHTML=topSVG(t,0,0,0,false);const b=sv.querySelector('.pz-top').getBBox();out[t]=+(Math.min(b.width,b.height)/(2*PZR)).toFixed(3)});sv.remove();return out};
 M.__pz=()=>{
   const st=plan[pi]||{},r=mainEl.getBoundingClientRect(),aim=(()=>{
+    if(phase==='lobby'){const b=lobbyEl.querySelector('.pz-lc:nth-child(3)')||lobbyEl.querySelector('.pz-lc');if(b){const q=b.getBoundingClientRect();return[q.left+q.width/2,q.top+q.height*.55]}}
     if(kind==='tap'){if(phase==='top'){const el=plateEl.querySelector('.pz-pc:last-child');const q=(el||plateEl).getBoundingClientRect();return[q.left+q.width/2,q.top+q.height/2]}
       if(phase==='bake'||phase==='serve'||phase==='prep'||phase==='dough')return[r.left+r.width/2,r.top+r.height*(phase==='bake'?.6:.5)]}
     return[r.left+r.width/2,r.top+r.height/2]})();
@@ -704,9 +768,12 @@ M.__pz=()=>{
     plate:S?S.plate.length:0,plateShown:!plateEl.hidden,flying,tops:S?S.pz.tops.length:0,topsBy:S?S.pz.tops.reduce((o,x)=>(o[x[0]]=(o[x[0]]||0)+1,o),{}):{},
     counts:JSON.parse(JSON.stringify(counts)),want:S&&S.want,chosen:S&&S.chosen,cards:[...tray.querySelectorAll('.pz-card')].map(b=>b.dataset.t),
     cust:cust&&cust.kind,alive:al?al.state():null,served:DATA.served,misses,guide:G.state(),log:LOG.slice(),
+    lobby:lobbyEl.hidden?null:lob.map((c,i)=>{const b=lobbyEl.querySelectorAll('.pz-lc')[i],r=b&&b.getBoundingClientRect();return{kind:c.kind,want:c.want,x:r?r.left+r.width/2:0,y:r?r.top+r.height*.55:0,w:r?r.width:0}}),
+    strip:{n:+(stripEl.dataset.n||0),at:stripEl.dataset.at===''?-1:+stripEl.dataset.at,shown:stripEl.querySelectorAll(':scope > span[data-i]').length},
+    starsOn:sec.querySelectorAll('#pzStars .mlp-star.on').length,starsN:sec.querySelectorAll('#pzStars .mlp-star').length,moment:!!stage.querySelector('.mlp-moment'),progress:PRG()?PRG().get(id):null,
     sauce:S?S.pz.sauce:false,cheese:S?S.pz.cheese.length:0,baked:S?S.pz.baked:false,lines:S&&S.lines,toolOn:!!tool,rubbing:custEl.classList.contains('pz-rub'),parts:K.stats()};
 };
 games[id]={enter:()=>{requestAnimationFrame(()=>{if(cur()===id)newCustomer()})},
-  exit:()=>{L.begin();gen++;H={};act=null;killTool();G.stop();fxEl.innerHTML='';K.clear();tray.onpointerdown=null;if(al){al.detach();al=null}phase='';kind='wait'},resize:size};
+  exit:()=>{L.begin();gen++;H={};act=null;killTool();G.stop();fxEl.innerHTML='';K.clear();tray.onpointerdown=null;lobbyOff();if(al){al.detach();al=null}phase='';kind='wait'},resize:size};
 window.addEventListener('resize',()=>{if(cur()===id)size()});
 })();

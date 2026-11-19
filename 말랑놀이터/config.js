@@ -655,7 +655,9 @@ window.MLCFG = {
           "id": "leaves",
           "bubble": "나뭇잎",
           "steps": [
+            "pick",
             "rinse",
+            "towel",
             "dry"
           ],
           "from": 2
@@ -664,14 +666,17 @@ window.MLCFG = {
           "id": "tangled",
           "bubble": "엉킨 털",
           "steps": [
-            "brush"
+            "brush",
+            "perfume"
           ],
           "from": 3
         },
         {
           "id": "party",
           "bubble": "리본",
-          "steps": [],
+          "steps": [
+            "perfume"
+          ],
           "from": 1,
           "say": [
             "파티에 가요! 예쁘게 해 주세요",
@@ -861,7 +866,8 @@ window.MLCFG = {
           "땋기",
           "올림머리"
         ]
-      }
+      },
+      "_needs설명": "P12-나: needs[].steps 에 flow.extraSteps 를 끼움. pick=나뭇잎 콕콕 떼기(첫 과정), towel=말리기 전 수건 톡톡(콕 3번), perfume=꾸미기 뒤 향수 칙(콕 1번). 꾸미기(dress)는 모든 손님이 하고, 과정 그림 줄에 자리가 있으면(4개 이하) 그림으로도 보임"
     },
     "coloring": {
       "_설명": "새 놀이. 큰 그림의 칸을 색칠. 처음엔 콕 누르면 한 칸이 채워지고, 단계가 오르면 칸과 색이 늘어남.",

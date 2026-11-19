@@ -37,6 +37,8 @@ const HAT='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.
     await pickNeed('party');await waitPhase('dress',12000);await W(900);
     let s=await st();await tapPt(s.slotPts.head);await p.locator('#psPanel .ps-card').first().click();await W(900);
     await p.waitForFunction(()=>window.ML.__ps().mirror,null,{timeout:15000});await p.locator('#psMirBtn').click();
+    /* P12-나: a party customer wants a spritz of perfume after dressing (one tap), then the mirror moment */
+    await W(500);if((await st()).phase==='perfume')await p.locator('#psPanel .ps-perf').click();
     if(onMirror)await onMirror();
     await p.waitForFunction(()=>window.ML.__ps().view==='lobby',null,{timeout:10000});
   };

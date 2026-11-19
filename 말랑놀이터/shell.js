@@ -330,7 +330,65 @@ function place(key,o={}){
 /* ============================== old screens: same header now ============================== */
 document.querySelectorAll('#app > .screen').forEach(s=>{if(s.id!=='home')adopt(s.id)});
 
-M.Shell={screen,adopt,cards,tool,finish,start,place,has,route,backOf,art,ICON:I,placeBG,
+
+/* ============================== P12-나 flow: step strip, the basket at the top, the reward flying into it ==============================
+   flow.stepStrip: "화면 위에 이번 손님의 과정 그림 2~4개(작은 동그라미). 지금 과정만 크게, 끝난 과정은 별. 누르는 것이 아니라 보여 주기만"
+   flow.reward:    "손님이 나갈 때 하트(또는 당근) 1개를 건네줌 → 화면 위 바구니로(P9의 당근 바구니와 연결)" — the same basket as home (ML.Room) */
+const FLOW=CF.flow||{};
+const STRIP_MAX=Math.max(2,num(FLOW.stepStrip,1,4));
+const STAR_SM=`<svg viewBox="0 0 20 20"><path d="M10 1.6l2.5 5.3 5.8.7-4.3 4 1.1 5.8L10 14.6l-5.1 2.8 1.1-5.8-4.3-4 5.8-.7z" fill="#F0D58A" stroke="${OL}" stroke-width="1.3" stroke-linejoin="round"/></svg>`;
+stEl.textContent+=`
+.sh-strip.sh-steps{gap:6px;pointer-events:none}
+.sh-strip.sh-steps>span{flex:none;width:38px;height:38px;border-radius:50%;background:var(--paper);display:grid;place-items:center;position:relative;opacity:.6;
+  transition:width .35s ease-out,height .35s ease-out,opacity .35s;box-shadow:0 2px 6px rgba(91,74,66,.12)}
+.sh-strip.sh-steps>span>svg{width:74%;height:74%;display:block;overflow:visible}
+.sh-strip.sh-steps>span.on{width:56px;height:56px;opacity:1;box-shadow:0 0 0 4px color-mix(in srgb,${C.rose} 55%,#fff),0 2px 6px rgba(91,74,66,.14)}
+.sh-strip.sh-steps>span.done{opacity:.92}
+.sh-strip.sh-steps>span .sh-st{position:absolute;right:-5px;top:-5px;width:20px;height:20px}
+.sh-strip.sh-steps>span .sh-st svg{width:100%;height:100%;display:block}
+.sh-strip .sh-basket{flex:none;width:66px;height:62px;display:block;pointer-events:none}
+.sh-strip .sh-basket svg{width:100%;height:100%;display:block;overflow:visible}
+.sh-strip .sh-basket.got{animation:shgot .6s cubic-bezier(.3,1.5,.5,1)}
+@keyframes shgot{0%{transform:scale(1)}35%{transform:scale(1.14,.9)}70%{transform:scale(.96,1.05)}100%{transform:scale(1)}}
+.sh-fly{position:fixed;z-index:80;width:34px;height:68px;margin:-34px 0 0 -17px;pointer-events:none}
+.sh-fly svg{width:100%;height:100%;display:block;overflow:visible}
+`;
+/* the steps of this customer: icons (svg strings), at = index of the current step (>= length: all done).
+   More than STRIP_MAX steps: a window of STRIP_MAX around the current one. Returns what is shown (for tests). */
+function steps(strip,icons,at){
+  if(!strip)return null;strip.classList.remove('sh-dots');icons=icons||[];
+  if(!icons.length){strip.classList.remove('sh-steps');strip.innerHTML='';strip.dataset.n='0';strip.dataset.at='';return{n:0,shown:0,at:-1}}
+  strip.classList.add('sh-steps');const n=icons.length,a=Math.max(0,at|0);
+  const from=n<=STRIP_MAX?0:Math.max(0,Math.min(n-STRIP_MAX,a-1)),to=Math.min(n,from+STRIP_MAX);
+  let h='';for(let i=from;i<to;i++)h+=`<span class="${i<a?'done':i===a?'on':''}" data-i="${i}">${icons[i]||''}${i<a?`<i class="sh-st">${STAR_SM}</i>`:''}</span>`;
+  strip.innerHTML=h;strip.dataset.n=String(n);strip.dataset.at=String(a);
+  return{n,shown:to-from,at:a};
+}
+/* the carrot basket (the same one as on the home screen and in My Room) in the header strip; n defaults to the saved count */
+function basket(strip,n){
+  if(!strip)return null;const R=M.Room;strip.classList.remove('sh-steps','sh-dots');
+  strip.innerHTML=R?`<span class="sh-basket" aria-label="당근 바구니">${R.basketSVG(n==null?R.carrots():n)}</span>`:'';strip.dataset.n='0';strip.dataset.at='';
+  return strip.querySelector('.sh-basket');
+}
+/* reward: one carrot flies from (x,y) (client px) into the basket in the strip (0.9 s); the basket shows one less until it lands.
+   The carrot itself was counted when the round ended (ML.Progress.clear → 'ml-round' → ML.Room), so this only shows it. */
+function reward(strip,x,y,then){
+  const R=M.Room;let el=strip&&strip.querySelector('.sh-basket');
+  if(!R){then&&then();return()=>{}}
+  const have=R.carrots();if(!el)el=basket(strip,Math.max(0,have-1));else el.innerHTML=R.basketSVG(Math.max(0,have-1));
+  const br=el.getBoundingClientRect(),tx=br.left+br.width/2,ty=br.top+br.height*.35;
+  const f=document.createElement('div');f.className='sh-fly';f.innerHTML=R.carrotSVG();f.style.left=x+'px';f.style.top=y+'px';document.body.appendChild(f);
+  let done=false,t=0;
+  const land=()=>{if(done)return;done=true;clearTimeout(t);f.remove();const e=strip&&strip.querySelector('.sh-basket');
+    if(e){e.innerHTML=R.basketSVG(R.carrots());e.classList.remove('got');void e.offsetWidth;e.classList.add('got')}
+    try{M.tone(784,.14,'sine',.08);M.tone(1046,.2,'sine',.07,.12)}catch(_){}then&&then()};
+  try{const a=f.animate([{transform:'translate(0,0) rotate(0) scale(1)'},{transform:`translate(${(tx-x)*.5}px,${(ty-y)*.5-70}px) rotate(-30deg) scale(1.1)`,offset:.5},
+    {transform:`translate(${tx-x}px,${ty-y}px) rotate(-10deg) scale(.7)`}],{duration:900,easing:'ease-in-out',fill:'forwards'});a.onfinish=land}catch(_){}
+  t=setTimeout(land,1300);   // lands even if the animation never runs (hidden tab)
+  return()=>{if(done)return;done=true;clearTimeout(t);f.remove()};
+}
+
+M.Shell={steps,basket,reward,STRIP_MAX,screen,adopt,cards,tool,finish,start,place,has,route,backOf,art,ICON:I,placeBG,
   get places(){return PLACES},get placeOf(){return Object.assign({},PLACE_OF)},get retired(){return Object.assign({},RETIRED)},
   get screens(){return Object.keys(REG).map(k=>Object.assign({},REG[k]))},
   sizes:{head:HEAD_PX,back:BACK_PX,card:CARD_PX,tool:TOOL_PX,tile:TILE_PX,perPage:PER_PAGE,maxCards:MAX_CARDS}};

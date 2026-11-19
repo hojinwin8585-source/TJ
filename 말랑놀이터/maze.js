@@ -111,8 +111,7 @@ const css=`
 #maze .bar .round{width:64px;height:64px;padding:10px}
 #maze .bar .round svg{display:block;width:100%;height:100%}
 .mzbar-sp{flex:1}
-.mzstars{display:flex;gap:2px;flex:none}
-.mzstars svg{width:20px;height:20px}
+.mzstars{display:flex;flex:none;margin-left:auto}
 .mz-stage{flex:1;min-height:0;position:relative;border-radius:30px;overflow:hidden;touch-action:none;box-shadow:0 6px 14px rgba(91,74,66,.12);background:#DDE8CF}
 .mz-stage>svg.mz-scene{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none}
 .mz-ch{position:absolute;left:0;top:0;pointer-events:none;will-change:transform;z-index:5}
@@ -258,7 +257,15 @@ function sayGoal(k){
   const l=lv===2?LINE.pizza:lv===3?LINE.carrots:lv===4?LINE.seek:lv===5?LINE.key:LINE.home;say(l[0],l[1])
 }
 const goalLine=()=>{const lv=st.lv;return lv===2?LINE.pizza:lv===3?LINE.carrots:lv===4?LINE.seek:lv===5?LINE.key:LINE.home};
-function stars(){$('#mzStars').innerHTML=Array.from({length:Math.min(8,DATA.stars)},()=>ICO.star).join('')}
+/* P12-나: the 3-star row of the level engine (ML.Progress), as in the salon */
+function stars(n){const pr=PRG();$('#mzStars').innerHTML=pr&&pr.stars?pr.stars(id,n):''}
+/* progress.levelUpMoment: what the new level brings (games.maze.levels[].new), big, with its name */
+function newThing(n){const d=LV[n]||{};
+  if(d.keyAt)return{art:svg(D.key),ko:'열쇠!',en:'A key!',what:'key'};
+  if(d.hide||n===4)return{art:svg(D.apple),ko:'그림 길!',en:'Picture signs!',what:'signs'};
+  if(d.carrots)return{art:svg(D.carrot),ko:'당근!',en:'Carrots!',what:'carrots'};
+  if(d.pizza)return{art:svg(D.pizza),ko:'피자 배달!',en:'Pizza delivery!',what:'pizza'};
+  return{art:svg(D.house),ko:'잘했어요!',en:'Well done!',what:'level'}}
 
 /* ---------- footprints (the next spots) ---------- */
 const secXY=(x,y)=>{const sr=sec.getBoundingClientRect(),r=stage.getBoundingClientRect();return[x+r.left-sr.left,y+r.top-sr.top]};
@@ -394,11 +401,15 @@ async function win(){
   if(friendAl){friendAl.setMood('happy');friendAl.play('wave')}
   const l=def.gk==='home'?LINE.homeWin:LINE.friendWin;say(l[0],l[1]);
   celebrate(st.tx,st.ty-chSize().h*.6);
-  DATA.stars++;DATA.done=(DATA.done||0)+1;save();stars();if(PRG())PRG().clear(id);
+  DATA.stars++;DATA.done=(DATA.done||0)+1;save();
+  /* progress: one star fills slowly; a full row → the level-up moment after the cheering, then an empty row */
+  const pr=PRG(),R=pr?pr.clear(id):null;if(R&&pr.after){stars(Math.max(0,R.filled-1));L.later(()=>pr.fillStars($('#mzStars'),R.filled),350);LOG.push('star:'+R.filled)}else stars();
   await wait(2000);if(!L.ok(t))return;
   if(totoAl)totoAl.sound('hehe');tPlay('clap');
   if(friendAl)friendAl.play('hop');
   await wait(Math.max(GAP,3400));if(!L.ok(t))return;
+  if(R&&R.up&&pr.moment){st.phase='levelup';const th=newThing(R.level);LOG.push('levelup:'+R.level+':'+th.what);
+    await new Promise(res=>{const stop=pr.moment(stage,th,res);L.onEnd(()=>{stop();res()})});if(!L.ok(t))return;LOG.push('levelup:done')}
   newRound();
 }
 
@@ -497,6 +508,11 @@ M.__mz=()=>{
     reasons:st.g.edges.filter(e=>e.w).map(e=>({edge:e.id,reason:e.reason})),
     edges:st.g.edges.map(e=>({id:e.id,a:e.a,b:e.b,w:e.w,len:e.len,pts:e.p.map(p=>[Math.round(p[0]),Math.round(p[1])])})),
     nodes:Object.values(st.g.nodes).map(n=>({id:n.id,x:n.x,y:n.y,c:n.c,r:n.r})),
+    starsOn:sec.querySelectorAll('#mzStars .mlp-star.on').length,starsN:sec.querySelectorAll('#mzStars .mlp-star').length,moment:!!stage.querySelector('.mlp-moment'),progress:PRG()?PRG().get(id):null,
     log:LOG.slice(-60)};
 };
+/* rules.depth hook: per level, what the child does (tap a footprint or follow the road, choose at a fork, the friend's welcome) */
+M.__mzDepth=()=>[1,2,3,4,5].map(n=>{const d=LV[n],forks=d.E.filter(e=>e.w).length;
+  const steps=['발자국 콕 / 길 따라가기'].concat(forks?['갈림길 고르기']:[],d.carrots?['당근 줍기']:[],n===4?['그림 표지 듣고 고르기']:[],d.keyAt?['열쇠 줍기','문 열기']:[],[d.gk==='home'?'집에 도착':'친구 만나기']);
+  return{level:n,processes:steps.length,steps,hands:['tap','trace'],someone:true,choice:forks>0,ending:'도착 · 친구가 반김 · 별'}});
 })();

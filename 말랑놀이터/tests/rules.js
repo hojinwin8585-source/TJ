@@ -65,8 +65,13 @@ const TOL=.01;   // measuring tolerance on the height ratios
   const results={},extra={};
 
   /* ---------- pizza: level 1 by tapping and rubbing only ---------- */
-  await p.evaluate(()=>window.ML.go('pizza'));await p.waitForFunction(()=>window.ML.__pz().phase==='sauce',null,{timeout:9000});await W(2500);
+  await p.evaluate(()=>window.ML.go('pizza'));
+  /* P12-나: the shop front first — pick a waiting customer (the screen with the customers is checked too) */
+  await p.waitForFunction(()=>window.ML.__pz().phase==='lobby',null,{timeout:9000});await W(1200);
   let rz=await look('pizza',ZONES.pizza,true);results.pizza=rz;
+  {const a=(await p.evaluate(()=>window.ML.__pz())).aim;await p.mouse.click(a[0],a[1])}
+  await p.waitForFunction(()=>window.ML.__pz().phase==='sauce',null,{timeout:9000});await W(2500);
+  merge(results.pizza,await look('pizza',ZONES.pizza,true));
   const pz=()=>p.evaluate(()=>window.ML.__pz());
   let fin=null;const t0=Date.now();
   while(Date.now()-t0<90000){const s=await pz();
@@ -136,7 +141,7 @@ const TOL=.01;   // measuring tolerance on the height ratios
   const ns=(CFG.games||{}).nailshop||{},lvls=ns.levels||[],nl=lvls.length?lvls[lvls.length-1].steps:[],nf=lvls.length?lvls[0].steps:[];
   rows.push({g:`nailshop (1~${lvls.length}단계)`,proc:`${new Set(nf).size}~${new Set(nl).size}`,hands:['rub(도구 따라옴)','tap','card'],someone:true,choice:true,ending:'거울·액자',src:'config levels'});
   /* the games' own depth hooks (P16): use what the game says about itself; guess from the first screen only when there is no hook */
-  const HOOKS={dishes2:'__dishDepth',chores2:'__choreDepth',bakery:'__bakeDepth',routine2:'__routineDepth',makeup2:'__mkDepth',clothes:'__clDepth',restaurant:'__rsDepth',icecream2:'__icDepth',jobs:'__jbDepth',xmashouse:'__xmDepth'};
+  const HOOKS={dishes2:'__dishDepth',chores2:'__choreDepth',bakery:'__bakeDepth',routine2:'__routineDepth',makeup2:'__mkDepth',clothes:'__clDepth',restaurant:'__rsDepth',icecream2:'__icDepth',jobs:'__jbDepth',xmashouse:'__xmDepth',maze:'__mzDepth'};
   const hooked=await p.evaluate(H=>{const out={};Object.keys(H).forEach(g=>{const f=window.ML[H[g]];if(typeof f!=='function')return;try{let v=f();if(!Array.isArray(v))v=[v];
       out[g]=v.map(d=>({level:d.level,processes:d.processes,hands:(d.hands||d.handActions||[]).filter(Boolean),someone:!!(d.someone!=null?d.someone:d.customer),choice:d.choice,ending:d.ending}))}catch(e){out[g]={err:e.message}}});return out},HOOKS);
   for(const g of others){const q=probe[g];if(!q||/^zone-|^map$|^stage$|^friends$|^stamps$|^videos$/.test(g))continue;
@@ -149,7 +154,7 @@ const TOL=.01;   // measuring tolerance on the height ratios
   rows.forEach(r=>{const pr=typeof r.proc==='string'?+r.proc.split('~').pop():r.proc,lack=[];
     if(pr<minProc)lack.push('과정');if(r.hands.length<minHands)lack.push('손동작');if(!r.someone)lack.push('손님');if(r.choice!==true)lack.push('고르기');if(!r.ending||r.ending==='?')lack.push('끝내기');
     console.log([r.g,r.proc,r.hands.join('+')||'-',r.someone?'있음':'없음',r.choice===true?'있음':r.choice===false?'없음':r.choice,r.ending||'없음',lack.length?'고칠 것('+lack.join(',')+')':'갖춤',r.src].join(' | '))});
-  console.log('  * 피자 1단계는 rules.depth.must.processes 의 "1단계는 3개부터" 에 따라 과정 4개(소스·썰기·올리기·굽기), 고르기는 3단계부터(games.pizza.levels).');
+  console.log('  * 피자 1단계는 rules.depth.must.processes 의 "1단계는 3개부터" 에 따라 과정 4개(소스·썰기·올리기·굽기), 고르기는 모든 단계에서 가게 앞 손님 고르기(P12-나), 3단계부터 토핑 고르기도(games.pizza.levels).');
 
   /* ---------- oneShell (P16): one header for every screen ---------- */
   const HEAD=(SH.header||{}).heightPx||72;

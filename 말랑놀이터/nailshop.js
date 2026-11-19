@@ -21,6 +21,7 @@ const PARTS=(STEPS.parts||{}).items||['round gem','heart gem','pearl','tiny ribb
 const NAMES_KO={heart:'하트',star:'별',flower:'꽃',dots:'물방울 점',stripes:'줄무늬',moon:'달','round gem':'동그란 보석','heart gem':'하트 보석',pearl:'진주','tiny ribbon':'작은 리본','star stud':'별 장식','flower part':'꽃 장식'};
 const NAMES_EN={dots:'polka dots',stripes:'stripes','star stud':'star stud','flower part':'flower'};
 const LOG=[];
+const LINK_MS=Math.round((+(String(((CF.flow||{}).beats||[])[3]||'').match(/(\d+(?:\.\d+)?)\s*초/)||[0,1.5])[1])*1000);   // flow.beats: '이음 장면(1.5초)'
 const praise=(ko,en)=>{const p=M.nextPraise();return[ko?ko+' '+p[0]:p[0],en?en+' '+p[1]:p[1]]};
 const sayL=l=>{if(l)say(l[0],l[1])};
 const iya=w=>w+(batchim(w)?'이야':'야');
@@ -90,7 +91,7 @@ const svgInner=s=>s.replace(/^<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'');
 
 const css=`
 #nailshop{gap:8px}
-.nsstars{display:flex;gap:2px;flex:none}.nsstars svg{width:20px;height:20px}
+.nsstars{display:flex;gap:2px;flex:none;margin-left:auto}
 #nailshop .bar .round{width:64px;height:64px;padding:10px}
 #nailshop .bar .round svg{display:block;width:100%;height:100%}
 .ns-lobby{flex:1;min-height:0;position:relative;border-radius:30px;overflow:hidden;box-shadow:0 6px 14px rgba(91,74,66,.12);background:#F1E8EE;touch-action:manipulation}
@@ -179,12 +180,12 @@ const css=`
 const stEl=document.createElement('style');stEl.textContent=css;document.head.appendChild(stEl);
 
 /* P16: the screen and its header come from the common shell (ML.Shell.screen): same back picture, size and place on every screen */
-const sec=M.Shell.screen(id,{title:'네일숍',pre:PAPER_DEFS,backId:'nsHome',backs:[{id:'nsBack',label:'가게 앞으로'}],after:'<div class="nsstars" id="nsStars"></div>',body:`<div class="ns-lobby" id="nsLobby"><div class="nl-bg">${LB_WALL}</div><div class="nl-awn">${LB_AWN}</div><div class="nl-frames" id="nsFrames"></div><div class="nl-win">${LB_WIN}</div><div class="nl-door" id="nsDoor">${LB_DOOR}</div><div class="nl-seats" id="nsSeats"></div></div>
+const SCR=M.Shell.screen(id,{title:'네일숍',pre:PAPER_DEFS,backId:'nsHome',backs:[{id:'nsBack',label:'가게 앞으로'}],after:'<div class="nsstars" id="nsStars"></div>',body:`<div class="ns-lobby" id="nsLobby"><div class="nl-bg">${LB_WALL}</div><div class="nl-awn">${LB_AWN}</div><div class="nl-frames" id="nsFrames"></div><div class="nl-win">${LB_WIN}</div><div class="nl-door" id="nsDoor">${LB_DOOR}</div><div class="nl-seats" id="nsSeats"></div></div>
 <div class="ns-room" id="nsRoom" hidden><div class="ns-stage" id="nsStage"><div class="ns-table"></div><div class="ns-cust" id="nsCust"></div>
 <div class="lp lp-back" id="nsLpBack">${H.LAMP.back}</div><div class="ns-hand" id="nsHand"></div><div class="ns-glow" id="nsGlow"></div><div class="ns-dock"></div><div class="lp lp-glow" id="nsLpGlow">${H.LAMP.glow}</div><div class="lp lp-front" id="nsLpFront">${H.LAMP.front}</div><div class="lp ns-dots" id="nsDots"></div>
 <div class="ns-zbg" id="nsZbg"></div><div class="ns-zoom" id="nsZoom" hidden></div><div class="ns-pfx" id="nsPfx"></div>
 <button class="ns-corner" id="nsNext" aria-label="다음" hidden>${ICON.next}</button><button class="ns-corner" id="nsMir" aria-label="거울" hidden>${ICON.mirror}</button><button class="ns-corner" id="nsHandBack" aria-label="손 전체" hidden>${H.TOOLS.handIcon}</button><button class="ns-corner" id="nsMode" aria-label="꾸미기 도구 바꾸기" hidden></button><button class="ns-corner ns-arrow" id="nsArL" aria-label="왼쪽 손톱" hidden>${ICON.arrowL}</button><button class="ns-corner ns-arrow" id="nsArR" aria-label="오른쪽 손톱" hidden>${ICON.arrowR}</button></div>
-<div class="ns-panel" id="nsPanel"></div></div>`}).sec;
+<div class="ns-panel" id="nsPanel"></div></div>`}),sec=SCR.sec,stripEl=SCR.strip;
 const $=s=>sec.querySelector(s);
 const lobbyEl=$('#nsLobby'),roomEl=$('#nsRoom'),seatsEl=$('#nsSeats'),framesEl=$('#nsFrames'),doorEl=$('#nsDoor'),homeBtn=$('#nsHome'),backBtn=$('#nsBack');
 const stage=$('#nsStage'),custEl=$('#nsCust'),handEl=$('#nsHand'),zoomEl=$('#nsZoom'),zbg=$('#nsZbg'),pfx=$('#nsPfx'),panel=$('#nsPanel');
@@ -208,7 +209,21 @@ let view='lobby',phase='',lobby=[],seatIdx=-1,cs=null,raf=0,lastMiss=0,misses=0,
 const secXY=(x,y)=>{const sr=sec.getBoundingClientRect();return[x-sr.left,y-sr.top]};
 const MISS=VO.onWrongPlace.map(m=>[m.ko,m.en]);
 function miss(){misses++;G.nudge();const n=performance.now();if(n-lastMiss<2400)return;lastMiss=n;const c=pick(MISS);say(c[0],c[1])}
-function stars(){$('#nsStars').innerHTML=Array.from({length:Math.min(8,DATA.served)},()=>ICON.star).join('')}
+/* P12-나: the 3-star row of the level engine (ML.Progress), as in the salon */
+function stars(n){const pr=PR();$('#nsStars').innerHTML=pr&&pr.stars?pr.stars(id,n):''}
+/* flow.stepStrip: the stages of this guest (ML.Shell.steps), the current one big */
+const nailWant=()=>cs?(levelColors()[cs.want]||COLORS[0]).hex:COLORS[0].hex;
+function stageIcon(st){if(st.deco){const m=st.modes[0];return m==='art'?H.TOOLS.brush(nailWant()):m==='stamp'?H.TOOLS.stamp(nailWant()):H.TOOLS.gem(nailWant())}
+  const k=st.key;return k==='cure'?H.LAMP.icon(false):k==='color'?H.bottle(nailWant()):k==='file'?H.TOOLS.file:k==='oil'?H.TOOLS.dropper:H.TOOLS.brush('#EAF6FF',true)}
+let stripInfo=null;
+function showStrip(){if(!cs)return;stripInfo=M.Shell.steps(stripEl,plan.map(stageIcon),pi);LOG.push('strip:'+pi+'/'+plan.length)}
+/* progress.levelUpMoment: the new step of the new level, big, with its name */
+const STEP_ART=k=>k==='file'?H.TOOLS.file:k==='oil'?H.TOOLS.dropper:k==='stamp'?H.TOOLS.stamp(PAL.rose):k==='parts'?H.TOOLS.gem(PAL.rose):k==='art'?H.TOOLS.brush(PAL.rose):H.TOOLS.brush('#EAF6FF',true);
+function newThing(n){const cur=(LEVELS[n-1]||{}).steps||[],prev=(LEVELS[n-2]||{}).steps||[],k=cur.find(x=>!prev.includes(x)&&STEPS[x]);
+  if(k)return{art:STEP_ART(k),ko:(STEPS[k].ko||'')+'!',en:(STEPS[k].en||'')+'!',what:'step:'+k};
+  const sp=((LEVELS[n-1]||{}).special||[]).find(x=>!((LEVELS[n-2]||{}).special||[]).includes(x));
+  if(sp)return{art:H.bottle(PAL.lilac),ko:'새 젤!',en:'New gel!',what:'special:'+sp};
+  return{art:H.bottle(PAL.rose),ko:'잘했어요!',en:'Well done!',what:'level'}}
 
 /* ============================== shop front (가게 앞) ============================== */
 function newCustomer(avoid){
@@ -237,8 +252,16 @@ function showLobby(o={}){
   exitRoom();view='lobby';phase='lobby';seatIdx=-1;L.onEnd(lobbyAliveOff);
   lobbyEl.hidden=false;roomEl.hidden=true;homeBtn.hidden=false;backBtn.hidden=true;
   lobby.forEach(c=>{if(c)c.inside=false});fillLobby();renderFrames(!!o.served);
-  if(o.served){phase='arrive';renderSeats(o.slot);walkOut(o.served,()=>arrive(o.slot))}else{renderSeats();greet(!o.quiet)}
-  stars();
+  /* P12-나: the carrot basket in the header (the same as at home, ML.Room); a served guest hands one carrot to it on the way out */
+  M.Shell.basket(stripEl,o.served&&M.Room?Math.max(0,M.Room.carrots()-1):undefined);stars();
+  if(o.served){phase='arrive';renderSeats(o.slot);
+    L.later(()=>{const d=doorEl.getBoundingClientRect();const stop=M.Shell.reward(stripEl,d.left+d.width/2,d.top+d.height*.55,()=>LOG.push('reward'));L.onEnd(stop)},300);
+    /* progress: one star fills slowly; a full row → the level-up moment (after the guest has gone), then an empty row */
+    const R=o.result,pr=PR();let up=false;
+    if(R&&pr&&pr.after){const stop=pr.after(id,R,{starsEl:$('#nsStars'),host:lobbyEl,momentAfter:1700,thing:n=>{const t=newThing(n);LOG.push('levelup:'+n+':'+t.what);phase='levelup';return t},
+      then:()=>{if(up){LOG.push('levelup:done');arrive(o.slot)}}});L.onEnd(stop);up=!!R.up;if(R)LOG.push('star:'+R.filled)}
+    walkOut(o.served,()=>{if(!up)arrive(o.slot)})}
+  else{renderSeats();greet(!o.quiet)}
 }
 function greet(talk){phase='lobby';if(talk!==false)say(LINE.lobby[0],LINE.lobby[1],true);
   G.start({type:'tap',at:()=>{const b=seatsEl.querySelector('.nl-slot:nth-child(2) .nl-cust')||seatsEl.querySelector('.nl-cust');if(!b)return[sec.clientWidth/2,sec.clientHeight/2];const r=b.getBoundingClientRect();return secXY(r.left+r.width/2,r.top+r.height*.55)},ko:LINE.lobby[0],en:LINE.lobby[1]})}
@@ -358,12 +381,21 @@ function showNext(){showCorner(nextBtn);nextSize()}
 /* ---------- stages ---------- */
 function runStage(){
   if(!cs)return;killTools();stopBrush();hideCorner(nextBtn);hideCorner(modeBtn);doneN=new Set();cards=null;panel.innerHTML='';gi=0;applyCrop();glow();guideLoop();
-  const st=plan[pi];if(!st){finishStage();return}
+  const st=plan[pi];showStrip();if(!st){finishStage();return}
   if(st.deco){decoStage(st.modes);return}
   stepKey=st.key;LOG.push('step:'+st.key);
   if(st.key==='cure')cureStep();else toolStep(st.key);
 }
-function advance(){if(!cs)return;actx();sfx.pop();alPlay('clap');if(stepKey==='file')cs.nails.forEach(n=>{n.dust=false});hideCorner(nextBtn);G.stop();if(zoomI!=null)unzoom(true);pi++;runStage()}
+function advance(){if(!cs)return;actx();sfx.pop();alPlay('clap');if(stepKey==='file')cs.nails.forEach(n=>{n.dust=false});hideCorner(nextBtn);G.stop();if(zoomI!=null)unzoom(true);pi++;
+  const nx=plan[pi];if(nx&&nx.key!=='cure')slideLink(runStage);else runStage()}
+function showStripDone(){if(cs){stripInfo=M.Shell.steps(stripEl,plan.map(stageIcon),plan.length)}}
+/* flow.beats 4 (네일숍): between steps the guest draws the hand back and holds it out again (쓱, 1.5 s) */
+function slideLink(then){
+  killTools();stopBrush();phase='link';LOG.push('link:slide');panel.innerHTML='';cards=null;glowEl.innerHTML='';glowKey='';handWait(false);showStrip();
+  try{handEl.animate([{translate:'0 0'},{translate:'0 24%',offset:.4},{translate:'0 -3%',offset:.8},{translate:'0 0'}],{duration:1200,easing:'ease-in-out'})}catch(_){}
+  noise(.3,{type:'lowpass',freq:800,vol:.06});L.later(()=>tone(660,.1,'sine',.06),900);
+  L.later(()=>{if(cs&&phase==='link')then()},LINK_MS);
+}
 nextBtn.addEventListener('click',()=>{if(nextBtn.hidden||view!=='room')return;advance()});
 const need3=()=>Math.min(3,nailCount());   // flow: 손톱 3개 이상 하면 다음 버튼
 
@@ -446,6 +478,8 @@ function humStart(){const a=actx();if(!a||!M.S.sound)return;const t=a.currentTim
   g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.05,t+.6);o.connect(g);o2.connect(g);g.connect(a.destination);o.start(t);o2.start(t);
   hum={stop(){const t2=a.currentTime;try{g.gain.cancelScheduledValues(t2);g.gain.setValueAtTime(g.gain.value,t2);g.gain.linearRampToValueAtTime(.0001,t2+.4);o.stop(t2+.45);o2.stop(t2+.45)}catch(e){}hum=null}}}
 function cureStep(){
+  /* flow.beats 4 (네일숍): the lamp comes down onto the table, the guest's hand goes in when the child taps it (손을 램프로 쏙) */
+  LOG.push('link:lamp');try{[lpBack,lpFront].forEach(e=>e.animate([{translate:'0 -40%',opacity:0},{translate:'0 3%',opacity:1,offset:.75},{translate:'0 0',opacity:1}],{duration:900,easing:'ease-out'}))}catch(_){}
   phase='cure';cards={type:'lamp'};glow();applyCrop();stage.classList.add('cure');handWait(false);if(al)al.setTool('lamp');dotsEl.innerHTML='<i></i>'.repeat(CURE_S);   // the guest peeks into the lamp
   panel.innerHTML=`<button class="ns-card in" aria-label="램프" style="max-width:150px">${H.LAMP.icon(false)}</button>`;
   sayL(cureN?NV.top:LINE.lamp);
@@ -642,14 +676,14 @@ function finishStage(){phase='finish';handWait(true);panel.innerHTML='';cards=nu
 function armMirror(){if(!mirBtn.hidden||mirrorT)return;const wait=Math.max(0,MIRROR_AFTER-(performance.now()-firstDeco));mirrorT=1;
   L.later(()=>{mirrorT=0;if(!cs||!['deco','finish'].includes(phase)||pi<plan.length-1&&phase!=='finish')return;if(decoN>0){showCorner(mirBtn);cornerGuide(mirBtn)}},wait)}
 mirBtn.addEventListener('click',()=>{
-  if(mirBtn.hidden||!cs||!['deco','finish'].includes(phase))return;actx();
-  phase='mirror';G.stop();hideCorner(mirBtn);hideCorner(nextBtn);hideCorner(modeBtn);unzoom(true);applyCrop();glow();cards=null;panel.innerHTML='';LOG.push('mirror');sfx.pop();render();
+  if(mirBtn.hidden||!cs||!['deco','finish'].includes(phase))return;actx();let result=null;
+  phase='mirror';showStripDone();G.stop();hideCorner(mirBtn);hideCorner(nextBtn);hideCorner(modeBtn);unzoom(true);applyCrop();glow();cards=null;panel.innerHTML='';LOG.push('mirror');sfx.pop();render();
   L.later(()=>{handEl.classList.add('raise');drawCust('happy');alPlay('clap');if(al)al.sound('wow');sayL(LINE.wow);[1318,1568,2093].forEach((f,i)=>tone(f,.25,'sine',.06,i*.12))},300);
   L.later(()=>{noise(.05,{type:'lowpass',freq:2200,vol:.12});noise(.07,{type:'lowpass',freq:1400,vol:.1,when:.07});photo()},1700);
   L.later(()=>{const rec={kind:cs.kind,nails:cs.nails.map(n=>Object.assign({},n,{col:n.col.map(p=>p&&{c:p.c,h:p.h,k:p.k,t:0}),dust:false,drop:false}))};
-    DATA.wall.unshift(rec);DATA.wall=DATA.wall.slice(0,3);DATA.served++;save();const pr=PR();if(pr&&typeof pr.clear==='function')try{pr.clear(id)}catch(_){}
-    stars();sayL(LINE.thanks);tone(1318,.4,'sine',.12);tone(1046,.6,'sine',.12,.3);handEl.classList.remove('raise')},3100);
-  L.later(()=>{const i=seatIdx;showLobby({served:{kind:cs.kind},slot:i})},4700);
+    DATA.wall.unshift(rec);DATA.wall=DATA.wall.slice(0,3);DATA.served++;save();const pr=PR();if(pr&&typeof pr.clear==='function')try{result=pr.clear(id)}catch(_){}
+    sayL(LINE.thanks);tone(1318,.4,'sine',.12);tone(1046,.6,'sine',.12,.3);handEl.classList.remove('raise')},3100);
+  L.later(()=>{const i=seatIdx;showLobby({served:{kind:cs.kind},slot:i,result})},4700);
 });
 function photo(){
   const r=handEl.getBoundingClientRect(),sr=stage.getBoundingClientRect(),w=Math.min(r.width*.7,sr.height*.5),h=w*112/100;
@@ -678,7 +712,12 @@ M.__ns=()=>({view,phase,level:levelNo(),plan:plan.map(s=>s.deco?s.modes.join('+'
   zoomRect:zoomI!=null?(r=>({x:r.left,y:r.top,w:r.width,h:r.height}))(zoomEl.getBoundingClientRect()):null,zvb:zvb.slice(),
   partPts:cs?cs.nails.flatMap((n,i)=>n.parts.map((p,j)=>{const [x,y]=nToClient(i,p.x,p.y);return{i,j,x,y}})):[],
   lamp:stage.classList.contains('lampon'),dots:dotsEl.querySelectorAll('i.on').length,served:DATA.served,wall:DATA.wall.length,frames:framesEl.querySelectorAll('.nl-frame.full').length,
-  misses,guide:G.state(),log:LOG.slice(),alive:al?al.state():null,lobbyAlive:lobbyAl.map(h=>h.state())});
+  misses,guide:G.state(),log:LOG.slice(),alive:al?al.state():null,lobbyAlive:lobbyAl.map(h=>h.state()),
+  strip:{n:+(stripEl.dataset.n||0),at:stripEl.dataset.at===''?-1:+stripEl.dataset.at,shown:stripEl.querySelectorAll(':scope > span[data-i]').length,on:(stripEl.querySelector(':scope > span.on')||{dataset:{}}).dataset.i,
+    basket:!!stripEl.querySelector('.sh-basket'),basketN:+((stripEl.querySelector('.rm-basket-art')||{dataset:{}}).dataset.n||0)},
+  starsOn:sec.querySelectorAll('#nsStars .mlp-star.on').length,starsN:sec.querySelectorAll('#nsStars .mlp-star').length,moment:!!lobbyEl.querySelector('.mlp-moment'),
+  progress:PR()?PR().get(id):null,carrots:M.Room?M.Room.carrots():null,links:LOG.filter(x=>/^link:/.test(x)).map(x=>x.slice(5))});
+M.__nsDepth=()=>LEVELS.map((l,i)=>{const p=makePlan(l.steps);return{level:i+1,processes:p.length+1,steps:p.map(s=>s.deco?s.modes.join('+'):s.key).concat(['mirror']),hands:['rub','tap','card'],someone:!!AL,choice:true,ending:'거울·액자·당근'}});
 games[id]={enter:()=>{requestAnimationFrame(()=>{if(cur()===id)showLobby()})},exit:()=>{exitRoom();view='lobby';phase='';cs=null;lobby.forEach(c=>{if(c)c.inside=false})},resize:()=>{size();layoutLobby();if(view==='room')render()}};
 window.addEventListener('resize',()=>{if(cur()===id){size();layoutLobby()}});
 /* home tile icon */

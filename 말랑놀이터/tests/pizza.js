@@ -47,7 +47,10 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
   }
 
   /* ---------- level 1 ---------- */
-  await p.evaluate(()=>window.ML.go('pizza'));await p.waitForFunction(()=>window.ML.__pz().phase==='sauce',null,{timeout:8000});await W(400);
+  await p.evaluate(()=>window.ML.go('pizza'));
+  /* P12-나: the shop front first — tap one of the waiting customers (lobby aim) */
+  const pickLobby=async()=>{await p.waitForFunction(()=>window.ML.__pz().phase==='lobby',null,{timeout:8000});await W(900);const a=(await st()).aim;await p.mouse.click(a[0],a[1]);await p.waitForFunction(()=>window.ML.__pz().phase!=='lobby',null,{timeout:4000})};
+  await pickLobby();await p.waitForFunction(()=>window.ML.__pz().phase==='sauce',null,{timeout:8000});await W(400);
   let s=await st();
   ok('1단계 과정: 소스 → 토마토 썰기 → 올리기 → 굽기 → 건네주기',s.level===1&&s.plan.join()==='sauce,prep:tomato,top:tomato,bake,serve',s.plan.join(' → '));
   ok('손님이 살아 있음 (ML.Alive)',!!s.alive&&s.alive.kind===s.cust,'손님 '+s.cust+', 깜빡임 '+(s.alive&&s.alive.blinks));
@@ -79,7 +82,7 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
   await W(3000);await shot('L1_nextCustomer');
 
   /* ---------- level 3: choose corn → rub the cob ---------- */
-  await p.evaluate(()=>window.ML.__pzLevel(3));await W(500);
+  await p.evaluate(()=>window.ML.__pzLevel(3));await W(500);await pickLobby();
   s=await st();ok('3단계 과정에 반죽·치즈·고르기·자르기',['dough','knead','sauce','cheese','choose','bake','slice'].every(k=>s.plan.some(x=>x.startsWith(k))),s.plan.join(' → '));
   const cornLog={};
   const r3=await playOne({tag:'L3_',pick:x=>{const i=x.cards.indexOf('corn');return i>=0?i:0},onStep:async x=>{

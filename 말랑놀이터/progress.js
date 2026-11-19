@@ -84,6 +84,24 @@ function moment(host,o={},done){
   return()=>{clearTimeout(t1);clearTimeout(t2);el.remove()};
 }
 
+
+/* P12-나: what every shop does after a round — the star row (el, showing the stars before this round) fills one star slowly;
+   a full row that opens a new level → the level-up moment on host (thing(level) → {art, ko, en}), then an empty row.
+   then() comes right away for an ordinary round, after the moment for a level-up. Returns a stop function (leaving the screen). */
+function after(id,R,o={}){
+  const el=o.starsEl,T=[];let stop=null,over=false;const fin=()=>{if(over)return;over=true;o.then&&o.then()};
+  if(!R){fin();return()=>{}}
+  if(el)el.innerHTML=stars(id,Math.max(0,R.filled-1));
+  T.push(setTimeout(()=>fillStars(el,R.filled),o.fillAfter==null?350:o.fillAfter));
+  const empty=()=>{if(el)el.innerHTML=stars(id,0)};
+  if(R.up){
+    T.push(setTimeout(()=>{const t=o.thing?o.thing(R.level):null;
+      if(!t||!o.host){empty();fin();return}
+      stop=moment(o.host,t,()=>{stop=null;empty();fin()})},o.momentAfter==null?1900:o.momentAfter));
+  }else{if(R.full)T.push(setTimeout(empty,2000));fin()}
+  return()=>{T.forEach(clearTimeout);if(stop){stop();stop=null}};
+}
+
 /* ---------- parent settings: one '놀이별 단계' block (progress.parentCanSetLevel) ---------- */
 let block=null;
 function ensureBlock(){
@@ -108,5 +126,5 @@ function sync(){
   block.querySelectorAll('.mlp-cl[data-game]').forEach(s=>{s.textContent=`(별 ${get(s.dataset.game).clears}/${NEED})`});
 }
 
-M.Progress={get,info,level,clear,struggle,set,register,stars,fillStars,moment,NEED,STARS,get games(){return Object.keys(REG)}};
+M.Progress={get,info,level,clear,struggle,set,register,stars,fillStars,moment,after,NEED,STARS,get games(){return Object.keys(REG)}};
 })();

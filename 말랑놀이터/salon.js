@@ -21,7 +21,7 @@ const STYLES=(HC.styles||[]).map(ko=>A.HAIR_STYLES.find(s=>s.ko===ko)).filter(Bo
 const isHair=k=>HAIRK.some(h=>h.id===k);
 const TAP_MS=450;        // motion.tapAlso has no number: one tap plays one stroke of about half a second
 const BEAT={ready:150,after:400};   // motion.threeBeats: 준비 0.15초 → 동작 → 여운 0.4초
-const LOG=[];
+const LOG=[],LINKS=[];   // LINKS: the link scenes and how long each took (tests)
 const praise=(ko,en)=>{const p=M.nextPraise();return[ko?ko+' '+p[0]:p[0],en?en+' '+p[1]:p[1]]};
 const word=k=>{const w=VO.actionWords[k];if(w)say(w.ko,w.en)};
 const KINDS=VO.animalNames;   // [{id,ko,en,name}]
@@ -30,10 +30,15 @@ const KINDS=VO.animalNames;   // [{id,ko,en,name}]
 const PROG=M.Progress||null,LEVELS=(PS.levels||[]).filter(l=>l&&l.level);
 const PLAY_MAX=Math.max(1,(i=>i<0?LEVELS.length:i)(LEVELS.findIndex(l=>!(l.customers||[]).length||!(l.customers||[]).every(k=>A.KINDS[k]))));
 const BRUSH_FROM=(TOOLS.brush||{}).from||3;
+const LEAVES_N=Math.max(1,+(String(((CF.flow||{}).extraSteps||{}).pickLeaves||'').match(/잎\s*(\d+)/)||[0,5])[1]);   // '잎 5개'
+const PATS_N=Math.max(1,+(String(((CF.flow||{}).extraSteps||{}).towel||'').match(/콕\s*(\d+)/)||[0,3])[1]);        // '콕 3번'
+const LINK_MS=Math.round((+(String(((CF.flow||{}).beats||[])[3]||'').match(/(\d+(?:\.\d+)?)\s*초/)||[0,1.5])[1])*1000);   // '이음 장면(1.5초)'
 const lvNo=()=>{const n=PROG?PROG.get(id).level:1;return Math.max(1,Math.min(PLAY_MAX,n|0||1))};
 const LV=()=>LEVELS[lvNo()-1]||{customers:KINDS.map(k=>k.id),steps:['foam','rinse','dry'],choose:['head','neck','face'],optionsPerChoice:3,colors:99};
 /* a washing step is ready at this level: in the level's steps, or the brush from tools.brush.from */
-const stepOk=(s,n=lvNo())=>s==='brush'?n>=BRUSH_FROM:((LEVELS[n-1]||LV()).steps||[]).includes(s);
+/* P12-나 flow.extraSteps: pick (나뭇잎 떼기) comes with its customer, towel (수건 톡톡) comes with the dryer, perfume (향수) after dressing at any level */
+const EXTRA=['pick','towel','perfume'];
+const stepOk=(s,n=lvNo())=>s==='brush'?n>=BRUSH_FROM:s==='pick'||s==='perfume'?true:s==='towel'?stepOk('dry',n):((LEVELS[n-1]||LV()).steps||[]).includes(s);
 const stepsOf=(need,n)=>((need&&need.steps)||[]).filter(s=>stepOk(s,n));
 /* needs that can come at this level (needs[].from), with at least one step this level has (party has none and needs none) */
 const needPool=(n=lvNo())=>NEEDS.filter(x=>(x.from||1)<=n&&(!(x.steps||[]).length||stepsOf(x,n).length));
@@ -57,6 +62,12 @@ const LINE={
   sneeze:['에취!','Achoo!'],
   shake:['부르르!','Shake shake!'],
   mirror:['다 꾸몄으면 거울을 콕!','All done? Tap the mirror!'],
+  /* P12-나 extra steps (config has what they are, not these sentences) */
+  pick:['나뭇잎을 콕콕 떼어 줘!','Pick off the leaves! Tap tap!'],
+  picked:['나뭇잎이 다 떨어졌어!','All the leaves are off!'],
+  pat:['수건으로 톡톡! 콕 눌러 봐!','Pat pat with the towel! Tap!'],
+  perfume:['향수를 칙! 콕 눌러 봐!','A spritz of perfume! Tap!'],
+  smell:['음~ 좋은 냄새!','Mmm, smells nice!'],
   /* P18 long-haired customers (config has the flow, not these sentences) */
   hair:n=>[`안녕! 나는 ${iya(n)}. 머리를 감고 예쁘게 해 줄래?`,`Hi! I'm ${n}. Can you wash my hair and make it pretty?`],
   towel:['수건으로 꾹꾹 닦아 줘!','Pat pat with the towel!'],
@@ -158,6 +169,19 @@ const NEED_ICON={
 };
 const bubble=need=>`<svg viewBox="0 0 60 56"><path d="M10 4H50Q58 4 58 12V34Q58 42 50 42H26L15 52L17 42H10Q2 42 2 34V12Q2 4 10 4Z" fill="#FFFDF9" stroke="${OL}" stroke-width="2.5" stroke-linejoin="round"/>${NEED_ICON[need]||''}</svg>`;
 const LEAF=(x,y,r,s)=>`<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${r}) scale(${s.toFixed(2)})"><path d="M0 -13Q12 -3 0 13Q-12 -3 0 -13Z" fill="#9CC48F" stroke="${OL}" stroke-width="2.2" stroke-linejoin="round"/><path d="M0 -9V10" stroke="#6E9E66" stroke-width="1.6"/></g>`;
+/* P12-나 pictures: the step strip icons, the perfume bottle, the towel that wraps the customer */
+const PERFUME=`<svg viewBox="0 0 100 100"><path d="M40 20H60V32H40Z" fill="#E3C79E" ${S}/><path d="M30 8H54Q60 8 60 14V20H40V14Q34 14 30 18Z" fill="${PAL.lilac}" ${S}/><circle cx="24" cy="18" r="9" fill="${PAL.rose}" ${S}/>
+  <path d="M26 40Q26 32 34 32H66Q74 32 74 40V82Q74 90 66 90H34Q26 90 26 82Z" fill="#EADFF7" ${S}/><path d="M34 46Q34 40 40 40" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" opacity=".85"/>
+  <path d="M50 76C34 66 36 52 44 52C47 52 49 54 50 57C51 54 53 52 56 52C64 52 66 66 50 76Z" fill="${PAL.rose}" ${S}/></svg>`;
+const STEP_ICON={
+  foam:()=>ICON.sponge,rinse:()=>ICON.shower,towel:()=>ICON.towel,dry:()=>ICON.dryer,brush:()=>ICON.brush,perfume:()=>PERFUME,
+  pick:()=>`<svg viewBox="-24 -24 48 48">${LEAF(-4,2,-30,1.25)}${LEAF(9,-6,40,.8)}</svg>`,
+  dress:()=>`<svg viewBox="-58 -56 116 112">${WEAR.head[0].d(PAL.rose,'#F6D3DB')}</svg>`,
+  style:()=>`<svg viewBox="0 0 100 100"><path d="M64 34Q92 28 88 60Q86 76 74 84Q78 64 64 54Z" fill="#E9C27A" ${S}/><circle cx="44" cy="52" r="28" fill="#E9C27A" ${S}/><path d="M24 50Q30 30 52 28" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" opacity=".6"/><circle cx="66" cy="36" r="8" fill="${PAL.rose}" ${S}/></svg>`
+};
+const WRAP=`<svg viewBox="0 0 200 140" preserveAspectRatio="none" style="overflow:visible"><path d="M10 34Q10 14 40 12Q100 4 160 12Q190 14 190 34L196 118Q196 134 176 134H24Q4 134 4 118Z" fill="${PAL.sky}" ${S}/>
+  <path d="M12 40Q100 26 188 40" stroke="#EAF4FB" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M18 106H182" stroke="#fff" stroke-width="5" stroke-dasharray="10 9" stroke-linecap="round" opacity=".8"/>
+  <path d="M60 50Q66 90 56 128M140 50Q134 90 144 128" stroke="${OL}" stroke-width="2.5" fill="none" opacity=".25" stroke-linecap="round"/></svg>`;
 const DROP=(x,y,s)=>`<path transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${s.toFixed(2)})" d="M0 -9Q8 3 0 7Q-8 3 0 -9Z" fill="#9FD0F0" stroke="#6FB2DC" stroke-width="1.5"/>`;
 
 /* ---------- backgrounds ---------- */
@@ -216,6 +240,8 @@ const css=`
 .ps-pet .pop .rb-tail{animation:psrib .9s ease-out;transform-box:fill-box;transform-origin:50% 0}
 @keyframes psrib{0%{transform:rotate(0)}20%{transform:rotate(16deg)}45%{transform:rotate(-11deg)}70%{transform:rotate(5deg)}100%{transform:rotate(0)}}
 .ps-card.style{background:color-mix(in srgb,var(--paper) 86%,var(--peach))}
+.ps-wrap{position:absolute;z-index:5;pointer-events:none;transform-origin:50% 0;opacity:0}
+.ps-wrap svg{width:100%;height:100%;display:block}
 .ps-tub{position:absolute;left:50%;bottom:3%;transform:translateX(-50%) translateY(130%);z-index:4;pointer-events:none;transition:transform .7s cubic-bezier(.3,1.2,.5,1)}
 .ps-tub.on{transform:translateX(-50%)}
 .ps-tub svg{width:100%;height:auto;display:block}
@@ -292,12 +318,12 @@ const css=`
 const stEl=document.createElement('style');stEl.textContent=css;document.head.appendChild(stEl);
 
 /* P16: the screen and its header come from the common shell (ML.Shell.screen): same back picture, size and place on every screen */
-const sec=M.Shell.screen(id,{title:'동물 미용실',pre:PAPER_DEFS,backId:'psHome',backs:[{id:'psBack',label:'가게 앞으로'}],after:'<div class="psstars" id="psStars"></div>',body:`<div class="ps-lobby" id="psLobby"><div class="lb-bg">${LB_WALL}</div><div class="lb-awn">${LB_AWN}</div><div class="lb-frames" id="psFrames"></div><div class="lb-win">${LB_WIN}</div><div class="lb-door" id="psDoor">${LB_DOOR}</div><div class="lb-seats" id="psSeats"></div></div>
+const SCR=M.Shell.screen(id,{title:'동물 미용실',pre:PAPER_DEFS,backId:'psHome',backs:[{id:'psBack',label:'가게 앞으로'}],after:'<div class="psstars" id="psStars"></div>',body:`<div class="ps-lobby" id="psLobby"><div class="lb-bg">${LB_WALL}</div><div class="lb-awn">${LB_AWN}</div><div class="lb-frames" id="psFrames"></div><div class="lb-win">${LB_WIN}</div><div class="lb-door" id="psDoor">${LB_DOOR}</div><div class="lb-seats" id="psSeats"></div></div>
 <div class="ps-salon" id="psSalon" hidden><div class="ps-stage" id="psStage">${BG}<div class="ps-pet" id="psPet"><div class="ps-bt"><div class="psbase"></div><svg class="over" viewBox="0 0 200 230">${A.animalOverlay()}</svg></div></div>
-<div class="ps-tub" id="psTub">${TUB}</div><div class="ps-pfx" id="psPfx"></div><button class="ps-mirbtn" id="psMirBtn" aria-label="거울" hidden>${ICON.mirror}</button></div>
-<div class="ps-panel" id="psPanel"></div></div>`}).sec;
+<div class="ps-tub" id="psTub">${TUB}</div><div class="ps-wrap" id="psWrap">${WRAP}</div><div class="ps-pfx" id="psPfx"></div><button class="ps-mirbtn" id="psMirBtn" aria-label="거울" hidden>${ICON.mirror}</button></div>
+<div class="ps-panel" id="psPanel"></div></div>`}),sec=SCR.sec,stripEl=SCR.strip;
 const $=s=>sec.querySelector(s);
-const stage=$('#psStage'),petEl=$('#psPet'),baseEl=petEl.querySelector('.psbase'),overEl=petEl.querySelector('.over'),ovBody=overEl.querySelector('.ov-body'),ovHead=overEl.querySelector('.ov-head'),tub=$('#psTub'),panel=$('#psPanel'),pfx=$('#psPfx'),mirBtn=$('#psMirBtn');
+const stage=$('#psStage'),petEl=$('#psPet'),baseEl=petEl.querySelector('.psbase'),overEl=petEl.querySelector('.over'),ovBody=overEl.querySelector('.ov-body'),ovHead=overEl.querySelector('.ov-head'),tub=$('#psTub'),panel=$('#psPanel'),pfx=$('#psPfx'),mirBtn=$('#psMirBtn'),wrapEl=$('#psWrap');
 const lobbyEl=$('#psLobby'),salonEl=$('#psSalon'),seatsEl=$('#psSeats'),framesEl=$('#psFrames'),doorEl=$('#psDoor'),homeBtn=$('#psHome'),backBtn=$('#psBack');
 const G=M.Guide.make(sec,{say});
 const DATA=Object.assign({served:0,wall:[]},store.get('mallang_salon',{}));if(!Array.isArray(DATA.wall))DATA.wall=[];
@@ -434,10 +460,14 @@ function showLobby(o={}){
   view='lobby';phase='lobby';st=null;seatIdx=-1;cards=null;dd=null;cd=null;L.onEnd(lobbyAliveOff);
   lobbyEl.hidden=false;salonEl.hidden=true;homeBtn.hidden=false;backBtn.hidden=true;
   lobby=lobby.map((c,i)=>c&&(validCust(c)||(o.served&&i===o.slot))?c:null);lobby.forEach(c=>{if(c)c.inside=false});fillLobby();
-  renderFrames(!!o.served);
+  renderFrames(!!o.served);wrapOff();
   const R=o.result;stars(R?R.filled-1:undefined);
+  /* P12-나: the header shows the carrot basket in front of the shop (the same one as at home, ML.Room) */
+  M.Shell.basket(stripEl,o.served&&M.Room?Math.max(0,M.Room.carrots()-1):undefined);
   if(o.served){
     phase='arrive';renderSeats(o.slot);
+    /* flow.reward: the customer hands over one carrot on the way out → it flies up into the basket (saved by ML.Room) */
+    L.later(()=>{const d=doorEl.getBoundingClientRect();const stop=M.Shell.reward(stripEl,d.left+d.width/2,d.top+d.height*.55,()=>LOG.push('reward'));L.onEnd(stop)},300);
     /* progress: after the mirror scene one star fills slowly; a full row → the level-up moment, then an empty row for the new level */
     if(R)L.later(()=>{if(PROG)PROG.fillStars($('#psStars'),R.filled);LOG.push('star:'+R.filled)},350);
     walkOut(o.served,()=>{
@@ -498,10 +528,16 @@ function freshState(c){
   const R=A.rng((Date.now()&0xffff)+c.kind.length*97);
   const cells=CELLS.map(()=>({mud:0,mr:10,leaf:0,lr:0,foam:0,rinse:0,towel:0,dry:0,tangle:0,brush:0,shaken:0}));
   if(c.need==='muddy'){cells.forEach(x=>{x.mud=R()<.7?1:0;x.mr=9+R()*6});let k=0;while(cells.filter(x=>x.mud).length<7&&k<99)cells[(R()*cells.length)|0].mud=1,k++}
-  if(c.need==='leaves'){cells.forEach(x=>{x.leaf=R()<.4?1:0;x.lr=Math.round(R()*360)});let k=0;while(cells.filter(x=>x.leaf).length<6&&k<99)cells[(R()*cells.length)|0].leaf=1,k++}
+  if(c.need==='leaves'){cells.forEach(x=>{x.lr=Math.round(R()*360)});const want=LEAVES_N,on=[];let k=0;
+    /* flow.extraSteps.pickLeaves: 잎 5개, spread over the body so each one is easy to tap */
+    while(on.length<want&&k<400){const i=(R()*cells.length)|0,c0=CELLS[i];k++;if(on.includes(i))continue;if(k<300&&on.some(j=>Math.hypot(CELLS[j].dx-c0.dx,CELLS[j].dy-c0.dy)<(k<200?44:30)))continue;on.push(i)}
+    on.forEach(i=>{cells[i].leaf=1})}
   if(c.need==='tangled'){cells.forEach((x,i)=>{x.tangle=!CELLS[i].face&&R()<.55?1:0});let k=0;while(cells.filter(x=>x.tangle).length<8&&k<99){const i=(R()*cells.length)|0;if(!CELLS[i].face)cells[i].tangle=1;k++}}
-  const hairy=c.need==='hair',need=NEEDS.find(n=>n.id===c.need)||{steps:[]},steps=hairy?HAIR_FLOW.filter(s=>s!=='style'||STYLES.length):stepsOf(need);
-  return{kind:c.kind,need:c.need,name:c.name,steps,plan:steps.slice(),hairy,style:null,knots:0,brushed:false,styleRot:0,level:lvNo(),cells,look:'',states:[],wear:{},used:{},drag:null,bloom:null,wiggle:null,hintOff:false,doneRatio:{},wrong:0,idle:0,lastTouch:0};
+  const hairy=c.need==='hair',need=NEEDS.find(n=>n.id===c.need)||{steps:[]},all=hairy?HAIR_FLOW.filter(s=>s!=='style'||STYLES.length):stepsOf(need);
+  /* P12-나: the washing steps (plan) and the step strip: + dressing when it fits (flow.stepStrip 2~4), + perfume (needs[].steps) */
+  const steps=all.filter(s=>s!=='perfume'),perfume=all.includes('perfume'),fin=perfume?['dress','perfume']:['dress'];
+  const strip=steps.length+fin.length<=M.Shell.STRIP_MAX?steps.concat(fin):steps.concat(perfume?['perfume']:[]);
+  return{kind:c.kind,need:c.need,name:c.name,steps,plan:steps.slice(),strip,si:0,perfume,perfumed:false,pats:0,hairy,style:null,knots:0,brushed:false,styleRot:0,level:lvNo(),cells,look:'',states:[],wear:{},used:{},drag:null,bloom:null,wiggle:null,hintOff:false,doneRatio:{},wrong:0,idle:0,lastTouch:0};
 }
 function enterSalon(i){
   L.begin();killTool();G.stop();clearFloats();
@@ -515,16 +551,119 @@ function enterSalon(i){
   alMood(c.need==='party'||c.need==='hair'?'happy':'sad');L.later(()=>{alPlay('hop',{n:2,wave:true});if(al)al.sound('hehe')},900);
   const need=NEEDS.find(n=>n.id===c.need)||{},hello=c.need==='party'&&need.say?need.say:(LINE[c.need]||LINE.muddy)(c.name);   // LINE.hair for the long-haired customers
   L.later(()=>say(hello[0],hello[1],true),500);
-  if(!st.steps.length){L.later(()=>{drawPet('idle');dress()},2600);return}
-  L.later(()=>{tub.classList.add('on');noise(.4,{type:'lowpass',freq:900,vol:.2})},2400);
-  L.later(()=>nextStep(),3200);
+  showStrip(st.strip[0]);
+  if(!st.steps.length){L.later(()=>{drawPet('idle');toDress()},2600);return}
+  L.later(()=>nextStep(),2600);
 }
+/* ============================== P12-나: the step strip and the link scenes between steps ============================== */
+/* flow.stepStrip: the customer's steps in the header (ML.Shell.steps), the current one big; key not in the strip = everything before is done */
+function showStrip(key){
+  if(!st)return;let i=key==null?st.strip.length:st.strip.indexOf(key,st.si);
+  if(i<0)i=key==='dress'&&st.strip.includes('perfume')?st.strip.indexOf('perfume'):st.strip.length;
+  st.si=i;st.stripShown=M.Shell.steps(stripEl,st.strip.map(k=>(STEP_ICON[k]||STEP_ICON.dress)()),i);LOG.push('strip:'+i+'/'+st.strip.length);
+}
+const tubSteps=['foam','rinse'];
 function nextStep(){
-  const k=st.steps.shift();
-  if(!k){tub.classList.remove('on');dress();return}
-  if(k==='style'){tub.classList.remove('on');styleStep();return}
+  const k=st.steps.shift(),tubOn=tub.classList.contains('on');
+  if(!k){if(tubOn)link('wrap',toDress);else toDress();return}
+  const inTub=tubSteps.includes(k);
+  if(inTub&&!tubOn){link('plop',()=>runStep(k));return}
+  if(!inTub&&tubOn){link(k==='towel'?'out':'wrap',()=>runStep(k));return}
+  runStep(k);
+}
+function runStep(k){
+  showStrip(k);
+  if(k==='style'){styleStep();return}
+  if(k==='pick'){pickStep();return}
+  if(k==='towel'&&!st.hairy){patStep();return}
   toolStep(k);
 }
+function toDress(){link('spin',()=>{drawPet('idle');dress()})}
+/* the towel that wraps the customer's body (link scene 'wrap' and the towel step) */
+function placeWrap(){const r=petEl.getBoundingClientRect(),s=stage.getBoundingClientRect();
+  Object.assign(wrapEl.style,{left:(r.left-s.left-r.width*.07)+'px',width:(r.width*1.14)+'px',top:(r.top-s.top+r.height*.43)+'px',height:(r.height*.54)+'px'})}
+const wrapOff=()=>wrapEl.getAnimations().forEach(a=>a.cancel());
+function wrapIn(){wrapOff();placeWrap();wrapEl.animate([{opacity:0,transform:'scaleY(.15)'},{opacity:1,transform:'scaleY(1.04)',offset:.7},{opacity:1,transform:'scaleY(1)'}],{duration:420,easing:'ease-out',fill:'forwards'});noise(.25,{type:'lowpass',freq:700,vol:.08})}
+function wrapOut(){wrapOff();wrapEl.style.opacity='1';const a=wrapEl.animate([{opacity:1,transform:'translateY(0) scaleY(1)'},{opacity:0,transform:'translateY(36%) scaleY(.85)'}],{duration:450,easing:'ease-in',fill:'forwards'});a.onfinish=()=>{wrapEl.style.opacity='';wrapOff()}}
+/* flow.beats 4: a short link scene (1.5 s) between steps — into the tub (plop), wrapped in a towel (wrap), out of the tub (out), the chair turns (spin) */
+function link(kind,then){
+  phase='link';killTool();G.stop();panel.innerHTML='';if(al){al.setTool(null);al.wind(null)}LOG.push('link:'+kind);const rec={k:kind,t:performance.now(),ms:0};LINKS.push(rec);if(LINKS.length>20)LINKS.shift();
+  const ms=kind==='out'?Math.round(LINK_MS*.5):LINK_MS,r=petEl.getBoundingClientRect(),s=stage.getBoundingClientRect(),cx=r.left-s.left+r.width/2;
+  if(kind==='plop'){
+    tub.classList.add('on');noise(.4,{type:'lowpass',freq:900,vol:.2});
+    L.later(()=>{if(btEl.animate)btEl.animate([{transform:'translateY(0)'},{transform:'translateY(-14%) scale(.97,1.04)',offset:.4},{transform:'translateY(2%) scale(1.06,.93)',offset:.78},{transform:'translateY(0) scale(1)'}],{duration:700,easing:'ease-in-out'})},300);
+    L.later(()=>{const tr=tub.getBoundingClientRect(),y=tr.top-s.top+tr.height*.18;tone(300,.12,'sine',.1);tone(220,.18,'sine',.08,.08);noise(.3,{type:'bandpass',freq:900,q:.7,vol:.1});
+      for(let k=0;k<6;k++){const a=(k/5-.5)*2.2;spawn(DROP(0,0,1.1),cx+Math.sin(a)*r.width*.35,y,'fly',{dx:Math.sin(a)*60,dy:-50-Math.cos(a)*30,rot:a*50,ms:750})}
+      if(al)al.sound('hehe')},820);
+  }else if(kind==='wrap'){
+    tub.classList.remove('on');L.later(wrapIn,150);L.later(()=>{beat('tap');if(al)al.kick(.7);tone(523,.1,'sine',.07);tone(659,.12,'sine',.07,.12)},650);L.later(wrapOut,1000);
+  }else if(kind==='out'){tub.classList.remove('on');tone(440,.1,'sine',.06)}
+  else if(kind==='spin'){
+    tub.classList.remove('on');petEl.classList.add('up');stage.classList.add('up');
+    L.later(()=>{if(btEl.animate)btEl.animate([{transform:'scaleX(1)'},{transform:'scaleX(-1) translateY(-3%)',offset:.5},{transform:'scaleX(1)'}],{duration:1000,easing:'ease-in-out'});
+      [523,659,784].forEach((f,k)=>tone(f,.14,'sine',.06,k*.16))},380);
+    L.later(()=>{const r2=petEl.getBoundingClientRect(),c2=r2.left-s.left+r2.width/2,y2=r2.top-s.top+r2.height*.3;[[-.55,0],[.55,-.1],[0,-.5]].forEach(([dx,dy],k)=>L.later(()=>spawn(A.twinkle(0,0,9,'#F0D58A'),c2+dx*r2.width,y2+dy*r2.height,'pop',{ms:600}),k*90))},1100);
+  }
+  L.later(()=>{if(st&&phase==='link'){rec.ms=Math.round(performance.now()-rec.t);then()}},ms);
+}
+
+/* ============================== P12-나 flow.extraSteps ============================== */
+const stToSec=(x,y)=>{const sr=stage.getBoundingClientRect();return secXY(x+sr.left,y+sr.top)};
+const leafLeft=()=>st?st.cells.map((c,i)=>c.leaf?i:-1).filter(i=>i>=0):[];
+/* pickLeaves: 'Tap tap' — each tap on the customer takes off the nearest leaf, it falls down (잎 5개) */
+function pickStep(){
+  phase='pick';H.dress=false;meter(STEP_ICON.pick());prog(0);alMood('sad');st.lastTouch=performance.now();
+  let introStop=P.toolIntro?P.toolIntro(stage,panel.querySelector('.mi'),STEP_ICON.pick(),{ko:'나뭇잎!',en:'Leaves!'}):null;L.onEnd(()=>{if(introStop)introStop()});
+  say(LINE.pick[0],LINE.pick[1],true);
+  G.start({type:'tap',at:()=>{const i=leafLeft()[0];if(i==null)return petXY(.5,.5);return stToSec(...cellXY(i))},ko:LINE.pick[0],en:LINE.pick[1]});
+}
+function pickLeaf(e){
+  G.touch();if(!inPet(e)){miss();return}const left=leafLeft();if(!left.length)return;
+  const sr=stage.getBoundingClientRect(),x=e.clientX-sr.left,y=e.clientY-sr.top;let best=left[0],bd=1e9;
+  left.forEach(i=>{const [cx,cy]=cellXY(i),d=Math.hypot(cx-x,cy-y);if(d<bd){bd=d;best=i}});
+  const c=st.cells[best],[lx,ly]=cellXY(best);c.leaf=0;LOG.push('pick:'+best);
+  spawn(LEAF(0,0,c.lr,1.1),lx,ly,'fly',{dx:(lx<sr.width/2?-1:1)*(30+rand(40)),dy:sr.height-ly,rot:200,ms:1300});
+  tone(880+rand(300),.07,'sine',.08);beat('tap');if(al)al.kick(.5);drawOver();
+  const n=leafLeft().length;prog(1-n/Math.max(1,LEAVES_N));
+  if(n)return;
+  phase='picked';G.stop();prog(1);SFX.sparkle();drawPet('happy');alMood('happy');alPlay('clap');const t=praise(LINE.picked[0],LINE.picked[1]);say(t[0],t[1]);
+  L.later(()=>{if(st){drawPet('idle');nextStep()}},1800);
+}
+/* towel: 'Tap 3 times' — the towel wraps the customer, pat pat, then unwraps */
+function patStep(){
+  phase='towel';H.dress=false;meter(ICON.towel);prog(0);st.pats=0;alMood('shiver');st.lastTouch=performance.now();
+  const nm=TOOL_NAME.towel;let introStop=P.toolIntro?P.toolIntro(stage,panel.querySelector('.mi'),ICON.towel,{ko:nm[0],en:nm[1]}):null;L.onEnd(()=>{if(introStop)introStop()});
+  say(LINE.pat[0],LINE.pat[1],true);
+  G.start({type:'tap',at:()=>petXY(.5,.62),ko:LINE.pat[0],en:LINE.pat[1]});
+}
+function pat(e){
+  G.touch();if(!inPet(e)){miss();return}if(st.pats>=PATS_N)return;st.pats++;LOG.push('pat:'+st.pats);
+  if(st.pats===1)wrapIn();else{placeWrap();wrapEl.animate([{transform:'scale(1,1)'},{transform:'scale(1.04,.9)',offset:.35},{transform:'scale(1,1)'}],{duration:380,easing:'ease-out',composite:'add'})}
+  beat('tap');if(al)al.kick(.6);tone(520+st.pats*90,.08,'sine',.08);
+  const r=petEl.getBoundingClientRect(),s=stage.getBoundingClientRect();for(let k=0;k<2;k++)spawn(DROP(0,0,.9),r.left-s.left+r.width*(.3+.4*Math.random()),r.top-s.top+r.height*.5,'fly',{dx:(Math.random()-.5)*80,dy:-40,rot:40,ms:600});
+  st.cells.forEach(c=>{if(c.rinse>0)c.towel=Math.min(1,st.pats/PATS_N)});drawOver();prog(st.pats/PATS_N);
+  if(st.pats<PATS_N)return;
+  phase='patted';G.stop();L.later(wrapOut,450);SFX.sparkle();drawPet('happy');alPlay('clap');const w=VO.actionWords.clean,t=praise(w.ko,w.en);say(t[0],t[1]);
+  L.later(()=>{if(st){drawPet('idle');nextStep()}},1800);
+}
+/* perfume: after dressing, 'Tap once' — a cloud of little hearts spreads slowly, then the mirror moment */
+function perfumeStep(){
+  phase='perfume';H.dress=false;G.stop();cards=null;mirBtn.classList.remove('on');mirBtn.hidden=true;st.hintOff=true;drawOver();showStrip('perfume');LOG.push('perfume:ask');
+  panel.innerHTML=`<button class="ps-card in ps-perf" aria-label="향수" style="flex:none;width:150px;height:150px;max-width:none">${PERFUME}</button>`;
+  say(LINE.perfume[0],LINE.perfume[1]);
+  G.start({type:'tap',at:()=>{const b=panel.querySelector('.ps-perf');if(!b)return petXY(.5,.5);const r=b.getBoundingClientRect();return secXY(r.left+r.width/2,r.top+r.height/2)},ko:LINE.perfume[0],en:LINE.perfume[1]});
+}
+const HEART=c=>`<path d="M0 9C-13 0-11-10-5.5-10C-2.5-10-.6-8 0-5.5C.6-8 2.5-10 5.5-10C11-10 13 0 0 9Z" fill="${c}" stroke="#E89AAE" stroke-width="1.6" stroke-linejoin="round"/>`;
+function spritz(){
+  if(phase!=='perfume'||!st)return;phase='spritz';st.perfumed=true;LOG.push('perfume');G.stop();actx();
+  const b=panel.querySelector('.ps-perf');if(b&&M.bounce)M.bounce(b);noise(.35,{type:'highpass',freq:2600,vol:.07});
+  const r=petEl.getBoundingClientRect(),s=stage.getBoundingClientRect(),cx=r.left-s.left+r.width/2,cy=r.top-s.top+r.height*.62;
+  for(let k=0;k<8;k++)L.later(()=>{const a=(k/7-.5)*2.6;spawn(HEART(k%2?'#F6C3CF':'#FBE0E6'),cx+Math.sin(a)*r.width*.18,cy,'fly',{dx:Math.sin(a)*r.width*.45,dy:-r.height*(.35+.1*(k%3)),rot:(k%2?12:-12),ms:2400})},k*110);
+  for(let k=0;k<3;k++)L.later(()=>spawn('<circle r="12" fill="#FBE0E6" opacity=".55"/>',cx+(k-1)*r.width*.25,cy-r.height*.15,'pop',{ms:1800}),k*160);
+  drawPet('happy');if(al){al.sound('wow');al.kick(.6)}alPlay('hop');L.later(()=>say(LINE.smell[0],LINE.smell[1]),500);
+  L.later(()=>{if(st&&phase==='spritz'){panel.innerHTML='';mirrorMoment()}},2300);
+}
+panel.addEventListener('click',e=>{if(e.target.closest('.ps-perf'))spritz()});
 function toolStep(key){
   phase=key;H.dress=false;const T=TOOL_OF[key],lk=T.log;meter(T.icon);prog(0);
   if(key==='foam')alMood('ticklish');else if(key==='dry')alMood('shiver');   // moods: 씻는 중 = 간질간질, 젖음 = 부르르
@@ -619,7 +758,7 @@ function knot(){
   const [x,y]=petPt(100,44),sr=stage.getBoundingClientRect();[[-24,-6],[22,-10],[0,-26]].forEach(([dx,dy],k)=>L.later(()=>spawn(A.twinkle(0,0,8,'#F0D58A'),x-sr.left+dx,y-sr.top+dy,'pop',{ms:PART.fadeMs}),k*80));
   if(st.knots<s.knots)return;
   phase='styled';G.stop();panel.innerHTML='';const p=praise(LINE.styled[0],LINE.styled[1]);say(p[0],p[1]);SFX.sparkle();alPlay('clap');
-  L.later(()=>{if(st){drawPet('idle');dress()}},1800);
+  L.later(()=>{if(st){drawPet('idle');toDress()}},1800);
 }
 panel.addEventListener('click',e=>{const b=e.target.closest('.ps-card.style');if(!b||phase!=='style'||!st)return;chooseStyle(b.dataset.style)});
 
@@ -638,7 +777,7 @@ function peek(){if(!st||phase!=='dress')return;st.used.peek=1;LOG.push('react:pe
 /* ============================== free dressing (자유 꾸미기) ============================== */
 const H={dress:false};
 function dress(){
-  phase='dress';H.dress=true;killTool();if(al)al.setTool(null);alMood('happy');panel.innerHTML='';tub.classList.remove('on');petEl.classList.add('up');stage.classList.add('up');st.hintOff=false;drawPet('idle');drawOver();
+  phase='dress';H.dress=true;killTool();if(al)al.setTool(null);alMood('happy');panel.innerHTML='';showStrip('dress');tub.classList.remove('on');petEl.classList.add('up');stage.classList.add('up');st.hintOff=false;drawPet('idle');drawOver();
   say(LINE.dress[0],LINE.dress[1],true);
   G.start({type:'tap',at:()=>{const [x,y]=petPt(...SLOT_PT.head);return secXY(x,y)},ko:LINE.dress[0],en:LINE.dress[1]});
 }
@@ -741,6 +880,9 @@ function hideMirror(){mirBtn.classList.remove('on');mirBtn.hidden=true;G.stop()}
 
 stage.addEventListener('pointerdown',e=>{
   if(view!=='salon')return;e.preventDefault();actx();
+  if(phase==='pick'&&st){pickLeaf(e);return}
+  if(phase==='towel'&&st&&!st.hairy&&!toolE){pat(e);return}
+  if(phase==='perfume'&&st){G.touch();if(inPet(e))spritz();else miss();return}
   if(phase==='style'&&st){G.touch();if(!inPet(e)){miss();return}if(st.style)knot();else{st.styleRot++;sfx.pop();showStyleCards()}return}
   if(phase!=='dress'||!st||e.target.closest('.ps-mirbtn'))return;
   G.touch();
@@ -789,7 +931,11 @@ panel.addEventListener('pointerup',endCard);panel.addEventListener('pointercance
 /* ---------- mirror moment: spin and smile → soft click → becomes a frame on the shop wall → thank you, wave, out ---------- */
 mirBtn.addEventListener('click',()=>{
   if(phase!=='dress'||!st||mirBtn.hidden)return;actx();
-  phase='mirror';H.dress=false;G.stop();cards=null;panel.innerHTML='';mirBtn.classList.remove('on');mirBtn.hidden=true;st.hintOff=true;LOG.push('mirror');
+  if(st.perfume&&!st.perfumed){sfx.pop();perfumeStep();return}   // flow.extraSteps.perfume: 꾸미기 뒤 향수 칙
+  mirrorMoment();
+});
+function mirrorMoment(){
+  phase='mirror';showStrip(null);H.dress=false;G.stop();cards=null;panel.innerHTML='';mirBtn.classList.remove('on');mirBtn.hidden=true;st.hintOff=true;LOG.push('mirror');
   petEl.classList.remove('up');stage.classList.remove('up');drawPet('happy');drawOver();sfx.pop();beat('tap');
   L.later(()=>{alPlay('dance');sweep()},450);   // bigMoments: dance (4 beats), then thanks and a wave
   L.later(()=>{noise(.05,{type:'lowpass',freq:2200,vol:.12});noise(.07,{type:'lowpass',freq:1400,vol:.1,when:.07});photo()},2900);   // the photo after the dance
@@ -801,7 +947,7 @@ mirBtn.addEventListener('click',()=>{
     /* progress: was this round hard (progress.struggle)? then one star; three stars open the next level */
     let result=null;if(PROG){PROG.struggle(id,{wrong:st.wrong,idleMs:st.idle});result=PROG.clear(id)}
     showLobby({served,slot:i,result})},6700);
-});
+}
 function sweep(){[1318,1568,2093].forEach((f,i)=>tone(f,.25,'sine',.06,i*.12))}
 function photo(){
   const r=petEl.getBoundingClientRect(),sr=stage.getBoundingClientRect(),w=r.width*.92,h=w*112/100;
@@ -841,9 +987,17 @@ M.__ps=()=>{
     mirror:!mirBtn.hidden,served:DATA.served,wall:DATA.wall.length,frames:framesEl.querySelectorAll('.lb-frame.full').length,
     hairy:st?st.hairy:false,hair:st&&st.hairy?{style:st.style,knots:st.knots,brushed:st.brushed,strands:al?al.strands():[]}:null,styles:STYLES.map(s=>s.id),
     fluff:[...baseEl.querySelectorAll('.ps-fb')].map(e=>+(e.style.getPropertyValue('--f')||0)),
-    used:st?Object.keys(st.used):[],guide:G.state(),log:LOG.slice(),alive:al?al.state():null,lobbyAlive:lobbyAl.map(h=>h.state())};
+    used:st?Object.keys(st.used):[],guide:G.state(),log:LOG.slice(),
+    strip:{keys:st?st.strip.slice():[],at:st?st.si:-1,n:+(stripEl.dataset.n||0),shown:stripEl.querySelectorAll(':scope > span[data-i]').length,
+      on:(stripEl.querySelector(':scope > span.on')||{dataset:{}}).dataset.i,done:stripEl.querySelectorAll(':scope > span.done').length,big:(e=>e?Math.round(e.getBoundingClientRect().width):0)(stripEl.querySelector(':scope > span.on')),
+      basket:!!stripEl.querySelector('.sh-basket'),basketN:+((stripEl.querySelector('.rm-basket-art')||{dataset:{}}).dataset.n||0)},
+    carrots:M.Room?M.Room.carrots():null,leaves:st?leafLeft().length:0,pats:st?st.pats:0,perfume:st?{wants:st.perfume,done:st.perfumed}:null,
+    links:LOG.filter(x=>/^link:/.test(x)).map(x=>x.slice(5)),linkMs:LINKS.map(r=>({k:r.k,ms:r.ms})),alive:al?al.state():null,lobbyAlive:lobbyAl.map(h=>h.state())};
 };
-function exitAll(){L.begin();killTool();G.stop();clearFloats();lobbyAliveOff();if(al){al.detach();al=null}dd=null;cd=null;cards=null;lobby.forEach(c=>{if(c)c.inside=false})}
+/* rules.depth hook: what this game is made of, per level (processes = washing steps + dressing + mirror) */
+M.__psDepth=()=>LEVELS.slice(0,PLAY_MAX).map((l,i)=>{const n=i+1,ns=needPool(n),most=ns.reduce((a,x)=>stepsOf(x,n).length>a.length?stepsOf(x,n):a,[]);
+  return{level:n,processes:most.length+2,steps:most.concat(['dress','mirror']),needs:ns.map(x=>x.id),hands:['rub','tap','card'].concat(ns.some(x=>stepsOf(x,n).includes('pick'))?['tap leaves']:[]),someone:!!AL,choice:true,ending:'거울·사진·액자·당근'}});
+function exitAll(){wrapOff();L.begin();killTool();G.stop();clearFloats();lobbyAliveOff();if(al){al.detach();al=null}dd=null;cd=null;cards=null;lobby.forEach(c=>{if(c)c.inside=false})}
 games[id]={enter:()=>{requestAnimationFrame(()=>{if(cur()===id)showLobby()})},exit:()=>{exitAll();view='lobby';phase=''},resize:()=>{size();layoutLobby()}};
 window.addEventListener('resize',()=>{if(cur()===id){size();layoutLobby()}});
 

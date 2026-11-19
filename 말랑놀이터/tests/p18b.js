@@ -76,7 +76,8 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
   ok('달걀 깨기 · 치대기가 콕으로 끝까지 (수는 그대로)',s.cnt.add===6&&s.cnt.knead===5,JSON.stringify({add:s.cnt.add,knead:s.cnt.knead}));
 
   /* ---------- 4. never more than max particles at once: bakery (above), pizza sauce, dishes scrubbing ---------- */
-  await p.evaluate(()=>window.ML.go('pizza'));await p.waitForFunction(()=>{const s=window.ML.__pz();return s.step==='sauce'&&s.kind==='rub'},null,{timeout:12000});await W(2400);
+  await p.evaluate(()=>window.ML.go('pizza'));await p.waitForFunction(()=>window.ML.__pz().phase==='lobby',null,{timeout:9000});await W(900);{const a=(await p.evaluate(()=>window.ML.__pz())).aim;await p.mouse.click(a[0],a[1])}
+  await p.waitForFunction(()=>{const s=window.ML.__pz();return s.step==='sauce'&&s.kind==='rub'},null,{timeout:12000});await W(2400);
   let z=await p.evaluate(()=>window.ML.__pz());const pr=z.rect;await touch('touchStart',[[pr.x+pr.w/2,pr.y+pr.h/2]]);
   for(let k=0;k<70&&z.step==='sauce';k++){await touch('touchMove',[[pr.x+pr.w*(.5+.32*Math.cos(k*.9)),pr.y+pr.h*(.5+.32*Math.sin(k*1.4))]]);await W(16);if(k%10===0)z=await p.evaluate(()=>window.ML.__pz())}
   await touch('touchEnd',[]);const pzParts=(await p.evaluate(()=>window.ML.__pz())).parts;
