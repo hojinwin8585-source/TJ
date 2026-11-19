@@ -653,13 +653,13 @@ function perfumeStep(){
   say(LINE.perfume[0],LINE.perfume[1]);
   G.start({type:'tap',at:()=>{const b=panel.querySelector('.ps-perf');if(!b)return petXY(.5,.5);const r=b.getBoundingClientRect();return secXY(r.left+r.width/2,r.top+r.height/2)},ko:LINE.perfume[0],en:LINE.perfume[1]});
 }
-const HEART=c=>`<path d="M0 9C-13 0-11-10-5.5-10C-2.5-10-.6-8 0-5.5C.6-8 2.5-10 5.5-10C11-10 13 0 0 9Z" fill="${c}" stroke="#E89AAE" stroke-width="1.6" stroke-linejoin="round"/>`;
+const HEART=c=>`<path transform="scale(1.7)" d="M0 9C-13 0-11-10-5.5-10C-2.5-10-.6-8 0-5.5C.6-8 2.5-10 5.5-10C11-10 13 0 0 9Z" fill="${c}" stroke="#E89AAE" stroke-width="1.4" stroke-linejoin="round"/>`;
 function spritz(){
   if(phase!=='perfume'||!st)return;phase='spritz';st.perfumed=true;LOG.push('perfume');G.stop();actx();
   const b=panel.querySelector('.ps-perf');if(b&&M.bounce)M.bounce(b);noise(.35,{type:'highpass',freq:2600,vol:.07});
   const r=petEl.getBoundingClientRect(),s=stage.getBoundingClientRect(),cx=r.left-s.left+r.width/2,cy=r.top-s.top+r.height*.62;
   for(let k=0;k<8;k++)L.later(()=>{const a=(k/7-.5)*2.6;spawn(HEART(k%2?'#F6C3CF':'#FBE0E6'),cx+Math.sin(a)*r.width*.18,cy,'fly',{dx:Math.sin(a)*r.width*.45,dy:-r.height*(.35+.1*(k%3)),rot:(k%2?12:-12),ms:2400})},k*110);
-  for(let k=0;k<3;k++)L.later(()=>spawn('<circle r="12" fill="#FBE0E6" opacity=".55"/>',cx+(k-1)*r.width*.25,cy-r.height*.15,'pop',{ms:1800}),k*160);
+  for(let k=0;k<3;k++)L.later(()=>spawn('<circle r="22" fill="#FBE0E6" opacity=".6"/>',cx+(k-1)*r.width*.25,cy-r.height*.15,'pop',{ms:1800}),k*160);
   drawPet('happy');if(al){al.sound('wow');al.kick(.6)}alPlay('hop');L.later(()=>say(LINE.smell[0],LINE.smell[1]),500);
   L.later(()=>{if(st&&phase==='spritz'){panel.innerHTML='';mirrorMoment()}},2300);
 }

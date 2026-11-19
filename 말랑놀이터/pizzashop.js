@@ -93,7 +93,7 @@ const css=`
 .pz-lc{position:absolute;border:0;padding:0;background:none;touch-action:none;transition:transform .5s ease-out,opacity .5s}
 .pz-lc .lc-ani{position:absolute;left:3%;right:3%;bottom:0;aspect-ratio:200/230;pointer-events:none}
 .pz-lc .lc-ani svg{width:100%;height:100%;display:block;overflow:visible}
-.pz-lc .lc-bub{position:absolute;right:-8%;top:-16%;width:50%;aspect-ratio:1;border-radius:50%;background:var(--paper);border:3px solid ${OL};display:grid;place-items:center;padding:5%;box-shadow:0 3px 8px rgba(91,74,66,.14);pointer-events:none}
+.pz-lc .lc-bub{position:absolute;right:0;top:-20%;width:50%;aspect-ratio:1;border-radius:50%;background:var(--paper);border:3px solid ${OL};display:grid;place-items:center;padding:5%;box-shadow:0 3px 8px rgba(91,74,66,.14);pointer-events:none}
 .pz-lc .lc-bub svg{width:100%;height:100%;display:block;overflow:visible}
 .pz-lc.sel{transform:translateY(-12px) scale(1.06)}
 .pz-lc.gone{opacity:0;pointer-events:none}
