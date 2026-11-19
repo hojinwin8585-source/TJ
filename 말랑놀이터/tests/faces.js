@@ -72,7 +72,7 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
   const a2=await alphaAt();
   ok('되살리기: 다시 칠하면 돌아옴',a2>200,`후 ${a2}`);
   await shot('faces_cut2_erase');
-  await tapEl('#fcNext');await until(()=>document.getElementById('faceCut').hidden,null,6000);await W(500);
+  await tapEl('#fcNext');await until(()=>document.getElementById('faceCut').hidden,null,6000).catch(async()=>{console.log('DBG',errs.join('|'),await p.evaluate(()=>JSON.stringify({t:document.getElementById('fcNext').textContent,top:(e=>e&&(e.id||e.className))(document.elementFromPoint(290,686)),r:document.getElementById('fcNext').getBoundingClientRect()})))});await W(500);
   st=await p.evaluate(()=>window.ML.Faces.__state());
   const gr=await p.evaluate(()=>{const r=window.ML.Faces.get('grandma');return{photo:/^data:image\/(webp|png)/.test(r.photo||''),len:(r.photo||'').length,hair:r.hair,skin:r.skin}});
   ok('저장: 할머니 사진이 IndexedDB에 들어감(256px 얼굴, 머리·피부색 뽑음)',st.withPhoto.join()==='grandma'&&gr.photo&&/^#/.test(gr.skin||''),JSON.stringify(gr));
