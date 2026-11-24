@@ -82,7 +82,6 @@ const results=[];const ok=(name,pass,info)=>{results.push({name,pass,info});cons
   /* ---------- 5) burger (level 3) by touch ---------- */
   await W(6000);
   await p.evaluate(()=>{window.ML.__rsLevel(3);const P=window.ML.Progress;P.clear('restaurant');P.clear('restaurant')});await W(1200);
-  const starsIn=await p.evaluate(()=>{const e=document.getElementById('rsStars');return e?{n:e.querySelectorAll('.mlp-star').length,on:e.querySelectorAll('.mlp-star.on').length}:null});
   let wrongT=null,dragT=null,pitch=null;
   s=await play('burger','tap',async s=>{
     /* the pitcher floats above the finger and is see-through over the bowl */
@@ -101,6 +100,7 @@ const results=[];const ok=(name,pass,info)=>{results.push({name,pass,info});cons
       await touch('touchStart',[{x:h.x,y:h.y}]);for(let k=1;k<=12;k++){await touch('touchMove',[{x:h.x+(pl.x-h.x)*k/12,y:h.y+(pl.y-h.y)*k/12}]);await W(35)}await touch('touchEnd',[]);await W(1300);
       const y=await st();dragT={layers:y.stack.layers.slice(),dragged:y.log.includes('drag:heel')};return true}
     return false});
+  const starsIn=await p.evaluate(()=>{const e=document.getElementById('rsStars');return e?{n:e.querySelectorAll('.mlp-star').length,on:e.querySelectorAll('.mlp-star.on').length}:null});
   await W(6000);const lvLog=(await st()).log;
   const bl=s.log,iS=bl.findIndex(x=>x.startsWith('stack:')),iOf=k=>bl.indexOf(k);
   const prep=['done:slice','done:press','done:flipP','done:melt','done:wash2','done:tear','done:cut','ready:halves','ready:patty','ready:lettuce','ready:tomato'];
@@ -116,7 +116,7 @@ const results=[];const ok=(name,pass,info)=>{results.push({name,pass,info});cons
   ok('버거: 끌어다 놓기로도 쌓임',!!dragT&&dragT.dragged&&dragT.layers[0]==='heel',dragT?`쌓인 것 ${dragT.layers.join(',')}`:'확인 못 함');
   ok('물 주전자: 손가락 위에 떠서 그릇을 가리지 않음(겹치면 60% 투명)',!!pitch&&pitch.bottom<=pitch.fy&&(!pitch.over||pitch.op<=.45),
     pitch?`주전자 아래끝 ${Math.round(pitch.bottom)} ≤ 손가락 ${Math.round(pitch.fy)} · 그릇과 겹침 ${pitch.over} · 불투명도 ${pitch.op}`:'확인 못 함');
-  ok('별 줄(3칸)과 단계 오르는 순간(3단계 → 4단계, 파스타)',!!starsIn&&starsIn.n===3&&starsIn.on===2&&lvLog.some(x=>x==='levelup:4:pasta'),`별 ${starsIn&&starsIn.on}/${starsIn&&starsIn.n} · ${lvLog.filter(x=>x.startsWith('levelup')).join(',')||'없음'}`);
+  ok('별 줄(3칸)과 단계 오르는 순간(3단계 → 4단계, 파스타)',!!starsIn&&starsIn.n===3&&starsIn.on===3&&lvLog.includes('star:3')&&lvLog.some(x=>x==='levelup:4:pasta'),`별 ${starsIn&&starsIn.on}/${starsIn&&starsIn.n} 다 참 · ${lvLog.filter(x=>x.startsWith('levelup')).join(',')||'없음'}`);
   const bigs=[['아침',bigT],['치킨',bigC],['버거',s.big]];
 
   /* ---------- 6) pasta + juice, pasta + salad (level 4) ---------- */
@@ -125,7 +125,7 @@ const results=[];const ok=(name,pass,info)=>{results.push({name,pass,info});cons
     const r=await play('pasta','tap');const L=r.log,c=r.cnt,sv=r.served;bigs.push(['파스타+'+sd,r.big]);
     const side=sd==='juice'?['done:juice','done:pour']:['done:chopS','done:tossS'];
     const want=['done:boil','done:noodles','done:stir','done:drain','done:sauceP','done:toss','done:twirl','done:sprinkle',...side];
-    const last=L.lastIndexOf('level:4'),Lr=L.slice(last);
+    const L2=(await st()).log,Lr=L2.slice(L2.lastIndexOf('level:4'));void L;
     ok(`파스타+${sd==='juice'?'주스':'샐러드'}: 끝까지, 두 가지 다 건네주고 먹음`,r.side===sd&&want.every(k=>Lr.includes(k))&&Lr.includes('sip')&&Lr.includes('bite'),`과정 ${Lr.filter(x=>x.startsWith('done:')).map(x=>x.slice(5)).join(' → ')} · 마시기/먹기 ${Lr.includes('sip')}`);
     ok(`파스타+${sd==='juice'?'주스':'샐러드'}: 손동작이 모습을 바꿈·만든 만큼 쓰기`,c.heat>=3&&c.noodlesIn===2&&r.soft>=1&&c.drained===1&&c.shake>=2&&c.sauce===3&&c.toss===3&&r.nest>=1&&c.sprinkled===1&&
       (sd==='juice'?c.squeezed===3&&c.pourSips===c.squeezed&&r.glassFill>=.77:c.cukeCut===3&&c.cukeIn===c.cukeCut&&c.tossedS===1),

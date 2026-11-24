@@ -821,7 +821,7 @@ function LAY2(W,Hc,ph,m,r){
   }
   const P=S.ps,side=S.sideId;
   if(ph==='serve'){const w=Math.min(W*.62,240),h=w*180/260;r.pplate=[w/2+10,Hc-h/2-6,w,h];
-    if(side==='salad'){const sw=Math.min(W*.42,170),sh=sw*170/240;r.sbowl=[W-sw/2-6,Hc-h-sh/2+18,sw,sh]}else{const gw=Math.min(W*.3,112),gh=gw*200/120;r.glass=[W-gw/2-14,Hc-h-gh/2+40,gw,gh]}return r}
+    if(side==='salad'){const sw=Math.max(162,Math.min(W*.46,176)),sh=sw*170/240;r.sbowl=[W-sw/2-6,Hc-h-sh/2+18,sw,sh]}else{const gw=Math.max(116,Math.min(W*.32,122)),gh=gw*200/120;r.glass=[W-gw/2-14,Hc-h-gh/2+40,gw,gh]}return r}
   if(['pick:noodle','boil','noodles','stir'].includes(ph)){const w=Math.min(W*.88,(Hc-24)*280/240,350),h=w*240/280;r.stove=[W/2,Hc-h/2-4,w,h];
     if(P.ndish>0){const dw=Math.min(184,Math.max(174,W*.46)),dh=dw*130/200;r.ndish=[W-dw/2-4,dh/2+4,dw,dh]}}
   else if(ph==='drain'){const w=Math.min(W*.58,220),h=w*240/280;if(!P.potGone)r.stove=[w/2+6,h/2+6,w,h];const cw=Math.min(W*.7,270),ch=cw*170/240;r.colander=[W-cw/2-6,Hc-ch/2-6,cw,ch]}
@@ -1272,7 +1272,7 @@ Object.assign(STEP,{
   },
   /* 차례차례 쌓기: 아래 빵 → 고기(치즈) → 상추 → 토마토. 콕 또는 끌어다 놓기. 차례가 아니면 살짝 튀어 돌아오고 응원 */
   stack(){
-    kind='tap';const g=gen,rr=E.ready?E.ready.getBoundingClientRect():null,rc=rr&&rr.width?[rr.left+rr.width/2,rr.top+rr.height/2]:null;
+    kind='wait';const g=gen,rr=E.ready?E.ready.getBoundingClientRect():null,rc=rr&&rr.width?[rr.left+rr.width/2,rr.top+rr.height/2]:null;
     S.bg.readyOn=false;S.bg.stackOn=true;lay();draw();
     STACK.forEach((k,i)=>{const el=E['st_'+k];if(!el||!rc)return;el.style.opacity='0';const to=ctr(el),w=el.getBoundingClientRect().width;
       L.later(()=>{if(g!==gen)return;fly(stackPic(k),rc,to,44,w,520,()=>{if(g!==gen)return;el.style.opacity='';squash(el);sfx.pop()},{up:50})},i*110)});
@@ -1298,7 +1298,7 @@ Object.assign(STEP,{
         if(!d.moved){if(!tapOk())return;if(d.k===next())place(d.k);else hopBack(d.k);return}
         const dx=e.clientX-d.x,dy=e.clientY-d.y,over=inRect(e,rectOf('bplate'),16);
         if(over&&d.k===next()){const r=el.getBoundingClientRect();LOG.push('drag:'+d.k);place(d.k,[r.left+r.width/2,r.top+r.height/2])}else backFrom(d.k,dx,dy,over)}};
-    L.later(()=>{if(g===gen)guideAt(AIM,'tap','아래 빵을 콕!','Tap the bottom bun!')},700);
+    L.later(()=>{if(g!==gen)return;kind='tap';guideAt(AIM,'tap','아래 빵을 콕!','Tap the bottom bun!')},1300);   // the pieces have landed
   },
   /* 소스 병을 꾹 짜며 지그재그(병은 손가락 위에서 따라오고, 소스 줄기가 손가락 자리로 떨어짐) */
   drizzle(){
