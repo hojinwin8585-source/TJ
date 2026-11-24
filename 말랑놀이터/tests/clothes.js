@@ -44,7 +44,10 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
   }
 
   /* ---------- the shop ---------- */
+  /* 공주·왕자 손님은 이제 공주 방(tests/princess.js)으로 가므로, 여기서는 다른 테마 손님을 세워 둠 */
+  const OTHER=[{d:'mina',th:'rain'},{d:'jun',th:'pajama'},{d:'sora',th:'pool'}];
   await p.evaluate(()=>window.ML.go('clothes'));await p.waitForFunction(()=>window.ML.__cl().phase==='lobby',null,{timeout:8000});await W(1200);
+  await p.evaluate(L=>window.ML.__clLobby(L),OTHER);await W(300);
   let s=await st();
   ok('1) 가게 배경 요소: 커튼 탈의실 · 거울 · 옷걸이 봉 · 신발 선반 · 창',Object.values(s.bg).every(Boolean),JSON.stringify(s.bg));
   ok('기다리는 친구 3명, 누를 곳 110px 이상',s.mates.length===3&&s.mates.every(q=>Math.min(q[2],q[3])>=110),s.mates.map(q=>Math.round(q[2])+'×'+Math.round(q[3])).join(', '));
@@ -86,6 +89,7 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
   await p.evaluate(()=>window.ML.__clLevel(4));await W(1500);s=await st();
   const seenTh=[],seenDoll=[];
   for(let r=0;r<3;r++){
+    await p.evaluate(L=>window.ML.__clLobby(L),OTHER);await W(300);
     s=await st();const i=r%3;await tap(s.mates[i][0],s.mates[i][1]);await p.waitForFunction(()=>window.ML.__cl().phase==='dress',null,{timeout:8000});await W(900);s=await st();
     if(r===0){ok('5) 4단계 자리: 머리 · 신발 · 소품 · 목, 3벌씩',['head','feet','hand','neck'].every(k=>s.slots.includes(k))&&s.options===3,s.slots.join(',')+' / '+s.options+'벌')}
     seenTh.push(s.theme);seenDoll.push(s.doll);

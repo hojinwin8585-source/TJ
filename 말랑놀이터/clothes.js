@@ -90,14 +90,14 @@ function eyes(d,px){
       <path d="M${ex-11} ${ey-7}Q${ex} ${ey-17} ${ex+11} ${ey-7}" stroke="${OL}" stroke-width="3" fill="none" stroke-linecap="round"/>${d.hair!=='short'?`<path d="M${ex+k*10} ${ey-9}l${k*4} -3" stroke="${OL}" stroke-width="2.2" stroke-linecap="round"/>`:''}</g>
       <path class="al-lid al-lid-${s}" opacity="0" d="M${ex-12} ${ey}Q${ex} ${ey+7} ${ex+12} ${ey}" stroke="${OL}" stroke-width="3" fill="none" stroke-linecap="round"/>`}).join('');
 }
-function head(d,px,wear){
+function head(d,px,wear,o={}){
   const ears=[58,182].map(x=>`<ellipse cx="${x}" cy="${112}" rx="8" ry="11" fill="${SKN(d)}" ${S3}/>`).join('');
-  return `${hairBack(d)}${ears}<path d="${FACE}" fill="${SKN(d)}" ${S3}/>
+  return `${o.hairB!=null?o.hairB:hairBack(d)}${ears}<path d="${FACE}" fill="${SKN(d)}" ${S3}/>
     ${[88,152].map(x=>A.vol.off?`<ellipse cx="${x}" cy="128" rx="11" ry="7" fill="#FF9AAE" opacity=".45"/>`:`<ellipse cx="${x}" cy="128" rx="13" ry="8.5" fill="${A.vol.cheek('#FF9AAE')}" opacity=".85"/>`).join('')}
     ${['l','r'].map(s=>{const ex=s==='l'?98:142;return `<path d="M${ex-8} 84Q${ex} 77 ${ex+8} 84" stroke="${d.hc}" stroke-width="2.6" fill="none" stroke-linecap="round" opacity=".8"/>`}).join('')}
     ${eyes(d,px)}<path d="M118 121Q120 123 122 121" stroke="${d.shade}" stroke-width="2.4" fill="none" stroke-linecap="round"/>
     <g class="al-mouth"><path d="M111 131Q120 142 129 131Z" stroke="${OL}" stroke-width="2.6" fill="#F08A96" stroke-linejoin="round" stroke-linecap="round"/><path d="M115 136Q120 139 125 136" stroke="#FFB3BF" stroke-width="2" fill="none" stroke-linecap="round"/></g>
-    ${A.vol.litAll(hairFront(d))}${A.vol.off?'':A.vol.shine(94,50,24,11,-24)}`;
+    ${o.face?o.face(px):''}${o.hairF!=null?o.hairF:A.vol.litAll(hairFront(d))}${o.ear||''}${A.vol.off?'':A.vol.shine(94,50,24,11,-24)}`;
 }
 
 /* ============================== clothes (clothesArt): each item returns pieces for the body parts, drawn to fit this body ============================== */
@@ -220,7 +220,7 @@ function pieces(wear,vivid,skip){
 }
 /* the whole doll. Body parts are separate groups (head / torso / arms / legs) so they move on their own and the clothes move with them */
 function doll(d,wear={},o={}){
-  const px='cl'+(++UID)+'_',p=pieces(wear,o.vivid!==false,o.skip);
+  const px='cl'+(++UID)+'_',p=o.pieces||pieces(wear,o.vivid!==false,o.skip);
   const legs=['l','r'].map(s=>{const g=LEG[s],K=s.toUpperCase();return `<g class="cl-leg cl-leg-${s}">${line(g.s,g.a,18,d.skin,6)}${A.vol.limb(g.s,g.a,18)}<ellipse cx="${FOOT[s][0]}" cy="${FOOT[s][1]}" rx="12" ry="7" fill="${SKN(d)}" ${S3}/>${p['leg'+K]}${p['foot'+K]}</g>`}).join('');
   const arms=['l','r'].map(s=>{const a=ARM[s],K=s.toUpperCase();return `<g class="al-arm al-arm-${s} cl-arm"><g class="al-arm-s">${ARMSH(a)}${line(a.s,a.h,14,d.skin,6)}${A.vol.limb(a.s,a.h,14)}<circle cx="${HAND[s][0]}" cy="${HAND[s][1]}" r="9" fill="${SKN(d)}" ${S3}/>${p['arm'+K]}${s==='r'?p.handR:''}</g></g>`}).join('');
   const under=`<path d="M96 166Q120 172 144 166L150 230Q120 238 90 230Z" fill="#FFF8F0" ${S3}/><path d="M104 166L106 160M136 166L134 160" stroke="${OL}" stroke-width="5" stroke-linecap="round"/><path d="M104 166L106 160M136 166L134 160" stroke="#FFF8F0" stroke-width="2" stroke-linecap="round"/><path d="M112 176Q120 182 128 176" stroke="#F6D3DB" stroke-width="3" fill="none" stroke-linecap="round"/>
@@ -229,8 +229,8 @@ function doll(d,wear={},o={}){
     ${A.vol.ground(120,366,58,9)}
     <g class="al-root" style="transform-origin:50% 92%"><g class="al-breathe" style="transform-origin:50% 92%">
     <g class="cl-back">${p.back}</g>${legs}
-    <g class="cl-torso"><path d="M111 148H129V168H111Z" fill="${SKN(d)}" ${S3}/>${line([120,166],[120,172],0,d.skin,0)}<path d="${TORSO}" fill="${SKN(d)}" ${S3}/>${under}${p.hip}<g class="cl-sway">${p.skirt}</g>${p.torso}${p.neck}${p.front}${HEADSH_()}</g>
-    ${arms}<g class="al-head" style="transform-origin:50% 40%"><g class="al-head-s" style="transform-origin:50% 40%"><g class="cl-head">${head(d,px,wear)}${p.hat}</g></g></g>${p.photo}
+    <g class="cl-torso"><path d="M111 148H129V168H111Z" fill="${SKN(d)}" ${S3}/>${line([120,166],[120,172],0,d.skin,0)}<path d="${TORSO}" fill="${SKN(d)}" ${S3}/>${o.noUnder?'':under}${p.hip}<g class="cl-sway">${p.skirt}</g>${p.torso}${p.collar||''}${p.neck}${p.front}${HEADSH_()}</g>
+    ${arms}<g class="al-head" style="transform-origin:50% 40%"><g class="al-head-s" style="transform-origin:50% 40%"><g class="cl-head">${head(d,px,wear,o)}${p.hat}</g></g></g>${p.photo}
     </g></g></svg>`;
 }
 let UID=0;
@@ -408,14 +408,15 @@ function size(){
   tray.style.height=Math.round(Math.min(trMax,Math.max(trMin,want,sh-pad-HEAD_PX-gaps-sh*STAGE_R[1])))+'px';
   const r=stR(),W=r.width,Hh=r.height;if(!W)return;
   const h=Math.round(Math.min(Hh*.9,W*.86*VBH/VBW)),w=Math.round(h*VBW/VBH);Object.assign(dollEl.style,{width:w+'px',height:h+'px'});
-  layoutMates();
+  layoutMates();if(S&&S.pr)prLayout();
 }
 function layoutMates(){const r=stR();if(!r.width)return;const W=r.width,Hh=r.height,bw=Math.round(Math.max(112,Math.min(W*.31,Hh*.3))),gap=(W-3*bw)/4;
   matesEl.querySelectorAll('.cl-mate').forEach((b,i)=>Object.assign(b.style,{left:(gap+i*(bw+gap))+'px',width:bw+'px',height:Math.round(bw*2.1)+'px'}))}
 
 /* ---------- drawing ---------- */
-function drawDoll(extra){if(!S)return;dollEl.innerHTML=doll(S.d,S.wear,{skip:S.drag});if(al)al.refresh()}
+function drawDoll(extra){if(!S)return;if(S.pr){prDraw();return}dollEl.innerHTML=doll(S.d,S.wear,{skip:S.drag});if(al)al.refresh()}
 function strip(){
+  if(S&&S.pr){stripEl.innerHTML='';return}
   const ks=lv.slots;stripEl.innerHTML=ks.map(k=>{const w=S&&S.wear[k],it=w&&findItem(k,w.id),c=w&&colorOf(w.col);
     const pic=it?cardSVG(k,it,w.col).replace('<svg ',`<svg data-v="1" `):slotIcon(k);return `<span class="${w?'done':''}${rack&&rack.slot===k?' on':''}">${pic}</span>`}).join('');
 }
@@ -429,7 +430,7 @@ const sparkles=(slot)=>{const [x,y]=dpt(...SLOT_PT[slot]),u=dR().width/VBW;[[-50
 function miss(){misses++;if(S)S.wrong++;G.nudge();const n=performance.now();if(n-lastMiss<2400)return;lastMiss=n;const c=pick(MISS);say(c[0],c[1])}
 
 /* ============================== in the shop: three friends wait, each wants a theme ============================== */
-function fillLobby(){const used=lobby.filter(Boolean);if(used.length===3)return;const ds=shuffle(DOLLS.map(d=>d.id)),ths=shuffle(THEMES.map(t=>t.id));lobby=ds.map((d,i)=>({d,th:ths[i%ths.length]}))}
+function fillLobby(){const used=lobby.filter(Boolean);if(used.length===3)return;const ds=shuffle(DOLLS.map(d=>d.id)),ths=shuffle(THEMES.map(t=>t.id));lobby=ds.map((d,i)=>({d,th:ths[i%ths.length]}));ensurePalace()}
 function renderMates(){
   matesEl.innerHTML=lobby.map((c,i)=>{const d=dollOf(c.d);return `<button class="cl-mate" data-i="${i}" aria-label="${d.ko}"><span class="cl-mini">${doll(d,{},{})}</span><span class="cl-bub">${bubble(c.th)}</span></button>`}).join('');
   layoutMates();lobbyAliveOff();if(M.Alive){matesEl.querySelectorAll('.cl-mini').forEach(e=>lobbyAl.push(M.Alive.attach(e,{kind:'doll',waiting:true})));turns=M.Alive.takeTurns(lobbyAl)}
@@ -450,6 +451,12 @@ function showLobby(o={}){
     G.start({type:'tap',at:()=>{const b=matesEl.querySelector('.cl-mate:nth-child(2) .cl-mini');if(!b)return[sec.clientWidth/2,sec.clientHeight/2];const r=b.getBoundingClientRect();return secXY(r.left+r.width/2,r.top+r.height*.4)}})},R?2400:300);
 }
 function levelUp(n){const a=levelInfo(n-1),b=levelInfo(n),k=b.slots.find(x=>!a.slots.includes(x));LOG.push('levelup:'+n+(k?':'+k:''));const pr=PRG();if(!pr)return;
+  /* after a princess round the new thing shown is the princess extra of this level (dress form, sparkle pattern, family face) */
+  if(lastPr&&PRA()){const P=PRA(),f0=prFlags(n-1),f1=prFlags(n);let art='',ko='',en='';
+    if(f1.mix&&!f0.mix){art=`<svg viewBox="40 126 160 250">${P.FORM}${P.gownSVG('puff','ball','pink',{only:'bodice'})}</svg>`;ko='드레스 틀이 왔어요!';en='A dress form!'}
+    else if(f1.trim&&!f0.trim){art=`<svg viewBox="20 216 200 136">${P.gownSVG('puff','ball','white',{only:'skirt',pat:'stars'})}</svg>`;ko='반짝이 무늬가 왔어요!';en='Sparkle patterns!'}
+    else if(f1.face&&!f0.face){art=P.standSVG('hair');ko='가족 공주님 얼굴!';en='Family princess faces!'}
+    if(art){LOG.push('plevelup:'+n);pr.moment(stage,{art,ko,en},()=>stars(0));return}}
   const art=k?slotIcon(k):cardSVG('top',itemOf('top','gown'),'pink');pr.moment(stage,{art,ko:'새 옷이 왔어요!',en:'New clothes!'},()=>stars(0))}
 matesEl.addEventListener('click',e=>{const b=e.target.closest('.cl-mate');if(!b||phase!=='lobby')return;pickMate(+b.dataset.i,b)});
 function pickMate(i,b){
@@ -458,12 +465,14 @@ function pickMate(i,b){
   b.animate([{transform:'translate(0,0) scale(1)'},{transform:`translate(${dx}px,-10px) scale(1.3)`,opacity:.2}],{duration:600,easing:'ease-in-out',fill:'forwards'});
   L.later(()=>enterRoom(i),620);
 }
-backBtn.addEventListener('click',()=>{if(view!=='room')return;actx();sfx.pop();showLobby()});
+backBtn.addEventListener('click',()=>{if(view!=='room')return;actx();if(S&&S.pr&&prBack())return;sfx.pop();showLobby()});
 lobbyEl_down();
 function lobbyEl_down(){stage.addEventListener('pointerdown',e=>{actx();if(view==='lobby'&&phase==='lobby'&&!e.target.closest('.cl-mate'))miss()})}
 
 /* ============================== dressing ============================== */
 function enterRoom(i){
+  lastPr=!!(lobby[i]&&lobby[i].th==='palace'&&M.PrincessArt);
+  if(lastPr){enterPrincess(i);return}
   L.begin();gen++;G.stop();lobbyAliveOff();const c=lobby[i];
   view='room';phase='dress';S={d:dollOf(c.d),th:c.th,seat:i,wear:{},drag:null,wrong:0,idle:0,rot:{},t0:performance.now()};lv=levelInfo(levelNo());rack=null;
   matesEl.hidden=true;homeBtn.hidden=true;backBtn.hidden=false;mirBtn.hidden=true;mirBtn.classList.remove('on');mirrorT=0;
@@ -565,7 +574,7 @@ tray.addEventListener('pointerup',endCard);tray.addEventListener('pointercancel'
 
 /* ============================== ending: the theme scene, walk out, three poses, click, album ============================== */
 mirBtn.addEventListener('click',()=>{
-  if(view!=='room'||mirBtn.hidden||!S||busy)return;actx();const g=gen;
+  if(view!=='room'||mirBtn.hidden||!S||busy)return;actx();if(S.pr){if(phase==='pdress'&&!pWork)prFinale();return}const g=gen;
   phase='ending';G.stop();rack=null;tray.innerHTML='<div class="cl-rod"></div>';mirBtn.classList.remove('on');mirBtn.hidden=true;LOG.push('mirror');sfx.pop();
   sceneEl.innerHTML=sceneSVG(S.th);LOG.push('scene:'+S.th);
   const W=stR().width;dollEl.style.transition='none';dollEl.style.transform=`translateX(${W*.6}px)`;
@@ -575,8 +584,7 @@ mirBtn.addEventListener('click',()=>{
   L.later(()=>{LOG.push('pose:3');dollEl.classList.add('tada');setTimeout(()=>dollEl.classList.remove('tada'),1450);tone(1046,.2,'sine',.08)},5100);
   L.later(()=>{flashEl.classList.add('on');SFX.shutter&&SFX.shutter();setTimeout(()=>flashEl.classList.remove('on'),260);photo()},6700);
   L.later(()=>{DATA.album.unshift({d:S.d.id,th:S.th,wear:JSON.parse(JSON.stringify(S.wear)),t:Date.now()});DATA.album=DATA.album.slice(0,12);DATA.served++;save();say('고마워! 예쁜 옷이야!','Thank you! I love my clothes!')},7900);
-  L.later(()=>{if(g!==gen)return;const i=S.seat;const others=lobby.filter((x,k)=>k!==i);const ds=DOLLS.map(d=>d.id).filter(x=>x!==S.d.id&&!others.some(o=>o.d===x)),ths=THEMES.map(t=>t.id).filter(x=>x!==S.th&&!others.some(o=>o.th===x));
-    lobby[i]={d:pick(ds.length?ds:[S.d.id]),th:pick(ths.length?ths:THEMES.map(t=>t.id))};
+  L.later(()=>{if(g!==gen)return;const i=S.seat;replaceMate(i);
     let result=null;const pr=PRG();if(pr){pr.struggle(GID,{wrong:S.wrong,idleMs:S.idle});result=pr.clear(GID)}else{DATA.level=Math.min(LEVELS.length,DATA.level+1);save()}
     dollEl.style.transform='';showLobby({result})},9800);
 });
@@ -584,6 +592,358 @@ function photo(){const r=dR(),s=stR(),w=s.width*.5,h=w*1.2,f=document.createElem
   f.innerHTML=`<div>${sceneSVG(S.th)}<div style="position:absolute;left:10%;right:10%;top:6%;bottom:0">${doll(S.d,S.wear,{})}</div></div>`;
   Object.assign(f.style,{width:w+'px',height:h+'px',left:(s.width/2-w/2)+'px',top:(s.height*.12)+'px'});stage.appendChild(f);
   L.later(()=>{const a=f.animate([{transform:'rotate(0) scale(1)'},{transform:'rotate(-8deg) scale(.4) translate(-60%,-80%)',opacity:.3}],{duration:900,easing:'ease-in',fill:'forwards'});a.onfinish=()=>f.remove()},900);L.onEnd(()=>f.remove())}
+
+/* ============================== 공주 방 (games.clothes.princessWardrobe) ==============================
+   후기 "공주가 너무 옷이 없어요ㅠ" → 공주·왕자 손님을 고르면 궁전 옷방: 인형이 가운데, 둘레에 받침대 6개(드레스·왕관·보석·머리·구두·손에 드는 것).
+   1단계부터 옷장이 다 열려 있고(종류 9가지 × 6가지 이상), 단계는 덤을 더함: 물감 통 → 윗옷·치마 맞추기 → 반짝이 무늬 → 우리 가족 얼굴.
+   받침대를 콕 → 그 물건 3개가 옷걸이 봉에(오른쪽 아래 큰 화살표 = 다음 3개). 콕 하거나 끌어 놓으면 입음, 인형에서 끌어내면 벗음, 입은 것을 콕 = 색 바꾸기.
+   거울을 눌러야 끝: 무도회장 · 조명 · 친구 공주 둘 · 천천히 떨어지는 색종이 · 포즈 3가지 · 사진첩. */
+const PWC=CL.princessWardrobe||{};
+let PR=null,lastPr=false;
+const PRA=()=>{if(!PR&&M.PrincessArt)PR=M.PrincessArt({OL,S3,FOLD,A,line,lerp,scallop,star5,blobs,ARM,HAND,FOOT,COLORS});return PR};
+const PSTANDS=(PWC.stands&&PWC.stands.length?PWC.stands:[{id:'crown',cats:['crown']},{id:'jewel',cats:['necklace','earring']},{id:'dress',cats:['gown','cape']},{id:'hair',cats:['hair']},{id:'hand',cats:['hand','gloves']},{id:'shoes',cats:['shoes']}]).slice(0,6);
+const PER=Math.max(1,Math.min(3,PWC.perPage||3));
+const STAND_VOICE={dress:['어떤 드레스를 입을까?','Which gown shall we wear?'],crown:['반짝반짝 왕관!','Sparkly crowns!'],jewel:['목걸이랑 귀걸이!','Necklaces and earrings!'],hair:['머리 모양을 골라 봐!','Pick a hairstyle!'],shoes:['어떤 구두를 신을까?','Which shoes?'],hand:['손에 뭘 들까?','Something to hold?']};
+const CAT_PT={crown:[120,30],hair:[120,70],earring:[185,132],necklace:[120,176],gown:[120,262],cape:[44,300],gloves:[76,232],hand:[170,238],shoes:[120,352],face:[120,104]};
+const POT_SETS=(((PWC.dye||{}).potSets)||[['pink','sky blue','purple'],['yellow','mint','magenta'],['red','blue','orange']]);
+/* which extras this level opens (princessWardrobe.levels: 물감 · 맞추기 · 무늬 · 가족 얼굴) */
+function prFlags(n){const L=PWC.levels&&PWC.levels.length?PWC.levels:[{level:1,new:'물감 통'},{level:2,new:'윗옷·치마 맞추기'},{level:3,new:'반짝이 무늬'},{level:4,new:'우리 가족 얼굴'}];
+  const f={dye:false,mix:false,trim:false,face:false};L.filter(l=>(l.level||1)<=n).forEach(l=>{const t=l.new||'';if(/물감/.test(t))f.dye=true;if(/맞추|윗옷|치마/.test(t))f.mix=true;if(/반짝|무늬/.test(t))f.trim=true;if(/가족|얼굴/.test(t))f.face=true});return f}
+let pEls=null,pWork=null,pdd=null,pcd=null,pFr=[];
+const pFaces=()=>{try{return M.Faces?M.Faces.list().filter(r=>r.photo):[]}catch(e){return[]}};
+/* the rail list of a stand: workshop cards first (dress), family faces first (hair, level 4), then every item of its categories */
+function prList(sid){const st=PSTANDS.find(s=>s.id===sid);if(!st)return[];const P=PRA(),fl=S.fl,out=[];
+  if(sid==='dress'){if(fl.mix)out.push({kind:'mix'});if(fl.dye)out.push({kind:'dye'})}
+  if(sid==='hair'&&fl.face)pFaces().forEach(r=>out.push({kind:'face',id:r.id}));
+  st.cats.forEach(cat=>(P.CATS[cat]||[]).forEach(it=>out.push({kind:'item',cat,id:it.id,col:it.cols[0]})));return out}
+const prStandOf=cat=>PSTANDS.find(s=>s.cats.includes(cat))||PSTANDS[0];
+function faceCard(id){const r=M.Faces&&M.Faces.get(id);if(!r||!r.photo)return'';const u='fcc'+(++UID);
+  return `<svg viewBox="40 20 160 150"><defs><clipPath id="${u}"><ellipse cx="120" cy="100" rx="52" ry="56"/></clipPath></defs><path d="M60 124C48 66 84 26 120 26C156 26 192 66 180 124Z" fill="${S.d.hc}" ${S3}/><ellipse cx="120" cy="100" rx="56" ry="60" fill="${S.d.skin}" ${S3}/><image href="${r.photo}" x="64" y="40" width="112" height="120" preserveAspectRatio="xMidYMid slice" clip-path="url(#${u})"/>${A.twinkle(176,40,8,'#F0D58A')}</svg>`}
+function prCard(e){const P=PRA();
+  if(e.kind==='dye')return `<svg viewBox="20 118 200 250" preserveAspectRatio="xMidYMid meet">${P.HANGER}${P.gownSVG('off','ball','white')}<g transform="translate(150 300) scale(.5)">${P.potSVG('pink').replace(/<\/?svg[^>]*>/g,'')}</g><g transform="translate(30 300) scale(.5)">${P.potSVG('sky blue').replace(/<\/?svg[^>]*>/g,'')}</g></svg>`;
+  if(e.kind==='mix')return `<svg viewBox="40 126 160 250" preserveAspectRatio="xMidYMid meet">${P.FORM}${P.gownSVG('puff','ball','pink',{only:'bodice'})}${A.twinkle(176,170,9,'#F0D58A')}${A.twinkle(62,200,6,'#F0D58A')}</svg>`;
+  if(e.kind==='face')return faceCard(e.id);
+  const it=P.itemOf(e.cat,e.id);return it?P.cardSVG(e.cat,it,e.col):''}
+/* what is worn, as pieces for the doll; S.drag = the category being dragged off (not drawn) */
+function prDollSVG(d,pw,o={}){const P=PRA(),w=Object.assign({},pw);if(o.skip)delete w[o.skip];const pp=P.pieces(w,true);
+  const fr=w.face&&M.Faces&&M.Faces.get(w.face.id),face=fr&&fr.photo?(px=>`<clipPath id="${px}fc"><path d="${FACE}"/></clipPath><image href="${fr.photo}" x="58" y="36" width="124" height="122" preserveAspectRatio="xMidYMid slice" clip-path="url(#${px}fc)"/>`):null;
+  return doll(d,{},{pieces:pp,hairB:pp.hairB,hairF:pp.hairF,ear:pp.ear,noUnder:!!w.gown,face})}
+function prDraw(){if(!S)return;dollEl.innerHTML=prDollSVG(S.d,S.pw,{skip:S.drag});if(al)al.refresh()}
+
+const PRCSS=`
+.cl-pbg{position:absolute;inset:0;pointer-events:none;z-index:0}
+.cl-pbg svg{width:100%;height:100%;display:block}
+.cl-stands{position:absolute;inset:0;z-index:2;pointer-events:none}
+.cl-stand{position:absolute;border:0;padding:0;background:none;pointer-events:auto;touch-action:manipulation;border-radius:26px;transition:transform .3s cubic-bezier(.3,1.3,.5,1),opacity .5s,box-shadow .2s}
+.cl-stand>svg{width:100%;height:100%;display:block;pointer-events:none}
+.cl-stand.open{transform:translateY(-4px) scale(1.04);box-shadow:0 0 0 4px color-mix(in srgb,var(--berry) 50%,#fff)}
+.cl-stand:active{transform:translateY(3px) scale(.97)}
+.cl-stands.gone .cl-stand{opacity:0;pointer-events:none}
+.cl-pnext{position:absolute;right:6px;bottom:6px;width:112px;height:112px;border:0;padding:4px;background:none;z-index:9;touch-action:manipulation;transition:transform .2s}
+.cl-pnext svg{width:100%;height:100%;display:block;pointer-events:none}
+.cl-pnext:active{transform:scale(.92)}
+.cl-pnext.nudge svg{animation:clnudge .6s ease-in-out}
+@keyframes clnudge{0%,100%{transform:translateX(0)}40%{transform:translateX(9px)}70%{transform:translateX(-3px)}}
+.cl-stage.pr .cl-mirbtn{left:calc(50% - 56px);right:auto;top:6px;bottom:auto;width:112px;height:112px}
+.cl-work{position:absolute;inset:0;z-index:8;touch-action:none;background:#F6EEE7;opacity:0;transition:opacity .35s}
+.cl-work.on{opacity:1}
+.cl-work .cl-wbg{position:absolute;inset:0;pointer-events:none}
+.cl-work .cl-wbg svg{width:100%;height:100%;display:block}
+.cl-wgown{position:absolute;touch-action:none;transform-origin:0 0;z-index:2}
+.cl-wgown svg{width:100%;height:100%;display:block;overflow:visible;pointer-events:none}
+.cl-pot{position:absolute;border:0;padding:0;background:none;touch-action:manipulation;z-index:1}
+.cl-pot svg{width:100%;height:100%;display:block;pointer-events:none;overflow:visible}
+.cl-pot.splash .cl-ink{animation:clink .7s ease-out}
+@keyframes clink{0%{transform:scale(1)}30%{transform:scale(1.12,.8)}60%{transform:scale(.95,1.08)}100%{transform:scale(1)}}
+.cl-pot .cl-ink{transform-box:fill-box;transform-origin:50% 50%}
+.cl-form{position:absolute;pointer-events:none}
+.cl-form svg{width:100%;height:100%;display:block;overflow:visible}
+.cl-form.snap>svg{animation:cldrop .5s ease-out}
+.cl-pfr{position:absolute;z-index:2;pointer-events:none;transition:opacity .8s,transform 1.2s ease-out}
+.cl-pfr>svg{width:100%;height:100%;overflow:visible}
+.cl-pfr .al-arm-l{transform-box:view-box!important;transform-origin:91px 172px!important}
+.cl-pfr .al-arm-r{transform-box:view-box!important;transform-origin:149px 172px!important}
+.cl-pfr .cl-sway{transform-box:view-box;transform-origin:120px 226px}
+.cl-pfr.sway .cl-sway{animation:clsway 1.1s ease-out}
+.cl-pfr.tada .al-arm-l{animation:cltadal 1.4s ease-in-out}
+.cl-pfr.tada .al-arm-r{animation:cltadar 1.4s ease-in-out}
+.cl-pfr.wave .al-arm-r{animation:clwave 1.2s ease-in-out}
+@keyframes clwave{0%,100%{transform:rotate(0)}30%,70%{transform:rotate(-120deg)}50%{transform:rotate(-100deg)}}
+.cl-confs{position:absolute;inset:0;z-index:6;pointer-events:none;overflow:hidden}
+.cl-conf{position:absolute;top:-24px;width:14px;height:14px;animation:clconf linear infinite}
+.cl-conf svg{width:100%;height:100%;display:block}
+@keyframes clconf{0%{transform:translate(0,0) rotate(0)}50%{transform:translate(16px,300px) rotate(150deg)}100%{transform:translate(-8px,620px) rotate(300deg)}}
+.cl-drip{position:absolute;width:10px;height:14px;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;pointer-events:none;z-index:3;animation:cldrip .9s ease-in forwards}
+@keyframes cldrip{from{transform:translateY(0);opacity:1}to{transform:translateY(70px);opacity:0}}
+`;
+{const e=document.createElement('style');e.textContent=PRCSS;document.head.appendChild(e)}
+
+/* ---------- enter the princess room ---------- */
+function enterPrincess(i){
+  L.begin();gen++;G.stop();lobbyAliveOff();const c=lobby[i],P=PRA();
+  view='room';phase='pdress';const n=levelNo();
+  S={d:dollOf(c.d),th:'palace',pr:true,seat:i,wear:{},pw:{},drag:null,wrong:0,idle:0,rot:{},t0:performance.now(),open:null,page:0,list:[],fl:prFlags(n),pots:0};lv=levelInfo(n);rack=null;
+  matesEl.hidden=true;homeBtn.hidden=true;backBtn.hidden=false;mirBtn.hidden=true;mirBtn.classList.remove('on');mirrorT=0;stage.classList.add('pr');
+  /* room parts live only while the princess room is open */
+  const bg=document.createElement('div');bg.className='cl-pbg';bg.innerHTML=P.ROOM;stage.insertBefore(bg,sceneEl);
+  const stw=document.createElement('div');stw.className='cl-stands';
+  stw.innerHTML=PSTANDS.map(s=>`<button class="cl-stand" data-stand="${s.id}" aria-label="${(P.CAT_KO[s.cats[0]]||[s.id])[0]}">${P.standSVG(s.id)}</button>`).join('');stage.insertBefore(stw,dollEl);
+  const nx=document.createElement('button');nx.className='cl-pnext';nx.setAttribute('aria-label','다음');nx.hidden=true;nx.innerHTML=P.NEXT;stage.insertBefore(nx,mirBtn);
+  pEls={bg,stands:stw,next:nx};
+  L.onEnd(prCleanup);
+  size();prDraw();strip();stars();
+  if(M.Alive){al=M.Alive.attach(dollEl,{kind:'doll'});const me=al;L.onEnd(()=>{me.detach();if(al===me)al=null})}
+  dollEl.animate([{transform:'translateX(-50%) scale(.7)',opacity:0},{transform:'translateX(-50%) scale(1)',opacity:1}],{duration:500,easing:'cubic-bezier(.3,1.3,.5,1)'});
+  tray.innerHTML=`<div class="cl-rod"></div>`;LOG.push('princess:'+n);
+  L.later(()=>{say(`안녕! 나는 ${iya(S.d.ko)}. 오늘은 공주님이 될 거야!`,`Hi! I'm ${S.d.en}. Today I'm a princess!`,true);if(al)al.play('hop',{n:2})},500);
+  L.later(()=>{if(phase==='pdress'&&!S.open)prOpen('dress',0,true)},1700);
+  L.later(()=>{say('받침대를 콕 눌러 봐! 옷이 잔뜩 있어.','Tap a stand! There are so many clothes!',true);
+    G.start({type:'tap',at:()=>{const b=stw.querySelector('[data-stand="crown"]')||stw.firstElementChild;const r=b.getBoundingClientRect();return secXY(r.left+r.width/2,r.top+r.height/2)}})},3600);
+}
+function prCleanup(){if(pEls){pEls.bg.remove();pEls.stands.remove();pEls.next.remove();pEls=null}prCloseWork(true);pFr.forEach(f=>{if(f.al)f.al.detach();f.el.remove()});pFr=[];
+  stage.querySelectorAll('.cl-confs,.cl-drip').forEach(e=>e.remove());stage.classList.remove('pr');pdd=null;pcd=null}
+/* layout: two columns of stands (3 + 3), the doll in the middle under the wall mirror, the big arrow bottom right */
+function prLayout(){if(!pEls)return;const r=stR(),W=r.width,H=r.height;if(!W)return;
+  const sw=Math.max(112,Math.min(130,Math.round(W*.3))),gap=8,nb=Math.max(112,Math.round(Math.min(W*.3,118)));
+  const sh=Math.max(112,Math.floor((H-6-(nb+12)-2*gap)/3));
+  pEls.stands.querySelectorAll('.cl-stand').forEach((b,i)=>{const col=i<3?0:1,row=i%3;Object.assign(b.style,{left:(col?W-6-sw:6)+'px',top:(6+row*(sh+gap))+'px',width:sw+'px',height:sh+'px'})});
+  Object.assign(pEls.next.style,{width:nb+'px',height:nb+'px'});
+  const headW=W-2*sw-12+8,hh=Math.max(260,Math.min(H-124,Math.round(headW*VBW/124*VBH/VBW))),w=Math.round(hh*VBW/VBH);
+  Object.assign(dollEl.style,{width:w+'px',height:hh+'px'});
+  if(pWork)prWorkLayout();
+}
+/* ---------- the rail: three at a time, the arrow shows the next three ---------- */
+function prOpen(sid,page,quiet){
+  if(!S||!S.pr||!pEls)return;const list=prList(sid);if(!list.length)return;const pages=Math.ceil(list.length/PER);
+  S.open=sid;S.list=list;S.page=((page|0)%pages+pages)%pages;
+  pEls.stands.querySelectorAll('.cl-stand').forEach(b=>b.classList.toggle('open',b.dataset.stand===sid));
+  prRail();if(!quiet){const v=STAND_VOICE[sid];if(v)say(v[0],v[1])}LOG.push('popen:'+sid+':'+S.page);
+}
+function prRail(){
+  const old=[...tray.querySelectorAll('.cl-card')];old.forEach(b=>{b.classList.add('out');setTimeout(()=>b.remove(),450)});
+  if(!S.open){pEls.next.hidden=true;return}
+  const pages=Math.ceil(S.list.length/PER),slice=S.list.slice(S.page*PER,S.page*PER+PER);
+  slice.forEach((e,k)=>{const b=document.createElement('button');b.className='cl-card slide';b.dataset.k=S.page*PER+k;b.dataset.kind=e.kind;if(e.cat)b.dataset.cat=e.cat;if(e.id)b.dataset.item=e.id;
+    const it=e.kind==='item'?PRA().itemOf(e.cat,e.id):null;b.setAttribute('aria-label',it?it.ko:e.kind==='dye'?'물감 통':e.kind==='mix'?'옷 맞추기':'가족 얼굴');
+    b.innerHTML=`<span class="cl-hook">${HOOK}</span>${prCard(e)}`;tray.appendChild(b);setTimeout(()=>b.classList.remove('slide'),60+k*110)});
+  pEls.next.hidden=pages<2;noise(.4,{type:'bandpass',freq:1800,q:2,vol:.05});prMarkWorn();
+}
+function prMarkWorn(){tray.querySelectorAll('.cl-card').forEach(b=>{if(b.classList.contains('out'))return;const e=S.list[+b.dataset.k];if(!e)return;const w=e.kind==='item'?S.pw[e.cat]:e.kind==='face'?S.pw.face:null;b.classList.toggle('worn',!!(w&&w.id===e.id))})}
+function prNext(){if(!S||!S.open||busy)return;actx();sfx.pop();G.touch();G.release();const pages=Math.ceil(S.list.length/PER);S.page=(S.page+1)%pages;LOG.push('pnext:'+S.open+':'+S.page);prRail();
+  pEls.next.classList.remove('nudge');void pEls.next.offsetWidth;pEls.next.classList.add('nudge');tone(660+S.page*60,.08,'sine',.08)}
+/* ---------- wearing ---------- */
+function prPt(cat){const p=CAT_PT[cat]||CAT_PT.gown;return dpt(p[0],p[1])}
+function prWear(e,fromEl){
+  if(!S||busy)return;const P=PRA(),cat=e.kind==='face'?'face':e.cat;busy=true;G.touch();G.stop();
+  const big=cat==='gown'||cat==='cape';
+  const fin=()=>{if(big){stage.classList.add('closed');noise(.3,{type:'bandpass',freq:900,q:.7,vol:.08})}
+    L.later(()=>{if(!S)return;
+      S.pw[cat]=e.kind==='face'?{id:e.id}:Object.assign({id:e.id,col:e.col},e.col2?{col2:e.col2}:{},e.pat?{pat:e.pat}:{});LOG.push('pwear:'+cat+':'+e.id);prDraw();stage.classList.remove('closed');
+      L.later(()=>{busy=false;dollEl.classList.remove('sway','drop');void dollEl.offsetWidth;dollEl.classList.add('drop');if(al)al.play(big?'twirl':'hop');if(big)setTimeout(()=>dollEl.classList.add('sway'),300);setTimeout(()=>dollEl.classList.remove('sway','drop'),1500);
+        prSparkle(cat);SFX.sparkle();const it=e.kind==='item'||cat==='gown'?P.itemOf(cat,e.id):null,c=P.colorOf(e.col);
+        if(cat==='face'){const r=M.Faces&&M.Faces.get(e.id);say(r?(M.Faces.nameKo(r)+' 공주님!'):'우리 가족 공주님!',r?('Princess '+M.Faces.nameEn(r)+'!'):'A family princess!')}
+        else if(it&&cat==='hair')say(it.ko+'!',cap(it.en)+'!');else if(it)say(`${c.ko} ${it.ko}!`,`${cap(c.en)} ${it.en}!`);
+        prMarkWorn();prArmMirror()},big?380:120)},big?380:60)};
+  if(fromEl){const [tx,ty]=prPt(cat);fly(fromEl,tx,ty,dR().width*(big?.55:.3),320,fin)}else fin();
+}
+function prSparkle(cat){const [x,y]=prPt(cat),u=dR().width/VBW;[[-50,-30],[46,-20],[0,40],[-30,30],[34,34]].forEach(([dx,dy],k)=>setTimeout(()=>spawn(A.twinkle(0,0,10,'#F0D58A'),x+dx*u,y+dy*u),k*80))}
+function prTakeOff(cat,f){if(!S)return;delete S.pw[cat];S.drag=null;LOG.push('poff:'+cat);prDraw();prMarkWorn();sfx.pop();say('어?','Oh?');if(al)al.play('oops');
+  if(f){const r=tray.getBoundingClientRect();fly(f,r.left+r.width/2,r.top+r.height/2,50,420,null,true)}
+  if(!Object.keys(S.pw).length){mirBtn.classList.remove('on');mirBtn.hidden=true}}
+function prRecolor(cat){const P=PRA(),w=S.pw[cat];if(!w||cat==='face'){prSparkle(cat);return}const it=P.itemOf(cat,w.id);if(!it){prSparkle(cat);return}
+  const cs=it.cols&&it.cols.length>1?it.cols:['white'].concat(P.GOWN_COLS);const i=cs.indexOf(w.col);w.col=cs[(i+1)%cs.length];
+  if(w.col2){const j=P.GOWN_COLS.indexOf(w.col2);w.col2=P.GOWN_COLS[(j+1)%P.GOWN_COLS.length]}
+  LOG.push('pcolor:'+cat+':'+w.col);prDraw();prSparkle(cat);const c=P.colorOf(w.col);say(c.ko+'!',cap(c.en.replace(' hair',''))+'!');tone(880,.1,'sine',.1);if(al)al.play('hop');prMarkWorn()}
+function prArmMirror(){if(!mirBtn.hidden)return;if(Object.keys(S.pw).length>=2)showMirror()}
+/* which worn thing (or which place) a touch on the doll means, in doll units */
+function pcatAt(x,y){const w=S.pw,has=c=>!!w[c],near=(p,r)=>Math.hypot(x-p[0],y-p[1])<r;
+  const seg=(s,t0)=>{const a=ARM[s],p=lerp(a.s,a.h,t0),q=a.h,dx=q[0]-p[0],dy=q[1]-p[1],L2=dx*dx+dy*dy,t=Math.max(0,Math.min(1,((x-p[0])*dx+(y-p[1])*dy)/L2));return Math.hypot(x-(p[0]+dx*t),y-(p[1]+dy*t))};
+  if(near([55,132],17)||near([185,132],17))return has('earring')||!has('hair')?'earring':'earring';
+  if(has('hand')&&(near(HAND.r,30)||(x>156&&x<236&&y>90&&y<300&&x>140+(300-y)*.1)))return 'hand';
+  if(y<56)return 'crown';
+  if(y<160){if(has('crown')&&y<66&&Math.abs(x-120)<64)return 'crown';return has('face')&&near([120,104],40)?'face':'hair'}
+  if(y<200&&Math.abs(x-120)<26)return 'necklace';
+  if(near(HAND.r,22))return 'hand';
+  if(has('gloves')&&(seg('l',.3)<14||seg('r',.3)<14||near(HAND.l,14)||near(HAND.r,14)))return 'gloves';
+  if(y>338)return 'shoes';
+  if(has('cape')&&(x<70||x>170))return 'cape';
+  if(!has('gown')&&(seg('l',.3)<12||seg('r',.3)<12))return 'gloves';
+  return 'gown'}
+const inDollP=(x,y)=>x>14&&x<232&&y>-6&&y<372;
+function prFloat(cat,cx,cy,px){const P=PRA(),w=S.pw[cat],f=document.createElement('div');f.className='cl-float';
+  if(cat==='face')f.innerHTML=faceCard(w.id);else{const it=P.itemOf(cat,w.id);f.innerHTML=it?P.cardSVG(cat,it,w.col,w).replace(/<svg /,'<svg data-v="1" '):''}
+  const [x,y]=secXY(cx,cy);Object.assign(f.style,{width:px+'px',height:px+'px',left:(x-px/2)+'px',top:(y-px/2)+'px'});sec.appendChild(f);return f}
+function prCardFloat(e,cx,cy,px){const f=document.createElement('div');f.className='cl-float';f.innerHTML=prCard(e);const [x,y]=secXY(cx,cy);Object.assign(f.style,{width:px+'px',height:px+'px',left:(x-px/2)+'px',top:(y-px/2)+'px'});sec.appendChild(f);return f}
+/* touches: stands, the arrow, the doll */
+stage.addEventListener('click',e=>{if(!S||!S.pr||phase!=='pdress'||pWork)return;
+  const st=e.target.closest('.cl-stand');if(st){actx();G.touch();G.release();sfx.pop();const sid=st.dataset.stand;
+    if(S.open===sid){prNext();return}prOpen(sid,0);st.animate([{transform:'scale(1)'},{transform:'scale(1.1)'},{transform:'scale(1.04) translateY(-4px)'}],{duration:350,easing:'ease-out'});return}
+  if(e.target.closest('.cl-pnext')){prNext();return}});
+stage.addEventListener('pointerdown',e=>{
+  if(!S||!S.pr||phase!=='pdress'||pWork||busy||e.target.closest('.cl-stand,.cl-pnext,.cl-mirbtn,.cl-work'))return;e.preventDefault();actx();G.touch();
+  const [x,y]=toDoll(e);if(!inDollP(x,y)){miss();return}
+  const cat=pcatAt(x,y);
+  if(S.pw[cat]){pdd={cat,id:e.pointerId,x0:e.clientX,y0:e.clientY,moved:false,f:null};try{stage.setPointerCapture(e.pointerId)}catch(_){}return}
+  const st=prStandOf(cat==='face'?'hair':cat);sfx.pop();const list=prList(st.id),k=list.findIndex(q=>q.cat===cat);prOpen(st.id,Math.max(0,Math.floor(k/PER)));
+});
+stage.addEventListener('pointermove',e=>{if(!pdd||e.pointerId!==pdd.id||!S)return;
+  if(!pdd.moved&&Math.hypot(e.clientX-pdd.x0,e.clientY-pdd.y0)>14){pdd.moved=true;if(!S.pw[pdd.cat]){pdd=null;return}S.drag=pdd.cat;prDraw();pdd.f=prFloat(pdd.cat,e.clientX,e.clientY,dR().width*.45);tone(520,.06,'triangle',.1)}
+  if(pdd.moved&&pdd.f){const [x,y]=secXY(e.clientX,e.clientY),w=pdd.f.offsetWidth;pdd.f.style.left=(x-w/2)+'px';pdd.f.style.top=(y-w/2)+'px'}});
+const prEndDrag=e=>{if(!pdd||(e&&e.pointerId!==pdd.id))return;G.release();const d=pdd;pdd=null;if(!S||!S.pr){if(d.f)d.f.remove();return}
+  if(!d.moved){prRecolor(d.cat);const st=prStandOf(d.cat==='face'?'hair':d.cat);if(S.open!==st.id){const list=prList(st.id),k=list.findIndex(q=>q.cat===d.cat||(d.cat==='face'&&q.kind==='face'));prOpen(st.id,Math.max(0,Math.floor(k/PER)),true)}return}
+  const [x,y]=toDoll(e),p=CAT_PT[d.cat]||CAT_PT.gown,out=!inDollP(x,y)||Math.hypot(x-p[0],y-p[1])>110;
+  if(out&&e.type!=='pointercancel')prTakeOff(d.cat,d.f);else{S.drag=null;if(d.f)d.f.remove();prDraw()}};
+stage.addEventListener('pointerup',prEndDrag);stage.addEventListener('pointercancel',prEndDrag);
+/* rail cards: tap = wear (or open the workshop), drag onto the doll = wear */
+tray.addEventListener('pointerdown',e=>{const b=e.target.closest('.cl-card');if(!b||!S||!S.pr||phase!=='pdress'||pcd||busy||b.classList.contains('out'))return;e.preventDefault();actx();G.touch();
+  if(pWork){prWorkCardDown(e,b);return}
+  pcd={b,k:+b.dataset.k,id:e.pointerId,x0:e.clientX,y0:e.clientY,moved:false,f:null};try{b.setPointerCapture(e.pointerId)}catch(_){}});
+tray.addEventListener('pointermove',e=>{if(!pcd||e.pointerId!==pcd.id)return;
+  if(!pcd.moved&&Math.hypot(e.clientX-pcd.x0,e.clientY-pcd.y0)>12){const bw=pcd.b.getBoundingClientRect().width;
+    if(pcd.w){const c=pWork&&pWork.cards&&pWork.cards[pcd.w.k];if(!c)return;pcd.moved=true;const f=document.createElement('div');f.className='cl-float';f.innerHTML=c.svg;const [x,y]=secXY(e.clientX,e.clientY);Object.assign(f.style,{width:bw+'px',height:bw+'px',left:(x-bw/2)+'px',top:(y-bw/2)+'px'});sec.appendChild(f);pcd.f=f;pcd.b.classList.add('lift')}
+    else{const en=S.list[pcd.k];if(!en||en.kind==='dye'||en.kind==='mix')return;pcd.moved=true;pcd.f=prCardFloat(en,e.clientX,e.clientY,bw);pcd.b.classList.add('lift')}}
+  if(pcd.moved&&pcd.f){const [x,y]=secXY(e.clientX,e.clientY),w=pcd.f.offsetWidth;pcd.f.style.left=(x-w/2)+'px';pcd.f.style.top=(y-w/2)+'px'}});
+const prEndCard=e=>{if(!pcd||(e&&e.pointerId!==pcd.id))return;G.release();const d=pcd;pcd=null;d.b.classList.remove('lift');if(!S||!S.pr){if(d.f)d.f.remove();return}
+  if(d.w){prWorkCardUp(e,d);return}
+  const en=S.list[d.k];if(!en){if(d.f)d.f.remove();return}
+  if(!d.moved){if(en.kind==='dye'){sfx.pop();prOpenDye();return}if(en.kind==='mix'){sfx.pop();prOpenMix();return}
+    const r=d.b.getBoundingClientRect(),f=prCardFloat(en,r.left+r.width/2,r.top+r.height/2,r.width*.9);sfx.pop();prWear(en,f);return}
+  const [x,y]=toDoll(e);if(inDollP(x,y)&&e.type!=='pointercancel')prWear(en,d.f);else{const r=d.b.getBoundingClientRect();fly(d.f,r.left+r.width/2,r.top+r.height/2,r.width,250)}};
+tray.addEventListener('pointerup',prEndCard);tray.addEventListener('pointercancel',prEndCard);
+
+/* ============================== workshops: dye pots (level 1) and the dress form (level 2+, trims at 3+) ============================== */
+const WORK_BG=`<svg viewBox="0 0 400 520" preserveAspectRatio="xMidYMid slice"><rect width="400" height="520" fill="#F6EEE7"/>${[0,1,2,3,4,5,6,7].map(i=>`<rect x="${i*52+10}" y="20" width="32" height="330" rx="6" fill="#F1E5DB"/>`).join('')}
+  <path d="M60 60H340" stroke="#D8BFA2" stroke-width="6" stroke-linecap="round"/><circle cx="60" cy="60" r="7" fill="#C9A98A"/><circle cx="340" cy="60" r="7" fill="#C9A98A"/>
+  <rect y="380" width="400" height="140" fill="#EAD8C6"/><rect x="0" y="380" width="400" height="16" fill="#D9BFA6"/><rect x="8" y="396" width="384" height="10" fill="#CDB194" opacity=".6"/>
+  ${[[52,92],[348,110],[300,40],[90,30]].map(([x,y])=>A.twinkle(x,y,7,'#F2E2B8')).join('')}</svg>`;
+function prWorkOpen(kind){const w=document.createElement('div');w.className='cl-work';w.innerHTML=`<div class="cl-wbg">${WORK_BG}</div>`;stage.appendChild(w);requestAnimationFrame(()=>w.classList.add('on'));
+  pWork={kind,el:w,step:'',busy:false};pEls.next.hidden=true;mirBtn.hidden=true;mirBtn.classList.remove('on');G.stop();
+  [...tray.querySelectorAll('.cl-card')].forEach(b=>{b.classList.add('out');setTimeout(()=>b.remove(),450)});return w}
+function prCloseWork(quiet){if(!pWork)return;const w=pWork.el;pWork=null;w.classList.remove('on');setTimeout(()=>w.remove(),360);if(quiet)w.remove();
+  if(!quiet&&S&&S.pr){prOpen('dress',S.page||0,true);if(Object.keys(S.pw).length>=2)showMirror()}}
+function prWorkLayout(){if(!pWork)return;const r=stR(),W=r.width,H=r.height,w=pWork;
+  if(w.kind==='dye'){const gw=Math.min(W*.6,220),gh=gw*1.25;w.home=[(W-gw)/2,10,gw,gh];if(!w.dipping)Object.assign(w.gown.style,{left:w.home[0]+'px',top:w.home[1]+'px',width:gw+'px',height:gh+'px'});
+    const pw=Math.max(112,Math.min(118,(W-24)/3)),ph=Math.round(pw*1.1),g=(W-3*pw)/4;w.pots.forEach((b,k)=>Object.assign(b.style,{left:(g+k*(pw+g))+'px',top:(H-ph-8)+'px',width:pw+'px',height:ph+'px'}))}
+  else{const fh=Math.min(H*.92,420),fw=fh*160/250;Object.assign(w.form.style,{left:((W-fw)/2)+'px',top:((H-fh)/2)+'px',width:fw+'px',height:fh+'px'})}}
+/* --- dye: dip the white gown into a pot; the colour creeps up the fabric with drips --- */
+function prOpenDye(){if(!S||pWork)return;const P=PRA(),w=prWorkOpen('dye');pWork.step='pick';LOG.push('pdye:open');
+  const set=POT_SETS[(S.pots++)%POT_SETS.length];pWork.cols=set;
+  const g=document.createElement('div');g.className='cl-wgown';const cid='dyc'+(++UID);
+  g.innerHTML=`<svg viewBox="20 118 200 250"><defs><clipPath id="${cid}"><rect x="0" y="372" width="240" height="0"/></clipPath></defs>${P.HANGER}<g>${P.gownSVG('off','ball','white',{vivid:true})}</g><g class="cl-dyed" clip-path="url(#${cid})"></g></svg>`;w.appendChild(g);pWork.gown=g;pWork.clip=g.querySelector('rect');
+  pWork.pots=set.map((c,k)=>{const b=document.createElement('button');b.className='cl-pot';b.dataset.k=k;b.dataset.col=c;b.setAttribute('aria-label',P.colorOf(c).ko+' 물감');b.innerHTML=P.potSVG(c);w.appendChild(b);return b});
+  prWorkLayout();say('하얀 드레스를 물감 통에 쏙 넣어 봐!','Dip the white gown into a pot!');
+  L.later(()=>{if(!pWork||pWork.kind!=='dye'||pWork.step!=='pick')return;G.start({type:'swipe',angle:90,span:Math.round(stR().height*.22),at:()=>{const a=pWork&&pWork.gown.getBoundingClientRect(),b=pWork&&pWork.pots[1].getBoundingClientRect();if(!a||!b)return[sec.clientWidth/2,sec.clientHeight/2];return secXY(a.left+a.width/2,(a.top+a.height*.6+b.top)/2)}})},1400);
+  w.addEventListener('click',e=>{const b=e.target.closest('.cl-pot');if(!b||!pWork||pWork.step!=='pick')return;actx();G.touch();G.release();prDip(+b.dataset.k)});
+  let gd=null;
+  g.addEventListener('pointerdown',e=>{if(!pWork||pWork.step!=='pick')return;e.preventDefault();e.stopPropagation();actx();G.touch();gd={id:e.pointerId,x0:e.clientX,y0:e.clientY,moved:false};try{g.setPointerCapture(e.pointerId)}catch(_){}});
+  g.addEventListener('pointermove',e=>{if(!gd||e.pointerId!==gd.id)return;const dx=e.clientX-gd.x0,dy=e.clientY-gd.y0;if(!gd.moved&&Math.hypot(dx,dy)>10)gd.moved=true;if(gd.moved)g.style.transform=`translate(${dx}px,${dy}px) rotate(${Math.max(-12,Math.min(12,dx/8))}deg)`});
+  const up=e=>{if(!gd||e.pointerId!==gd.id)return;const d=gd;gd=null;G.release();if(!pWork||pWork.step!=='pick')return;
+    if(!d.moved){g.animate([{transform:'rotate(0)'},{transform:'rotate(-6deg)'},{transform:'rotate(5deg)'},{transform:'rotate(0)'}],{duration:500});sfx.pop();say('물감 통에 쏙!','Into a pot!');return}
+    const k=pWork.pots.findIndex(b=>{const r=b.getBoundingClientRect();return e.clientX>r.left-20&&e.clientX<r.right+20&&e.clientY>r.top-80&&e.clientY<r.bottom+20});
+    if(k>=0&&e.type!=='pointercancel')prDip(k,true);else{g.animate([{transform:g.style.transform},{transform:'none'}],{duration:300,easing:'ease-out'});g.style.transform='';}};
+  g.addEventListener('pointerup',up);g.addEventListener('pointercancel',up);
+}
+function prDip(k,fromDrag){const w=pWork;if(!w||w.step!=='pick')return;w.step='dip';w.dipping=true;busy=true;G.stop();const P=PRA(),col=w.cols[k],pot=w.pots[k],g=w.gown;
+  const sr=stR(),gr=g.getBoundingClientRect(),pr=pot.getBoundingClientRect(),s=.5,[hx,hy,hw,hh]=w.home;
+  const tx=(pr.left-sr.left+pr.width/2)-hx-hw/2*s,ty=(pr.top-sr.top+pr.height*.5)-hy-hh*.9*s;
+  const from=fromDrag?g.style.transform||'none':'none';g.style.transform='';
+  const a1=g.animate([{transform:from},{transform:`translate(${tx}px,${ty-60}px) scale(${s})`,offset:.55},{transform:`translate(${tx}px,${ty+10}px) scale(${s})`}],{duration:900,easing:'ease-in-out',fill:'forwards'});
+  sfx.pop();LOG.push('pdip:'+col);
+  L.later(()=>{pot.classList.remove('splash');void pot.offsetWidth;pot.classList.add('splash');noise(.35,{type:'lowpass',freq:700,q:.8,vol:.12});say('퐁당!','Splash!');
+    const pc=P.colorOf(col).hex;for(let i=0;i<6;i++){const ang=-Math.PI*(.15+.7*i/5);spawn(`<circle r="4" fill="${pc}"/>`,pr.left+pr.width/2+Math.cos(ang)*30,pr.top+pr.height*.36+Math.sin(ang)*16,700)}
+    /* the coloured copy, clipped from the hem upwards */
+    g.querySelector('.cl-dyed').innerHTML=P.gownSVG('off','ball',col,{vivid:true});},850);
+  L.later(()=>{a1.cancel();const a2=g.animate([{transform:`translate(${tx}px,${ty+10}px) scale(${s})`},{transform:'none'}],{duration:800,easing:'ease-out',fill:'forwards'});
+    a2.onfinish=()=>{g.style.transform='';a2.cancel()};
+    const t0=performance.now(),D=1500,rc=w.clip;const step=()=>{if(!pWork||pWork!==w)return;const t=Math.min(1,(performance.now()-t0)/D),e=1-Math.pow(1-t,2),top=372-(372-118)*e;rc.setAttribute('y',top.toFixed(1));rc.setAttribute('height',(372-top).toFixed(1));if(t<1)requestAnimationFrame(step)};requestAnimationFrame(step);
+    /* drips from the hem */
+    const pc=P.colorOf(col).vivid;for(let i=0;i<5;i++)L.later(()=>{if(!pWork)return;const r=g.getBoundingClientRect(),s2=stR(),d=document.createElement('i');d.className='cl-drip';d.style.background=pc;d.style.left=(r.left-s2.left+r.width*(.25+.5*Math.random()))+'px';d.style.top=(r.top-s2.top+r.height*.9)+'px';w.el.appendChild(d);setTimeout(()=>d.remove(),950)},500+i*220);
+  },1250);
+  L.later(()=>{if(!pWork||pWork!==w)return;w.dipping=false;w.step='done';const c=P.colorOf(col);SFX.sparkle();const r=g.getBoundingClientRect();
+    [[.2,.3],[.8,.4],[.5,.7],[.3,.85],[.75,.8]].forEach(([u,v],i)=>setTimeout(()=>spawn(A.twinkle(0,0,11,'#F0D58A'),r.left+r.width*u,r.top+r.height*v),i*90));
+    say(`${c.ko} 드레스가 됐어!`,`It turned ${c.en}!`);LOG.push('pdye:'+col);busy=false},3000);
+  L.later(()=>{if(!pWork||pWork!==w)return;const r=g.getBoundingClientRect(),f=document.createElement('div');f.className='cl-float';f.innerHTML=g.innerHTML;const [x,y]=secXY(r.left,r.top);Object.assign(f.style,{left:x+'px',top:y+'px',width:r.width+'px',height:r.height+'px'});sec.appendChild(f);
+    prCloseWork(true);busy=false;prOpen('dress',0,true);prWear({kind:'item',cat:'gown',id:'dye',col},f)},4300);
+}
+/* --- the dress form: a top, then a skirt (then a sparkle pattern at level 3+), snapped together, then onto the doll --- */
+function prOpenMix(){if(!S||pWork)return;const P=PRA(),w=prWorkOpen('mix');LOG.push('pmix:open');
+  const f=document.createElement('div');f.className='cl-form';w.appendChild(f);pWork.form=f;pWork.b=null;pWork.s=null;pWork.pat=null;
+  prWorkLayout();prFormDraw();prMixStep('bodice');
+}
+function prFormDraw(){const P=PRA(),w=pWork;if(!w||w.kind!=='mix')return;let g='';
+  if(w.s)g+=P.gownSVG(w.b||'puff',w.s.id,w.s.col,{vivid:true,only:'skirt',pat:w.pat});if(w.b)g+=P.gownSVG(w.b.id,'ball',w.b.col,{vivid:true,only:'bodice'});
+  w.form.innerHTML=`<svg viewBox="40 126 160 250">${P.FORM}${g}</svg>`}
+function prMixStep(step){const P=PRA(),w=pWork;if(!w)return;w.step=step;const cols=shuffle(P.GOWN_COLS.slice());let cards=[];
+  if(step==='bodice')cards=shuffle(P.BODICE_IDS.slice()).slice(0,3).map((id,k)=>({part:'bodice',id,col:cols[k],svg:`<svg viewBox="62 148 116 104" preserveAspectRatio="xMidYMid meet">${P.HANGER.replace(/120 152V140/,'120 152V146')}${P.gownSVG(id,'ball',cols[k],{only:'bodice'})}</svg>`}));
+  else if(step==='skirt')cards=shuffle(P.SKIRT_IDS.slice()).slice(0,3).map((id,k)=>({part:'skirt',id,col:cols[k+3],svg:`<svg viewBox="20 216 200 136" preserveAspectRatio="xMidYMid meet">${P.gownSVG('puff',id,cols[k+3],{only:'skirt'})}</svg>`}));
+  else if(step==='trim')cards=shuffle(P.PAT_IDS.slice()).slice(0,3).map(id=>({part:'trim',id,svg:`<svg viewBox="20 216 200 136" preserveAspectRatio="xMidYMid meet">${P.gownSVG('puff','ball','white',{only:'skirt',pat:id})}</svg>`}));
+  w.cards=cards;[...tray.querySelectorAll('.cl-card')].forEach(b=>{b.classList.add('out');setTimeout(()=>b.remove(),450)});
+  cards.forEach((c,k)=>{const b=document.createElement('button');b.className='cl-card slide';b.dataset.w=k;b.dataset.kind=c.part;b.dataset.item=c.id;b.setAttribute('aria-label',c.part==='bodice'?P.BD_KO[c.id][0]:c.part==='skirt'?P.SK_KO[c.id][0]:P.PATS[c.id].ko);
+    b.innerHTML=`<span class="cl-hook">${HOOK}</span>${c.svg}`;tray.appendChild(b);setTimeout(()=>b.classList.remove('slide'),60+k*110)});
+  const v={bodice:['윗옷을 골라 봐!','Pick a top!'],skirt:['이번엔 치마!','Now a skirt!'],trim:['반짝이 무늬를 골라 봐!','Pick a sparkle pattern!']}[step];if(v)say(v[0],v[1]);
+  L.later(()=>{if(!pWork||pWork.step!==step)return;G.start({type:'tap',at:()=>{const b=tray.querySelector('.cl-card:not(.out)');if(!b)return[sec.clientWidth/2,sec.clientHeight/2];const r=b.getBoundingClientRect();return secXY(r.left+r.width/2,r.top+r.height/2)}})},1600);
+}
+function prWorkCardDown(e,b){if(!pWork||pWork.kind!=='mix'||b.dataset.w==null)return;pcd={b,w:{e:null,k:+b.dataset.w},id:e.pointerId,x0:e.clientX,y0:e.clientY,moved:false,f:null};try{b.setPointerCapture(e.pointerId)}catch(_){}}
+function prWorkCardUp(e,d){const w=pWork;if(!w||w.kind!=='mix'){if(d.f)d.f.remove();return}const c=w.cards[d.w.k];if(!c||busy){if(d.f)d.f.remove();return}
+  const r=d.b.getBoundingClientRect(),fr=w.form.getBoundingClientRect(),f=d.f||(()=>{const x=document.createElement('div');x.className='cl-float';x.innerHTML=c.svg;const [a,bb]=secXY(r.left,r.top);Object.assign(x.style,{left:a+'px',top:bb+'px',width:r.width+'px',height:r.height+'px'});sec.appendChild(x);return x})();
+  if(d.moved&&!(e.clientX>fr.left&&e.clientX<fr.right&&e.clientY>fr.top&&e.clientY<fr.bottom)){fly(f,r.left+r.width/2,r.top+r.height/2,r.width,250);return}
+  busy=true;sfx.pop();const ty=c.part==='bodice'?.28:.62;fly(f,fr.left+fr.width/2,fr.top+fr.height*ty,fr.width*.7,340,()=>{if(!pWork||pWork!==w){busy=false;return}
+    if(c.part==='bodice')w.b={id:c.id,col:c.col};else if(c.part==='skirt')w.s={id:c.id,col:c.col};else w.pat=c.id;LOG.push('pmix:'+c.part+':'+c.id);prFormDraw();
+    w.form.classList.remove('snap');void w.form.offsetWidth;w.form.classList.add('snap');tone(c.part==='trim'?1046:784,.12,'sine',.1);SFX.sparkle();
+    const R=w.form.getBoundingClientRect();[[.3,ty],[.7,ty],[.5,ty+.1]].forEach(([u,v],i)=>setTimeout(()=>spawn(A.twinkle(0,0,10,'#F0D58A'),R.left+R.width*u,R.top+R.height*v),i*90));
+    busy=false;
+    if(c.part==='bodice'){say(P().BD_KO[c.id][0]+'!',cap(P().BD_KO[c.id][1])+'!');L.later(()=>prMixStep('skirt'),900)}
+    else if(c.part==='skirt'){say('착! 붙었다!','Snap! Together!');L.later(()=>S.fl.trim?prMixStep('trim'):prMixDone(),1000)}
+    else{say(P().PATS[c.id].ko+'!',cap(P().PATS[c.id].en)+'!');L.later(prMixDone,1000)}});
+  function P(){return PRA()}
+}
+function prMixDone(){const w=pWork;if(!w||w.kind!=='mix')return;w.step='done';busy=true;[...tray.querySelectorAll('.cl-card')].forEach(b=>{b.classList.add('out');setTimeout(()=>b.remove(),450)});
+  say('나만의 드레스 완성!','My very own gown!');SFX.sparkle();const R=w.form.getBoundingClientRect();[[.2,.5],[.8,.5],[.5,.3],[.3,.8],[.7,.85]].forEach(([u,v],i)=>setTimeout(()=>spawn(A.twinkle(0,0,12,'#F0D58A'),R.left+R.width*u,R.top+R.height*v),i*90));
+  const en={kind:'item',cat:'gown',id:`mix:${w.b.id}:${w.s.id}`,col:w.b.col,col2:w.s.col,pat:w.pat||undefined};LOG.push('pmix:done:'+en.id);
+  L.later(()=>{if(pWork!==w)return;const P=PRA(),f=document.createElement('div');f.className='cl-float';f.innerHTML=`<svg viewBox="26 150 188 200">${P.gownSVG(w.b.id,w.s.id,w.b.col,{vivid:true,col2:w.s.col,pat:w.pat})}</svg>`;
+    const [x,y]=secXY(R.left+R.width*.1,R.top+R.height*.1);Object.assign(f.style,{left:x+'px',top:y+'px',width:(R.width*.8)+'px',height:(R.width*.8*200/188)+'px'});sec.appendChild(f);
+    prCloseWork(true);busy=false;prOpen('dress',0,true);prWear(en,f)},1300);
+}
+/* back while in a workshop = back to the room */
+function prBack(){if(pWork){prCloseWork(false);busy=false;sfx.pop();return true}return false}
+
+/* ============================== the princess ending: ballroom, spotlight, two friends, slow confetti, three poses, photo ============================== */
+function prFriendWear(){const P=PRA(),g=S.pw.gown,cols=P.friendCols(g&&g.col&&g.col!=='white'?g.col:'pink');
+  return P.FRIENDS.map((F,i)=>{const w={hair:{id:F.style,col:F.hcol},crown:{id:i?'tiara':'startiara',col:cols[i]},necklace:{id:'pearls',col:cols[i]},shoes:{id:'glass',col:'glass'},gloves:{id:'opera',col:'white'}};
+    w.gown=g?Object.assign({},g,{col:cols[i]},g.col2?{col2:cols[1-i]}:{}):{id:'rose',col:cols[i]};if(w.gown.id==='dye')w.gown.id='rose';return{F,w}})}
+function prFinale(){
+  const g0=gen,P=PRA();phase='ending';G.stop();busy=true;prCloseWork(true);S.open=null;tray.innerHTML='<div class="cl-rod"></div>';mirBtn.classList.remove('on');mirBtn.hidden=true;
+  if(pEls){pEls.stands.classList.add('gone');pEls.next.hidden=true}LOG.push('mirror');sfx.pop();
+  sceneEl.innerHTML=P.BALL;LOG.push('scene:ball');
+  const W=stR().width;dollEl.style.transition='none';dollEl.style.transform=`translateX(${W*.6}px)`;
+  L.later(()=>{sceneEl.classList.add('on');if(pEls)pEls.bg.style.opacity='0';dollEl.classList.add('walk');dollEl.style.transition='transform 1.6s linear';dollEl.style.transform='translateX(-50%)';say('무도회에 왔어요!','Off to the ball!')},100);
+  /* the two friend princesses in matching gowns, a little behind */
+  L.later(()=>{const r=stR(),dw=dR().width*.74,dh=dw*VBH/VBW;
+    pFr=prFriendWear().map(({F,w},i)=>{const el=document.createElement('div');el.className='cl-pfr';el.innerHTML=prDollSVG(F,w);
+      Object.assign(el.style,{width:dw+'px',height:dh+'px',left:(i?r.width*.79-dw/2:r.width*.21-dw/2)+'px',bottom:(r.height*.07)+'px',opacity:'0',transform:`translateX(${i?40:-40}px)`});stage.insertBefore(el,dollEl);
+      requestAnimationFrame(()=>{el.style.opacity='1';el.style.transform='none'});const h=M.Alive?M.Alive.attach(el,{kind:'doll'}):null;return{el,al:h,F}});
+    LOG.push('pfriends:'+pFr.length);say('친구 공주들도 왔어요!','Princess friends are here!');
+    const cf=document.createElement('div');cf.className='cl-confs';const n=Math.max(8,Math.min(24,PWC.confetti||16));
+    cf.innerHTML=Array.from({length:n},(_,i)=>`<i class="cl-conf" style="left:${((i*37)%100)}%;animation-duration:${(7+(i%5)*1.1).toFixed(1)}s;animation-delay:-${((i*1.3)%7).toFixed(1)}s">${P.confetti(i)}</i>`).join('');stage.insertBefore(cf,fxEl);},1500);
+  const all=c=>{dollEl.classList.add(c);pFr.forEach(f=>f.el.classList.add(c))},none=c=>{dollEl.classList.remove(c);pFr.forEach(f=>f.el.classList.remove(c))};
+  L.later(()=>{dollEl.classList.remove('walk');dollEl.style.transition='';LOG.push('pose:1');if(al)al.play('wave');pFr.forEach(f=>f.el.classList.add('wave'));setTimeout(()=>none('wave'),1300);say('짜잔!','Ta-da!')},2400);
+  L.later(()=>{LOG.push('pose:2');if(al)al.play('twirl');pFr.forEach(f=>{if(f.al)f.al.play('twirl')});all('sway');setTimeout(()=>none('sway'),1200)},4200);
+  L.later(()=>{LOG.push('pose:3');all('tada');setTimeout(()=>none('tada'),1450);tone(1046,.2,'sine',.08)},5700);
+  L.later(()=>{flashEl.classList.add('on');flashEl.style.opacity='.3';SFX.shutter&&SFX.shutter();setTimeout(()=>{flashEl.classList.remove('on');flashEl.style.opacity=''},260);prPhoto()},7300);
+  L.later(()=>{DATA.album.unshift({d:S.d.id,th:'palace',pr:true,wear:JSON.parse(JSON.stringify(S.pw)),t:Date.now()});DATA.album=DATA.album.slice(0,12);DATA.served++;save();say('고마워! 정말 멋진 공주야!','Thank you! What a lovely princess!')},8500);
+  L.later(()=>{if(g0!==gen)return;const i=S.seat;replaceMate(i);busy=false;
+    let result=null;const pr=PRG();if(pr){pr.struggle(GID,{wrong:S.wrong,idleMs:S.idle});result=pr.clear(GID)}else{DATA.level=Math.min(LEVELS.length,DATA.level+1);save()}
+    dollEl.style.transform='';showLobby({result})},10600);
+}
+function prPhoto(){const s=stR(),w=s.width*.62,h=w*1.1,f=document.createElement('div');f.className='cl-photo';const P=PRA();
+  f.innerHTML=`<div>${P.BALL}${prFriendWear().map(({F,w:ww},i)=>`<div style="position:absolute;width:44%;bottom:6%;${i?'right:-4%':'left:-4%'};aspect-ratio:${VBW}/${VBH}">${prDollSVG(F,ww)}</div>`).join('')}<div style="position:absolute;left:18%;right:18%;top:8%;bottom:0">${prDollSVG(S.d,S.pw)}</div></div>`;
+  Object.assign(f.style,{width:w+'px',height:h+'px',left:(s.width/2-w/2)+'px',top:(s.height*.1)+'px'});stage.appendChild(f);
+  L.later(()=>{const a=f.animate([{transform:'rotate(0) scale(1)'},{transform:'rotate(-8deg) scale(.4) translate(-60%,-80%)',opacity:.3}],{duration:900,easing:'ease-in',fill:'forwards'});a.onfinish=()=>f.remove()},1000);L.onEnd(()=>f.remove())}
+/* after a round the friend's seat gets someone new; a princess friend always stays in the shop (princessWardrobe.alwaysInShop) */
+function replaceMate(i){const others=lobby.filter((x,k)=>k!==i);const ds=DOLLS.map(d=>d.id).filter(x=>x!==S.d.id&&!others.some(o=>o.d===x)),ths=THEMES.map(t=>t.id).filter(x=>x!==S.th&&!others.some(o=>o.th===x));
+  lobby[i]={d:pick(ds.length?ds:[S.d.id]),th:pick(ths.length?ths:THEMES.map(t=>t.id))};ensurePalace(i)}
+function ensurePalace(prefer){if(PWC.alwaysInShop===false||!THEMES.some(t=>t.id==='palace')||lobby.some(c=>c&&c.th==='palace'))return;
+  let k=prefer!=null&&lobby[prefer]?prefer:lobby.findIndex(c=>c&&c.d!=='jun');if(k<0)k=0;if(lobby[k])lobby[k].th='palace'}
 
 /* ============================== test hooks ============================== */
 M.__clLevel=n=>{DATA.level=Math.max(1,Math.min(LEVELS.length,n|0));save();const pr=PRG();if(pr&&pr.set)pr.set(GID,DATA.level);if(cur()===id)showLobby();return levelNo()};
@@ -598,12 +958,40 @@ M.__cl=()=>{
     bg:{curtain:!!q('#bg-curtain'),mirror:!!q('#bg-mirror'),rack:!!q('#bg-rack'),shoes:!!q('#bg-shoes'),window:!!q('#bg-window')},
     parts:{head:dollEl.querySelectorAll('.al-head .cl-head').length,torso:dollEl.querySelectorAll('.cl-torso').length,armL:dollEl.querySelectorAll('.al-arm-l').length,armR:dollEl.querySelectorAll('.al-arm-r').length,legL:dollEl.querySelectorAll('.cl-leg-l').length,legR:dollEl.querySelectorAll('.cl-leg-r').length},
     wornIn:S?Object.fromEntries([...dollEl.querySelectorAll('[data-slot]')].map(g=>[g.getAttribute('data-slot')+'@'+(g.parentElement.closest('.cl-torso')?'torso':g.parentElement.closest('.al-arm')?'arm':g.parentElement.closest('.cl-leg')?'leg':g.parentElement.closest('.al-head')?'head':'body'),1])):{},
-    mates:[...matesEl.querySelectorAll('.cl-mate')].map(b=>{const r=b.getBoundingClientRect();return[r.left+r.width/2,r.top+r.height/2,r.width,r.height]}),
+    mates:[...matesEl.querySelectorAll('.cl-mate')].map(b=>{const r=b.getBoundingClientRect();return[r.left+r.width/2,r.top+r.height/2,r.width,r.height]}),mateThemes:lobby.map(c=>c&&c.th),
     mirror:!mirBtn.hidden,scene:sceneEl.classList.contains('on')?S&&S.th:null,album:DATA.album.length,served:DATA.served,alive:al?al.state():null,log:LOG.slice(),guide:G.state()};
 };
-M.__clDepth=()=>LEVELS.map((l,i)=>{const v=levelInfo(i+1);return{level:i+1,processes:1+v.slots.length+1,steps:['friend'].concat(v.slots,['mirror']),hands:['tap','drag','card'],someone:!!M.Alive,choice:true,ending:'theme scene · poses · photo',options:v.options}});
+M.__clDepth=()=>LEVELS.map((l,i)=>{const v=levelInfo(i+1),f=prFlags(i+1),P=PRA(),cats=P?Object.keys(P.CATS):[];
+  return{level:i+1,processes:1+v.slots.length+1,steps:['friend'].concat(v.slots,['mirror']),hands:['tap','drag','card'],someone:!!M.Alive,choice:true,ending:'theme scene · poses · photo',options:v.options,
+    princess:{stands:PSTANDS.length,categories:cats.length,items:cats.reduce((a,c)=>a+P.CATS[c].length,0),perCategory:Object.fromEntries(cats.map(c=>[c,P.CATS[c].length])),
+      steps:['friend','stands','rail'].concat(f.dye?['dye pots']:[],f.mix?['top + skirt']:[],f.trim?['sparkle pattern']:[],f.face?['family face']:[],['mirror']),hands:['tap','drag','dip'],extras:f,ending:'ballroom · spotlight · two friends · confetti · poses · photo'}}});
+/* tests: put chosen friends in the shop ([{d,th}]) */
+M.__clLobby=list=>{if(!Array.isArray(list))return lobby.map(c=>c&&Object.assign({},c));lobby=list.slice(0,3).map(c=>({d:dollOf(c.d).id,th:c.th}));if(cur()===id&&view==='lobby'){renderMates();layoutMates()}return lobby.map(c=>Object.assign({},c))};
+/* tests: the princess room as it is now (screen points are the centres of things) */
+M.__clPrincess=()=>{const P=PRA(),on=!!(S&&S.pr),rc=e=>{if(!e)return null;const r=e.getBoundingClientRect();return r.width?[r.left+r.width/2,r.top+r.height/2,r.width,r.height]:null};
+  const vis=e=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0};
+  const onDoll={};if(dollEl.querySelector('image'))onDoll.face=1;dollEl.querySelectorAll('[data-pcat]').forEach(g=>{try{const b=g.getBBox();if(b.width>0&&b.height>0)onDoll[g.getAttribute('data-pcat')]=1}catch(e){}});
+  const w=pWork;
+  return{on,phase,level:levelNo(),extras:on?Object.assign({},S.fl):prFlags(levelNo()),busy,
+    catalog:P?Object.fromEntries(Object.keys(P.CATS).map(c=>[c,P.CATS[c].map(x=>x.id)])):{},
+    stands:pEls?[...pEls.stands.querySelectorAll('.cl-stand')].map(b=>({id:b.dataset.stand,cats:(PSTANDS.find(s=>s.id===b.dataset.stand)||{}).cats,rect:rc(b),open:b.classList.contains('open'),svg:!!b.querySelector('svg')})):[],
+    open:on?S.open:null,page:on?S.page:0,pages:on&&S.open?Math.ceil(S.list.length/PER):0,
+    cards:[...tray.querySelectorAll('.cl-card:not(.out)')].filter(vis).map(b=>({kind:b.dataset.kind,cat:b.dataset.cat||null,id:b.dataset.item||null,rect:rc(b),worn:b.classList.contains('worn')})),
+    next:pEls&&!pEls.next.hidden?rc(pEls.next):null,mirror:!mirBtn.hidden?rc(mirBtn):null,
+    wear:on?JSON.parse(JSON.stringify(S.pw)):{},onDoll,
+    catPts:on?Object.fromEntries(Object.keys(CAT_PT).map(k=>[k,prPt(k)])):{},offPt:(()=>{const r=tray.getBoundingClientRect();return[r.left+r.width/2,r.top+r.height/2]})(),doll:rc(dollEl),
+    work:w?{kind:w.kind,step:w.step,gown:rc(w.gown),pots:(w.pots||[]).map(b=>({col:b.dataset.col,rect:rc(b)})),form:rc(w.form),b:w.b||null,s:w.s||null,pat:w.pat||null}:null,
+    finale:{friends:pFr.length,friendsShown:pFr.filter(f=>+getComputedStyle(f.el).opacity>.5).length,confetti:stage.querySelectorAll('.cl-conf').length,scene:sceneEl.classList.contains('on')},
+    album:DATA.album.length,log:LOG.slice()}};
+M.__clPR=()=>({art:PRA(),doll:(d,pw)=>prDollSVG(typeof d==='string'?dollOf(d):d,pw||{}),dolls:DOLLS});
+/* tests and screenshots: the princess doll alone, in the room or the ballroom */
+M.__clPrincessPreview=(did,pw,o={})=>{L.begin();gen++;G.stop();lobbyAliveOff();prCleanup();view='room';phase='preview';const P=PRA();
+  S={d:o.friend!=null?P.FRIENDS[o.friend]:dollOf(did),th:'palace',pr:true,wear:{},pw:pw||{},drag:null,wrong:0,rot:{},open:null,page:0,list:[],fl:prFlags(levelNo())};matesEl.hidden=true;
+  const bg=document.createElement('div');bg.className='cl-pbg';bg.innerHTML=o.ball?P.BALL:P.ROOM;stage.insertBefore(bg,sceneEl);pEls={bg,stands:document.createElement('div'),next:document.createElement('button')};
+  if(o.stands){pEls.stands.className='cl-stands';pEls.stands.innerHTML=PSTANDS.map(s=>`<button class="cl-stand" data-stand="${s.id}">${P.standSVG(s.id)}</button>`).join('');stage.insertBefore(pEls.stands,dollEl)}
+  stage.classList.add('pr');size();prDraw();return true};
 games[id]={enter:()=>{requestAnimationFrame(()=>{if(cur()===id)showLobby()})},
-  exit:()=>{L.begin();gen++;G.stop();fxEl.innerHTML='';lobbyAliveOff();if(al){al.detach();al=null}dd=null;cd=null;rack=null;busy=false;phase='';view='lobby';sec.querySelectorAll('.cl-float').forEach(f=>f.remove())},resize:size};
+  exit:()=>{L.begin();gen++;G.stop();fxEl.innerHTML='';lobbyAliveOff();prCleanup();if(al){al.detach();al=null}dd=null;cd=null;rack=null;busy=false;phase='';view='lobby';sec.querySelectorAll('.cl-float').forEach(f=>f.remove())},resize:size};
 window.addEventListener('resize',()=>{if(cur()===id)size()});
 /* home tile picture: the doll in a dress (no emoji) */
 document.querySelectorAll('.tile[data-go="clothes"] .ic').forEach(ic=>{ic.classList.add('cl-ic');ic.innerHTML=doll(DOLLS[0],{top:{id:'gown',col:'pink'},head:{id:'crown',col:'pink'}},{});const s=ic.querySelector('svg');if(s){s.style.width='1.3em';s.style.height='2.1em'}});
