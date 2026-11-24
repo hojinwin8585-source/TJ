@@ -164,7 +164,7 @@ const FXS={
   '.fc-fx .fx-up{animation:fx-up var(--fx-ms,900ms) ease-out both}@keyframes fx-up{0%{opacity:0;transform:translateY(8px) scale(.6)}25%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-26px) scale(1.05)}}'+
   '.fc-fx .fx-pop{animation:fx-pop var(--fx-ms,900ms) ease-in-out both}@keyframes fx-pop{0%{opacity:0;transform:scale(.2)}35%{opacity:1;transform:scale(1.15)}65%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.4)}}'+
   '.fc-fx .fx-drip{animation:fx-drip var(--fx-ms,900ms) ease-in both}@keyframes fx-drip{0%{opacity:0;transform:translateY(-4px)}20%{opacity:1}100%{opacity:0;transform:translateY(34px)}}'+
-  '.fc-praise{position:fixed;z-index:55;pointer-events:none;width:96px;left:10px;bottom:30%;opacity:0;transform:translateY(14px) scale(.7);transition:opacity .4s ease,transform .45s cubic-bezier(.34,1.5,.55,1)}'+
+  '.fc-praise{position:fixed;z-index:55;pointer-events:none;width:84px;right:12px;top:calc(env(safe-area-inset-top,0px) + 96px);opacity:0;transform:translateY(14px) scale(.7);transition:opacity .4s ease,transform .45s cubic-bezier(.34,1.5,.55,1)}'+
   '.fc-praise.on{opacity:1;transform:none}.fc-praise svg{display:block;width:100%;height:auto;overflow:visible}'+
   '.fc-fig{display:block;width:calc(var(--fw,96px));height:auto;position:relative}.fc-fig svg{display:block;width:100%;height:auto;overflow:visible}';
   (document.head||document.documentElement).appendChild(st)})();
