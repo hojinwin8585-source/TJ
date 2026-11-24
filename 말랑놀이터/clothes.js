@@ -201,14 +201,21 @@ const itemOf=(slot,iid)=>(ITEMS[slot]||[]).find(x=>x.id===iid)||null;
 /* photos from the closet (level 4 "우리 집 옷"): wardrobe categories → body places */
 const WCATS=((CF.wardrobe||{}).categories)||[];
 const CAT_SLOT={dress:'top',shoes:'feet',headband:'head',neck:'neck',bag:'hand',toy:'hand'};
-const PHOTO_BOX={top:[64,150,112,130],feet:[76,326,88,44],head:[56,8,128,70],neck:[90,150,60,44],hand:[150,214,62,70]};
+const PHOTO_BOX={top:[64,150,112,130],feet:[76,326,88,44],head:[68,-18,104,104],neck:[90,150,60,44],hand:[150,214,62,70]};
 function photoItems(){
   const list=store.get('mallang_closet',[]);if(!Array.isArray(list))return[];
   return list.map((c,k)=>{if(!c||!c.img)return null;const cat=WCATS.find(w=>w.id===c.cat||w.ko===c.cat||w.id===c.category||w.ko===c.category);const slot=cat&&CAT_SLOT[cat.id];if(!slot)return null;
     const b=PHOTO_BOX[slot];return{id:'photo:'+(c.id||k),slot,photo:c.img,ko:c.name||cat.ko,en:c.en||cat.en,cols:['pink'],th:[],vb:b.join(' '),
       d:()=>({photo:`<image href="${c.img}" x="${b[0]}" y="${b[1]}" width="${b[2]}" height="${b[3]}" preserveAspectRatio="xMidYMid meet"/>`})}}).filter(Boolean);
 }
-const findItem=(slot,iid)=>itemOf(slot,iid)||(String(iid).startsWith('photo:')?photoItems().find(p=>p.id===iid):null);
+/* P6 우리 물건: what the grown-up added (items.js): head things, clothes (the top place) and things to hold, at every level, one among the cards */
+const OUR_SLOT={head:'head',cloth:'top',hand:'hand'};
+function ourItems(slot){
+  try{if(!M.Items)return[];return M.Items.forPlace('clothes').filter(r=>OUR_SLOT[r.kind]===slot).map(r=>{const b=PHOTO_BOX[slot];
+    return{id:'photo:'+r.id,raw:r.id,ours:true,slot,photo:r.img,ko:r.ko,en:r.en,cols:['pink'],th:[],vb:b.join(' '),
+      d:()=>({photo:`<image href="${r.img}" x="${b[0]}" y="${b[1]}" width="${b[2]}" height="${b[3]}" preserveAspectRatio="xMidYMid meet"/>`})}})}catch(e){return[]}
+}
+const findItem=(slot,iid)=>itemOf(slot,iid)||(String(iid).startsWith('photo:')?photoItems().concat(ourItems(slot)).find(p=>p.id===iid):null);
 
 /* pieces of everything worn, each in its colour (vivid on the doll, calm on cards) */
 function pieces(wear,vivid,skip){
@@ -377,6 +384,7 @@ const css=`
 .cl-card.out{transform:translateX(-120vw)}
 .cl-card.worn{box-shadow:0 0 0 4px color-mix(in srgb,var(--berry) 60%,#fff),0 4px 12px rgba(91,74,66,.16)}
 .cl-card.lift{opacity:.35}
+.cl-card .cl-badge{position:absolute;right:4px;top:4px;width:30px;height:30px;pointer-events:none}.cl-card .cl-badge svg{width:100%;height:100%;display:block}
 .cl-show{display:flex;gap:12px;align-items:flex-end;justify-content:center;height:100%;padding:22px 0 6px;pointer-events:none}
 .cl-show span{height:100%;aspect-ratio:.9;border-radius:22px;background:var(--paper);padding:8px;box-shadow:0 3px 10px rgba(91,74,66,.1)}
 .cl-show span svg{width:100%;height:100%}
@@ -500,17 +508,22 @@ function poolFor(slot){const th=S.th,its=(ITEMS[slot]||[]).slice();its.sort((a,b
 function openRack(slot,again){
   const n=lv.options,pool=poolFor(slot);if(!pool.length)return;
   const rot=again?(S.rot[slot]||0)+1:(S.rot[slot]||0);S.rot[slot]=rot;
-  const pickd=[];for(let k=0;k<Math.min(n,pool.length);k++)pickd.push(pool[(rot*n+k)%pool.length]);
+  /* P6: at most one of our own things among the cards; a new one comes the first time, then every other time */
+  const ours=ourItems(slot),unseen=ours.find(x=>!M.Items.seen('clothes',x.raw)),own=unseen||(ours.length&&rot%2===0?ours[(rot/2|0)%ours.length]:null),m=own&&n>1?n-1:n;
+  const pickd=[];for(let k=0;k<Math.min(m,pool.length);k++)pickd.push(pool[(rot*m+k)%pool.length]);if(own&&n>1)pickd.push(own);
   const items=pickd.map((it,k)=>({id:it.id,col:it.cols[(rot+k)%it.cols.length]}));
   const old=[...tray.querySelectorAll('.cl-card')];old.forEach(b=>{b.classList.add('out');setTimeout(()=>b.remove(),450)});
   rack={slot,items};LOG.push('rack:'+slot+':'+items.map(x=>x.id).join('+'));
-  items.forEach((c,k)=>{const it=findItem(slot,c.id),b=document.createElement('button');b.className='cl-card slide';b.dataset.k=k;b.dataset.item=c.id;b.setAttribute('aria-label',it.ko);
-    b.innerHTML=`<span class="cl-hook">${HOOK}</span>${cardSVG(slot,it,c.col)}`;tray.appendChild(b);
+  items.forEach((c,k)=>{const it=findItem(slot,c.id),b=document.createElement('button');b.className='cl-card slide';b.dataset.k=k;b.dataset.item=c.id;b.setAttribute('aria-label',it.ko);if(it.ours)b.classList.add('ours');
+    b.innerHTML=`<span class="cl-hook">${HOOK}</span>${cardSVG(slot,it,c.col)}`+(it.ours?`<span class="cl-badge">${OUR_BADGE}</span>`:'');tray.appendChild(b);
     setTimeout(()=>b.classList.remove('slide'),60+k*110)});
   noise(.4,{type:'bandpass',freq:1800,q:2,vol:.05});markWorn();strip();
   const ask={top:['어떤 옷을 입을까?','Which top?'],bottom:['치마? 바지?','A skirt or trousers?'],feet:['어떤 신발을 신을까?','Which shoes?'],head:['머리에는 뭘 쓸까?','Something for the head?'],neck:['목에는 뭘 할까?','Something for the neck?'],hand:['손에 뭘 들까?','Something to hold?']}[slot];
-  say(ask[0],ask[1]);
+  const nw=own&&n>1&&unseen&&own===unseen?own:null;
+  if(nw){const v=M.Items.newVoice();say(M.Items.fill(v[0],nw),M.Items.fill(v[1],nw))}else say(ask[0],ask[1]);
+  items.forEach(c=>{const it=findItem(slot,c.id);if(it&&it.ours)M.Items.markSeen('clothes',it.raw)});
 }
+const OUR_BADGE=`<svg viewBox="-20 -20 40 40"><path d="M0 15C-22 0 -19 -17 -9 -17C-4 -17 -1 -14 0 -10C1 -14 4 -17 9 -17C19 -17 22 0 0 15Z" fill="#FFFDF9" stroke="#E89AAE" stroke-width="4" stroke-linejoin="round"/><path d="M0 15C-22 0 -19 -17 -9 -17C-4 -17 -1 -14 0 -10C1 -14 4 -17 9 -17C19 -17 22 0 0 15Z" fill="none" stroke="${OL}" stroke-width="1.6" stroke-linejoin="round"/></svg>`;
 function markWorn(){if(!rack)return;const w=S.wear[rack.slot];tray.querySelectorAll('.cl-card').forEach(b=>{if(b.classList.contains('out'))return;const c=rack.items[+b.dataset.k];b.classList.toggle('worn',!!(w&&c&&w.id===c.id))})}
 /* put on: the curtain closes a little, opens, and it is on (vivid) — then a twirl and the skirt sways */
 function putOn(slot,iid,col,fromEl){

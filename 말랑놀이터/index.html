@@ -508,6 +508,7 @@ body{background:linear-gradient(180deg,var(--bg),color-mix(in srgb,var(--bg) 82%
     <div class="row"><span>엄마 목소리 녹음</span><button class="btn small alt" id="openRecs">녹음하기</button></div>
     <div class="row"><span>주인공·친구 사진</span><button class="btn small alt" id="openFriendsEdit">사진 바꾸기</button></div>
     <div class="row"><span>우리 가족 얼굴<br><small>엄마·아빠·삼촌·할머니 사진을 넣어요</small></span><button class="btn small alt" id="openFaces">얼굴 관리</button></div>
+    <div class="row"><span>우리 물건<br><small>모자·장난감 같은 진짜 물건을 사진으로 넣어요</small></span><button class="btn small alt" id="openItems">물건 관리</button></div>
     <div class="row"><span>칭찬 도장·진짜 드레스</span><button class="btn small alt" id="openStamps">도장판 열기</button></div>
     <div class="row"><span>모험 진행</span><button class="pillhold holdbtn" id="resetQuest">처음부터 다시 (꾹 2초)</button></div>
     <h4>오늘 논 놀이</h4>
@@ -830,6 +831,7 @@ hold($('#gear'),2000,()=>{
 $('#closeSettings').onclick=()=>{$('#settings').hidden=true};
 $('#openStamps').onclick=()=>{$('#settings').hidden=true;go('stamps')};
 $('#openFaces').onclick=()=>{$('#settings').hidden=true;if(window.ML&&ML.Faces)ML.Faces.openManager()};
+$('#openItems').onclick=()=>{$('#settings').hidden=true;if(window.ML&&ML.Items)ML.Items.openManager()};
 $('#openFriendsEdit').onclick=()=>{$('#settings').hidden=true;go('friends');games.friends.setEdit(true)};
 hold($('#resetQuest'),2000,()=>{PROG.cleared=0;PROG.pos=0;saveProg();toast('모험을 처음부터 다시 시작해요. 친구 사진은 그대로 남아 있어요.');games.home.enter()});
 
@@ -1615,6 +1617,7 @@ if('serviceWorker' in navigator&&location.protocol==='https:'){
 <script src="art.js"></script>
 <script src="alive.js"></script>
 <script src="faces.js"></script>
+<script src="items.js"></script>
 <script src="play2.js"></script>
 <script src="play3.js"></script>
 <script src="guide.js"></script>

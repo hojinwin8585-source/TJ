@@ -127,10 +127,12 @@ const UNL=PS.itemUnlock||{},UNL_EVERY=Math.max(1,UNL.everyCustomers||3),UNL_ORDE
 const slotOfItem=n=>UNL_SLOT[n]||(ITEM[n]||{}).slot;
 /* ---------- photoItems (P6 puts them in the closet with a category): same rules as drawn ones, a photo instead of a drawing ---------- */
 const PHO=PS.photoItems||{},PHO_SLOT=PHO.fromWardrobe||{},WCATS=((CF.wardrobe||{}).categories)||[];
+/* P6 우리 물건: head things the grown-up added (items.js) come as photo decorations of the head place */
+const ourItems=()=>{try{return M.Items?M.Items.forPlace('salon').map(r=>({id:'photo:'+r.id,slot:'head',photo:r.img,ko:r.ko,en:r.en})):[]}catch(e){return[]}};
 function photoItems(){
-  const list=store.get('mallang_closet',[]);if(!Array.isArray(list))return[];
-  return list.map((c,k)=>{if(!c||!c.img)return null;const cat=WCATS.find(w=>w.id===c.cat||w.ko===c.cat||w.id===c.category||w.ko===c.category);const slot=cat&&PHO_SLOT[cat.ko];if(!slot)return null;
-    return{id:'photo:'+(c.id||k),slot,photo:c.img,ko:c.name||cat.ko,en:c.en||cat.en}}).filter(Boolean);
+  const list=store.get('mallang_closet',[]);if(!Array.isArray(list))return ourItems();
+  return ourItems().concat(list.map((c,k)=>{if(!c||!c.img)return null;const cat=WCATS.find(w=>w.id===c.cat||w.ko===c.cat||w.id===c.category||w.ko===c.category);const slot=cat&&PHO_SLOT[cat.ko];if(!slot)return null;
+    return{id:'photo:'+(c.id||k),slot,photo:c.img,ko:c.name||cat.ko,en:c.en||cat.en}}).filter(Boolean));
 }
 const itemOf=n=>ITEM[n]||(String(n).startsWith('photo:')?photoItems().find(p=>p.id===n)||null:null);
 /* one decoration drawn around (0,0): drawn ones in their colour, photos as they are */

@@ -21,11 +21,25 @@ const store=M.store,say=(ko,en,q)=>{try{M.say(ko,en,q)}catch(e){}};
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 
 /* ---------------- saved state ---------------- */
-const fresh=()=>({carrots:0,pending:0,fed:0,inbox:[],held:null,placed:{},next:{big:0,small:0},rounds:{},log:[],todayGift:''});
+const fresh=()=>({carrots:0,pending:0,fed:0,inbox:[],held:null,placed:{},next:{big:0,small:0},rounds:{},log:[],todayGift:'',offered:[]});
 let ST=Object.assign(fresh(),store.get(KEY,{}));
-['inbox','log'].forEach(k=>{if(!Array.isArray(ST[k]))ST[k]=[]});['placed','rounds','next'].forEach(k=>{if(!ST[k]||typeof ST[k]!=='object')ST[k]=k==='next'?{big:0,small:0}:{}});
+['inbox','log','offered'].forEach(k=>{if(!Array.isArray(ST[k]))ST[k]=[]});['placed','rounds','next'].forEach(k=>{if(!ST[k]||typeof ST[k]!=='object')ST[k]=k==='next'?{big:0,small:0}:{}});
 const save=()=>store.set(KEY,ST);
-const GIFT=id=>(A.GIFTS||[]).find(g=>g.id===id);
+/* P6 우리 물건: a 'room' thing the grown-up added is a present like the drawn ones, with its own photo (floor places) */
+const ourGift=id=>{const r=String(id).startsWith('photo:')&&M.Items?M.Items.fromCard(id):null;
+  return r?{id,ko:r.ko,en:r.en,size:'big',place:'floor',ours:true,svg:()=>`<svg viewBox="0 0 100 100" style="overflow:visible">${A.vol&&A.vol.ground?A.vol.ground(50,96,38,5):''}<image href="${r.img}" x="2" y="0" width="96" height="96" preserveAspectRatio="xMidYMax meet"/></svg>`}:null};
+const GIFT=id=>(A.GIFTS||[]).find(g=>g.id===id)||ourGift(id);
+/* each new 'room' thing comes once as a present in the box; things that were deleted leave the box and the room */
+function syncOurs(){
+  if(!M.Items)return;let ch=false;
+  const gone=id=>String(id).startsWith('photo:')&&!M.Items.fromCard(id);
+  const n0=ST.inbox.length;ST.inbox=ST.inbox.filter(id=>!gone(id));if(ST.inbox.length!==n0)ch=true;
+  if(ST.held&&gone(ST.held)){ST.held=null;ch=true}
+  Object.keys(ST.placed).forEach(k=>{if(gone(ST.placed[k])){delete ST.placed[k];ch=true}});
+  M.Items.list('room').forEach(r=>{const id=M.Items.cardId(r.id);if(!ST.offered.includes(id)){ST.offered.push(id);ST.inbox.push(id);ch=true}});
+  if(ch){save();if(M.current()==='zone-myroom')render()}
+}
+document.addEventListener('ml-items',()=>{try{syncOurs()}catch(e){}});
 function give(size,why){
   const list=(A.GIFTS||[]).filter(g=>g.size===size);if(!list.length)return null;
   const i=(ST.next[size]|0)%list.length,g=list[i];ST.next[size]=(i+1)%list.length;
@@ -148,7 +162,7 @@ function clothes(){const C=(M.closet&&M.closet())||[],n=M.stamps?M.stamps():0;re
 function family(){const C=M.CAST||{},F=C.family||{};return[C.hero&&C.hero.photo,F.mom&&F.mom.photo,F.dad&&F.dad.photo].filter(Boolean).slice(0,3)}
 function render(){
   const bl=blocked();let h='';
-  SPOTS.forEach(sp=>{const id=ST.placed[sp[0]],g=id&&GIFT(id);if(!g||bl[sp[0]])return;const w=g.size==='small'?sp[3]*.8:sp[3];
+  SPOTS.forEach(sp=>{const id=ST.placed[sp[0]],g=id&&GIFT(id);if(!g||bl[sp[0]])return;const w=g.ours?sp[3]*1.5:g.size==='small'?sp[3]*.8:sp[3];
     h+=`<div class="rm-spot ${sp[4]}" data-spot="${sp[0]}" data-gift="${g.id}" style="left:${sp[1]}%;top:${sp[2]}%;--w:${w}%;--z:${sp[4]==='wall'?2:3+Math.round(sp[2]/10)}">${g.svg()}</div>`});
   const fam=family();if(fam.length)h+=`<div class="rm-frame" aria-label="우리 가족 액자"><div class="fr">${fam.map(p=>`<i style="background-image:url(${p})"></i>`).join('')}</div></div>`;
   const cl=clothes();if(cl.length)h+=`<div class="rm-hanger" aria-label="내 옷"><div class="bar"></div><div class="cl">${cl.map(c=>`<img src="${c.img}" alt="">`).join('')}</div></div>`;
@@ -219,7 +233,7 @@ stage.addEventListener('pointerdown',e=>{
 window.addEventListener('resize',()=>{if(M.current()==='zone-myroom')drawGlows()});
 
 M.games['zone-myroom']={
-  enter:()=>{totoEl.innerHTML=totoSVG('idle');render();if(M.Alive){al=M.Alive.attach(totoEl,{kind:'bunny'})}
+  enter:()=>{try{syncOurs()}catch(e){}totoEl.innerHTML=totoSVG('idle');render();if(M.Alive){al=M.Alive.attach(totoEl,{kind:'bunny'})}
     if(ST.held||ST.inbox.length)say('내 방이에요! 선물 상자가 있어요! 콕 눌러 봐!','My room! There is a present! Tap the box!');
     else if(ST.carrots>0)say('내 방이에요! 토토에게 당근을 줘 볼까?','My room! Shall we give Toto a carrot?');
     else say(`${MS.ko||'내 방'}에 왔어요!`,'Welcome to my room!')},

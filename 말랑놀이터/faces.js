@@ -27,7 +27,7 @@ const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,v);return true}catch(e){return false}};
 function openDB(){return new Promise((res,rej)=>{
   try{if(!window.indexedDB){rej(new Error('no idb'));return}
-    const q=indexedDB.open(DBN,1);q.onupgradeneeded=()=>{try{q.result.createObjectStore(OS,{keyPath:'id'})}catch(e){}};
+    const q=indexedDB.open(DBN,2);q.onupgradeneeded=()=>{try{[OS,'items'].forEach(n=>{if(!q.result.objectStoreNames.contains(n))q.result.createObjectStore(n,{keyPath:'id'})})}catch(e){}};   /* 'items' = P6 our own things (items.js) */
     q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error||new Error('idb'));q.onblocked=()=>rej(new Error('blocked'));
     setTimeout(()=>rej(new Error('timeout')),4000);
   }catch(e){rej(e)}})}
@@ -265,10 +265,10 @@ function modal(id,html){let m=document.getElementById(id);if(!m){m=document.crea
 /* ---------- face cut ---------- */
 const SZ=560,RY=126/107;       // the frame: an oval with the face's height-to-width, 107 × 126 inside a 256 square
 let cutEl=null,C=null;
-function openCut(img,target,done){
-  css();
-  cutEl=modal('faceCut',`<div class="sheet center" role="dialog" aria-label="얼굴만 따기">
-    <h3 id="fcTitle">얼굴만 따기</h3>
+function openCut(img,target,done,opt){
+  css();const obj=!!(opt&&opt.obj),RYo=obj?1:RY;
+  cutEl=modal('faceCut',`<div class="sheet center" role="dialog" aria-label="${obj?'물건만 따기':'얼굴만 따기'}">
+    <h3 id="fcTitle">${obj?'물건만 따기':'얼굴만 따기'}</h3>
     <p class="hint" id="fcHint"></p>
     <div class="fc-stage"><canvas id="fcFrame" width="${SZ}" height="${SZ}"></canvas><canvas id="fcWork" width="512" height="512" hidden></canvas></div>
     <div class="fc-ctl" id="fcCtl1"><span>크기</span><input type="range" id="fcSize" min="0.08" max="0.48" step="0.005" aria-label="틀 크기"><button class="btn small alt" id="fcAuto" hidden>얼굴 자동으로 맞추기</button></div>
@@ -276,6 +276,7 @@ function openCut(img,target,done){
       <div class="seg" id="fcTool"><button data-t="erase" class="on">지우개</button><button data-t="restore">되살리기</button></div>
       <span>붓</span><input type="range" id="fcBrush" min="8" max="64" value="28" aria-label="붓 크기">
       <span>가장자리</span><input type="range" id="fcSoft" min="0" max="8" step="1" value="4" aria-label="가장자리 부드럽게">
+      <button class="btn small alt" id="fcBg" hidden>배경 자동으로 지우기</button>
       <button class="btn small ghost" id="fcUndo">되돌리기</button>
     </div>
     <div class="row" style="justify-content:center"><button class="btn ghost" id="fcCancel">취소</button><button class="btn ghost" id="fcBack" hidden>이전</button><button class="btn" id="fcNext">다음</button></div>
@@ -287,12 +288,13 @@ function openCut(img,target,done){
   const clampFr=()=>{fr.rx=Math.max(SZ*.08,Math.min(SZ*.48,fr.rx));fr.cx=Math.max(0,Math.min(SZ,fr.cx));fr.cy=Math.max(0,Math.min(SZ,fr.cy));$('#fcSize').value=fr.rx/SZ};
   const draw=()=>{
     g.fillStyle='#EDE8E0';g.fillRect(0,0,SZ,SZ);g.drawImage(img,ox,oy,fw,fh);
-    g.fillStyle='rgba(46,42,79,.5)';g.beginPath();g.rect(0,0,SZ,SZ);g.ellipse(fr.cx,fr.cy,fr.rx,fr.rx*RY,0,0,Math.PI*2,true);g.fill('evenodd');
-    g.strokeStyle='#fff';g.lineWidth=5;g.beginPath();g.ellipse(fr.cx,fr.cy,fr.rx,fr.rx*RY,0,0,Math.PI*2);g.stroke();
-    g.fillStyle='#fff';[[0,-1],[0,1],[-1,0],[1,0]].forEach(([a,b])=>{g.beginPath();g.arc(fr.cx+a*fr.rx,fr.cy+b*fr.rx*RY,7,0,Math.PI*2);g.fill()});
+    g.fillStyle='rgba(46,42,79,.5)';g.beginPath();g.rect(0,0,SZ,SZ);if(obj){g.moveTo(fr.cx-fr.rx,fr.cy-fr.rx);g.lineTo(fr.cx-fr.rx,fr.cy+fr.rx);g.lineTo(fr.cx+fr.rx,fr.cy+fr.rx);g.lineTo(fr.cx+fr.rx,fr.cy-fr.rx);g.closePath()}else g.ellipse(fr.cx,fr.cy,fr.rx,fr.rx*RYo,0,0,Math.PI*2,true);g.fill('evenodd');
+    g.strokeStyle='#fff';g.lineWidth=5;g.beginPath();if(obj)g.rect(fr.cx-fr.rx,fr.cy-fr.rx,fr.rx*2,fr.rx*2);else g.ellipse(fr.cx,fr.cy,fr.rx,fr.rx*RYo,0,0,Math.PI*2);g.stroke();
+    g.fillStyle='#fff';[[0,-1],[0,1],[-1,0],[1,0]].forEach(([a,b])=>{g.beginPath();g.arc(fr.cx+a*fr.rx,fr.cy+b*fr.rx*RYo,7,0,Math.PI*2);g.fill()});
   };
   C.draw=draw;clampFr();draw();
-  $('#fcHint').textContent='타원 틀을 손가락으로 끌어서 얼굴에 맞추고, 두 손가락으로 벌리거나 아래 막대로 크기를 맞춰 주세요. 머리카락과 턱선은 다음 화면에서 손봐요.';
+  const H1=obj?'네모 틀을 손가락으로 끌어서 물건에 맞추고, 두 손가락으로 벌리거나 아래 막대로 크기를 맞춰 주세요. 남은 배경은 다음 화면에서 지워요.':'타원 틀을 손가락으로 끌어서 얼굴에 맞추고, 두 손가락으로 벌리거나 아래 막대로 크기를 맞춰 주세요. 머리카락과 턱선은 다음 화면에서 손봐요.';
+  $('#fcHint').textContent=H1;
   const mapPt=e=>{const r=cv.getBoundingClientRect();return[(e.clientX-r.left)*SZ/r.width,(e.clientY-r.top)*SZ/r.height]};
   cv.addEventListener('pointerdown',e=>{if(C.step!==1)return;try{cv.setPointerCapture(e.pointerId)}catch(_){}C.ptrs.set(e.pointerId,mapPt(e));C.pinch=0});
   cv.addEventListener('pointermove',e=>{
@@ -304,7 +306,7 @@ function openCut(img,target,done){
   const up=e=>{C.ptrs.delete(e.pointerId);C.pinch=0};cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
   $('#fcSize').addEventListener('input',e=>{fr.rx=+e.target.value*SZ;clampFr();draw()});
   /* FaceDetector (only where the device has it): fit the frame by itself; by hand when it is not there */
-  if('FaceDetector' in window){
+  if(!obj&&'FaceDetector' in window){
     const b=$('#fcAuto');b.hidden=false;
     const fit=async()=>{try{const fd=new window.FaceDetector({fastMode:true,maxDetectedFaces:1}),r=await fd.detect(img);
       if(r&&r[0]){const bb=r[0].boundingBox;fr.cx=ox+(bb.x+bb.width/2)*s;fr.cy=oy+(bb.y+bb.height*.42)*s;fr.rx=bb.width*s*.68;clampFr();draw();return true}}catch(e){}return false};
@@ -312,14 +314,14 @@ function openCut(img,target,done){
   }
   /* step 2: the oval part of the photo on a 512 sheet, with the pieces round it kept to bring back */
   const toStep2=()=>{
-    const k=107/fr.rx,half=128/k,ix=(fr.cx-ox)/s,iy=(fr.cy-oy)/s,hi=half/s;
+    const k=(obj?128:107)/fr.rx,half=128/k,ix=(fr.cx-ox)/s,iy=(fr.cy-oy)/s,hi=half/s;
     const o=document.createElement('canvas');o.width=o.height=512;const og=o.getContext('2d');og.drawImage(img,ix-hi,iy-hi,hi*2,hi*2,0,0,512,512);C.orig=o;
-    wg.clearRect(0,0,512,512);wg.save();wg.beginPath();wg.ellipse(256,256,214,252,0,0,Math.PI*2);wg.clip();wg.drawImage(o,0,0);wg.restore();
-    C.step=2;C.undo=[];cv.hidden=true;wk.hidden=false;$('#fcCtl1').hidden=true;$('#fcCtl2').hidden=false;$('#fcBack').hidden=false;$('#fcNext').textContent='저장';
+    wg.clearRect(0,0,512,512);wg.save();wg.beginPath();if(obj)wg.rect(0,0,512,512);else wg.ellipse(256,256,214,252,0,0,Math.PI*2);wg.clip();wg.drawImage(o,0,0);wg.restore();
+    C.step=2;C.undo=[];cv.hidden=true;wk.hidden=false;$('#fcCtl1').hidden=true;$('#fcCtl2').hidden=false;$('#fcBack').hidden=false;$('#fcBg').hidden=!obj;
     $('#fcHint').textContent='남은 배경은 지우개로 지우고, 너무 지운 곳은 되살리기로 칠해 주세요. 가장자리 막대로 얼굴 둘레를 부드럽게 해요.';
   };
-  const toStep1=()=>{C.step=1;cv.hidden=false;wk.hidden=true;$('#fcCtl1').hidden=false;$('#fcCtl2').hidden=true;$('#fcBack').hidden=true;$('#fcNext').textContent='다음';draw();
-    $('#fcHint').textContent='타원 틀을 손가락으로 끌어서 얼굴에 맞추고, 두 손가락으로 벌리거나 아래 막대로 크기를 맞춰 주세요. 머리카락과 턱선은 다음 화면에서 손봐요.'};
+  const toStep1=()=>{C.step=1;cv.hidden=false;wk.hidden=true;$('#fcCtl1').hidden=false;$('#fcCtl2').hidden=true;$('#fcBack').hidden=true;$('#fcNext').textContent='다음';$('#fcBg').hidden=true;draw();
+    $('#fcHint').textContent=H1};
   const snap=()=>{C.undo.push(wg.getImageData(0,0,512,512));if(C.undo.length>10)C.undo.shift()};
   const wpos=e=>{const r=wk.getBoundingClientRect();return[(e.clientX-r.left)*512/r.width,(e.clientY-r.top)*512/r.height]};
   const brush=(a,b)=>{const rr=+$('#fcBrush').value/2+4;wg.save();wg.lineWidth=rr*2;wg.lineCap='round';
@@ -330,10 +332,22 @@ function openCut(img,target,done){
   wk.addEventListener('pointermove',e=>{if(!C.last)return;const p=wpos(e);brush(C.last,p);C.last=p});
   const end=()=>{C.last=null};wk.addEventListener('pointerup',end);wk.addEventListener('pointercancel',end);
   $('#fcTool').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;C.tool=b.dataset.t;cutEl.querySelectorAll('#fcTool button').forEach(x=>x.classList.toggle('on',x===b))});
+  /* objects: the colour along the border is taken as the background and washed away from the edges inward (a tolerance, not a promise: the eraser finishes it) */
+  $('#fcBg').onclick=()=>{
+    snap();const id=wg.getImageData(0,0,512,512),px=id.data,W=512,seen=new Uint8Array(W*W),q=[];
+    const bd=[];for(let i=0;i<W;i+=4){bd.push(i,0,i,W-1,0,i,W-1,i)}
+    let r=0,gg=0,b=0,n=0;for(let k=0;k<bd.length;k+=2){const x=bd[k],y=bd[k+1],j=(y*W+x)*4;if(px[j+3]>200){r+=px[j];gg+=px[j+1];b+=px[j+2];n++}}
+    if(!n){toast('배경을 찾지 못했어요. 지우개로 지워 주세요.');return}
+    r/=n;gg/=n;b/=n;const TOL=62,near=j=>px[j+3]<20||Math.hypot(px[j]-r,px[j+1]-gg,px[j+2]-b)<TOL;
+    for(let k=0;k<bd.length;k+=2){const x=bd[k],y=bd[k+1],p=y*W+x;if(!seen[p]&&near(p*4)){seen[p]=1;q.push(p)}}
+    while(q.length){const p=q.pop(),x=p%W,y=(p-x)/W;[[x+1,y],[x-1,y],[x,y+1],[x,y-1]].forEach(([a,c])=>{if(a<0||c<0||a>=W||c>=W)return;const m=c*W+a;if(!seen[m]&&near(m*4)){seen[m]=1;q.push(m)}})}
+    for(let p=0;p<W*W;p++)if(seen[p])px[p*4+3]=0;
+    wg.putImageData(id,0,0);
+  };
   $('#fcUndo').onclick=()=>{const d=C.undo.pop();if(d)wg.putImageData(d,0,0)};
   $('#fcCancel').onclick=()=>{cutEl.hidden=true;C=null};
   $('#fcBack').onclick=toStep1;
-  $('#fcNext').onclick=()=>{if(C.step===1){toStep2();return}finish(wk,+$('#fcSoft').value)};
+  $('#fcNext').onclick=()=>{if(C.step===1){toStep2();return}finish(wk,+$('#fcSoft').value,obj)};
   C.__step2=toStep2;
   cutEl.hidden=false;
 }
@@ -360,11 +374,12 @@ function sample(id){
   return out;
 }
 const toData=cv=>{let d='';try{d=cv.toDataURL('image/webp',.92)}catch(e){}return/^data:image\/webp/.test(d)?d:cv.toDataURL('image/png')};
-function finish(wk,soft){
-  const out=document.createElement('canvas');out.width=out.height=PX;const o=out.getContext('2d',{willReadFrequently:true});o.imageSmoothingQuality='high';o.drawImage(wk,0,0,PX,PX);
-  const id=o.getImageData(0,0,PX,PX);let n=0;for(let i=3;i<id.data.length;i+=4)if(id.data[i]>16)n++;
-  if(n<PX*PX*.04){toast('다 지워졌어요. 되돌리기를 눌러 주세요.');return}
-  const colors=sample(id);feather(id,soft);o.putImageData(id,0,0);
+function finish(wk,soft,obj){
+  const PXo=obj?((M.Items&&M.Items.px)||384):PX;
+  const out=document.createElement('canvas');out.width=out.height=PXo;const o=out.getContext('2d',{willReadFrequently:true});o.imageSmoothingQuality='high';o.drawImage(wk,0,0,PXo,PXo);
+  const id=o.getImageData(0,0,PXo,PXo);let n=0;for(let i=3;i<id.data.length;i+=4)if(id.data[i]>16)n++;
+  if(n<PXo*PXo*.04){toast('다 지워졌어요. 되돌리기를 눌러 주세요.');return}
+  const colors=obj?{}:sample(id);feather(id,soft);o.putImageData(id,0,0);
   const data=toData(out),done=C.done,t=C.target;cutEl.hidden=true;C=null;
   if(done)done({photo:data,colors,target:t});
 }
@@ -441,6 +456,13 @@ function openManager(){
   $('#fmClose').onclick=()=>{mgrEl.hidden=true;armed=null;changed()};
 }
 Faces.openManager=openManager;
+/* P6: the same cutter for a thing (square frame, no face) ; items.js uses it */
+Faces.cutObject=(img,done)=>{css();openCut(img,{kind:'obj'},done,{obj:true})};
+Faces.loadFile=loadFile;
+Faces.__cutObjDirect=async(dataUrl,fr,auto)=>{
+  const im=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=dataUrl});
+  return new Promise(res=>{openCut(im,{kind:'obj'},r=>res(r),{obj:true});
+    if(fr){C.fr.cx=fr.cx*SZ;C.fr.cy=fr.cy*SZ;C.fr.rx=fr.rx*SZ}C.draw();C.__step2();if(auto)$('#fcBg').click();$('#fcNext').click()})};
 Faces.closeManager=()=>{if(mgrEl)mgrEl.hidden=true};
 /* tests: the same cut path without the dialog (frame as 0..1 of the picture) */
 Faces.__cutDirect=async(id,kind,dataUrl,fr)=>{

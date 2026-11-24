@@ -42,7 +42,11 @@ const KIND={
 const famFaces=()=>{try{return M.Faces?M.Faces.list():[]}catch(e){return[]}};
 const FRAME_AT=[8,16];
 const TASKS_BASE={1:['orn','orn','orn'],2:['star','light','light','light'],3:['stock','stock','gift','gift'],4:['wreath','snow','snow','snow']};
-const taskList=lv=>{const b=TASKS_BASE[lv]||[];return lv===4&&famFaces().length?b.concat(['frame']):b};
+/* P6: with our own Christmas things added by the grown-up (items.js), level 4 ends with one more: that thing stands in the room */
+const ourXm=()=>{try{return M.Items?M.Items.forPlace('xmas'):[]}catch(e){return[]}};
+const DECO_AT=[36,78],DECO_AT2=[112,40];   // top left wall above the door (beside the tree top when a family frame is there too)
+const decoPos=()=>taskList(4).includes('frame')?DECO_AT2:DECO_AT;
+const taskList=lv=>{let b=TASKS_BASE[lv]||[];if(lv===4&&famFaces().length)b=b.concat(['frame']);if(lv===4&&ourXm().length)b=b.concat(['deco']);return b};
 const TASKS=new Proxy({},{get:(_,k)=>TASKS_BASE[k]?taskList(+k):undefined});
 const TREE_AT=[68,26],FIRE_AT=[200,184],WIN_AT=[207,36],DOOR_AT=[6,92];
 const GIFT_AT=[[110,338],[188,340],[150,360]];
@@ -52,7 +56,7 @@ const tp=(p,at)=>[p[0]+at[0],p[1]+at[1]];
 const ribbon=en=>/yellow|mint|orange/.test(en)?X.C.berry:X.C.snow;
 
 /* ---------------- saved state ---------------- */
-const emptyTree=()=>({orn:[],star:null,lights:0,stock:[],gifts:[],wreath:null,snow:0,frame:null});
+const emptyTree=()=>({orn:[],star:null,lights:0,stock:[],gifts:[],wreath:null,snow:0,frame:null,deco:null});
 const fresh=()=>({tree:emptyTree(),lv:0,done:false,plan:null});
 let ST=Object.assign(fresh(),store.get(KEY,{}));
 const fix=()=>{if(!ST.tree||typeof ST.tree!=='object')ST.tree=emptyTree();ST.tree=Object.assign(emptyTree(),ST.tree);['orn','stock','gifts'].forEach(k=>{if(!Array.isArray(ST.tree[k]))ST.tree[k]=[]});
@@ -153,6 +157,7 @@ function targetOf(k){
   if(k==='gift'){const g=(P.gift||[0,1,2])[t.gifts.length]??0;const p=GIFT_AT[g];return{p:[p[0],p[1]-18],g}}
   if(k==='wreath')return{p:wreathAt()};
   if(k==='frame')return{p:[FRAME_AT[0]+27,FRAME_AT[1]+30]};
+  if(k==='deco')return{p:[decoPos()[0],decoPos()[1]-30]};
   return null;
 }
 
@@ -174,6 +179,7 @@ function draw(){
   s+=`<g transform="translate(${WIN_AT[0]} ${WIN_AT[1]})">${itemG('snow',X.window(t.snow),'',t.snow&&freshKey==='snow'?'xm-on':'')}</g>`;
   s+=`<g transform="translate(${DOOR_AT[0]} ${DOOR_AT[1]})">${X.door()}</g>`;
   if(t.wreath){const [x,y]=wreathAt();s+=`<g transform="translate(${x} ${y})">${itemG('wreath',X.wreath(vividOf(t.wreath)),X.wreath(hexOf(t.wreath)))}</g>`}
+  if(t.deco){const r=M.Items&&M.Items.get(t.deco);if(r)s+=`<g transform="translate(${decoPos()[0]} ${decoPos()[1]})">${itemG('deco',`<image href="${r.img}" x="-34" y="-70" width="68" height="68" preserveAspectRatio="xMidYMax meet"/>`,'')}</g>`}
   if(t.frame){const f=frameG(t.frame);if(f)s+=`<g transform="translate(${FRAME_AT[0]} ${FRAME_AT[1]})">${itemG('frame',f,'')}</g>`}
   s+=`<g transform="translate(${FIRE_AT[0]} ${FIRE_AT[1]})">${X.fireplace()}</g>`;
   t.stock.forEach((o,i)=>{const [x,y]=hookAt(o.h);s+=`<g transform="translate(${x} ${y+2})">${itemG('stock:'+i,X.stocking(vividOf(o.c)),X.stocking(hexOf(o.c)))}</g>`});
@@ -192,9 +198,10 @@ function draw(){
 function drawToto(mood){totoEl.innerHTML=A.animal('bunny',mood||'idle',{})+X.scarf}
 const FRAME_ICON=`<svg viewBox="0 0 60 66" style="overflow:visible"><rect x="6" y="6" width="48" height="54" rx="6" fill="#DDBB94" stroke="${OL}" stroke-width="3"/><rect x="12" y="12" width="36" height="42" rx="3" fill="#FBF3E4"/><circle cx="30" cy="30" r="9" fill="#F6D5BE" stroke="${OL}" stroke-width="2"/><path d="M16 52Q30 38 44 52Z" fill="#A9CFA0" stroke="${OL}" stroke-width="2"/></svg>`;
 const STEP_HEX={orn:'#E0786F',star:'#EBCB6B',stock:'#7D9BE0',gift:'#E89AAE',wreath:'#E0786F',light:'#EBCB6B'};
+const decoIcon=()=>{const r=ourXm()[0];return r?`<svg viewBox="0 0 60 66" style="overflow:visible"><image href="${r.img}" x="4" y="4" width="52" height="58" preserveAspectRatio="xMidYMid meet"/></svg>`:FRAME_ICON};
 function strip(){
   const lv=ST.lv||level(),list=TASKS[lv]||[],n=doneCount();
-  stripEl.innerHTML=list.map((k,i)=>`<span class="xs${i<n?' done':''}${i===n&&!ST.done?' on':''}" data-k="${k}">${k==='frame'?FRAME_ICON:X.card(k==='light'?'bulb':k,STEP_HEX[k]||'#E0786F')}</span>`).join('');
+  stripEl.innerHTML=list.map((k,i)=>`<span class="xs${i<n?' done':''}${i===n&&!ST.done?' on':''}" data-k="${k}">${k==='frame'?FRAME_ICON:k==='deco'?decoIcon():X.card(k==='light'?'bulb':k,STEP_HEX[k]||'#E0786F')}</span>`).join('');
 }
 function stars(n){const pr=PRG();starsEl.innerHTML=pr?pr.stars(GID,n):''}
 
@@ -202,7 +209,7 @@ function stars(n){const pr=PRG();starsEl.innerHTML=pr?pr.stars(GID,n):''}
 const tasks=()=>TASKS[ST.lv]||TASKS[1];
 function doneCount(){
   const t=ST.tree;
-  switch(ST.lv){case 1:return Math.min(3,t.orn.length);case 2:return(t.star?1:0)+Math.min(3,t.lights);case 3:return Math.min(2,t.stock.length)+Math.min(2,t.gifts.length);case 4:return(t.wreath?1:0)+Math.min(3,t.snow)+(t.frame&&taskList(4).includes('frame')?1:0);default:return 0}
+  switch(ST.lv){case 1:return Math.min(3,t.orn.length);case 2:return(t.star?1:0)+Math.min(3,t.lights);case 3:return Math.min(2,t.stock.length)+Math.min(2,t.gifts.length);case 4:return(t.wreath?1:0)+Math.min(3,t.snow)+(t.frame&&taskList(4).includes('frame')?1:0)+(t.deco&&taskList(4).includes('deco')?1:0);default:return 0}
 }
 const pickN=(arr,n)=>{const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a.slice(0,n)};
 /* the decorations of the levels below stay; if they are missing (a parent moved the level, or a fresh tree), they are hung quietly first */
@@ -217,7 +224,7 @@ function clearFrom(lv){
   if(lv<=1)t.orn=[];
   if(lv<=2){t.star=null;t.lights=0}
   if(lv<=3){t.stock=[];t.gifts=[]}
-  if(lv<=4){t.wreath=null;t.snow=0;t.frame=null}
+  if(lv<=4){t.wreath=null;t.snow=0;t.frame=null;t.deco=null}
 }
 function startRound(lv){
   T0++;G.stop();
@@ -235,6 +242,7 @@ function next(first){
   if(i>=list.length){finishRound();return}
   task=list[i];
   if(task==='frame')showFaceCards();
+  else if(task==='deco')showDecoCards();
   else if(KIND[task])showCards(task,first);
   else if(task==='light')askTap('light',first);
   else if(task==='snow')askTap('snow',first);
@@ -245,6 +253,16 @@ function showFaceCards(){
   const items=fs.map(r=>({v:r.id,ko:r.ko+'!',en:(r.en||r.ko)+'!',svg:A.personHead(r.photo,M.Faces.look(r))}));
   tray.innerHTML='';tray.appendChild(SHL.cards(items,it=>pick('frame',it.v)));
   const line=['액자에 누구를 넣을까? 골라 봐!','Who goes in the frame? Pick one!'];say(line[0],line[1]);
+  G.start({type:'tap',wait:true,after:5000,ko:line[0],en:line[1],at:()=>{const c=tray.querySelector('.sh-card');if(!c)return[stage.clientWidth/2,stage.clientHeight];const r=c.getBoundingClientRect(),s=stage.getBoundingClientRect();return[r.left-s.left+r.width/2,r.top-s.top+r.height/2]}});
+}
+/* --- P6: choose which of our own things stands in the room (up to 3 cards, each the cut-out photo) --- */
+const decoSVG=r=>`<svg viewBox="0 0 100 100" style="overflow:visible"><image href="${r.img}" x="2" y="2" width="96" height="96" preserveAspectRatio="xMidYMid meet"/></svg>`;
+function showDecoCards(){
+  phase='cards';const rs=ourXm(),un=rs.filter(r=>!M.Items.seen('xmas',r.id)),rest=pickN(rs.filter(r=>!un.includes(r)),3);
+  const fs=un.slice(0,1).concat(rest).slice(0,3);
+  const items=fs.map(r=>({v:r.id,ko:r.ko+'!',en:r.en+'!',svg:decoSVG(r)}));
+  tray.innerHTML='';tray.appendChild(SHL.cards(items,it=>pick('deco',it.v)));
+  const nw=un[0],v=M.Items.newVoice(),line=nw?[M.Items.fill(v[0],nw),M.Items.fill(v[1],nw)]:['우리 집 장식을 골라 봐!','Pick our own decoration!'];say(line[0],line[1]);
   G.start({type:'tap',wait:true,after:5000,ko:line[0],en:line[1],at:()=>{const c=tray.querySelector('.sh-card');if(!c)return[stage.clientWidth/2,stage.clientHeight];const r=c.getBoundingClientRect(),s=stage.getBoundingClientRect();return[r.left-s.left+r.width/2,r.top-s.top+r.height/2]}});
 }
 /* --- choose a card --- */
@@ -271,7 +289,7 @@ function pick(k,c){
   if(phase!=='cards'||busy)return;
   held={k,c};phase='place';LOG.push('pick:'+k+':'+c);
   if(al){al.setMood('wow');al.play('hop')}
-  tray.innerHTML='';tray.appendChild(SHL.tool(k==='frame'?(()=>{const r=M.Faces.get(c);return A.personHead(r.photo,M.Faces.look(r))})():X.card(k,hexOf(c),ribbon(c)),{cls:'xm-held'}));
+  tray.innerHTML='';tray.appendChild(SHL.tool(k==='deco'?(()=>{const r=M.Items.get(c);return r?decoSVG(r):''})():k==='frame'?(()=>{const r=M.Faces.get(c);return A.personHead(r.photo,M.Faces.look(r))})():X.card(k,hexOf(c),ribbon(c)),{cls:'xm-held'}));
   const tg=targetOf(k);spotsEl.innerHTML='';
   const b=document.createElement('button');b.type='button';b.className='xm-spot';b.setAttribute('aria-label','반짝이는 자리');
   b.innerHTML=`<svg viewBox="-12 -12 24 24">${A.twinkle(0,0,11,'#F2D06B')}${A.twinkle(0,0,5,'#fff')}</svg>`;
@@ -290,12 +308,14 @@ function hang(){
   else if(k==='gift'){t.gifts.push({g:tg.g,c});freshKey='gift:'+(t.gifts.length-1)}
   else if(k==='wreath'){t.wreath=c;freshKey='wreath'}
   else if(k==='frame'){t.frame=c;freshKey='frame'}
+  else if(k==='deco'){t.deco=c;freshKey='deco';try{M.Items.markSeen('xmas',c)}catch(e){}}
   save();held=null;phase='hung';spotsEl.innerHTML='';G.stop();LOG.push('hang:'+k+':'+c);
   pop();tone(1046,.5,'sine',.1,.06);tone(1568,.35,'sine',.05,.16);
   draw();strip();
   if(al){al.setMood('happy');al.play('hop')}
   const nice=[['예쁘다!','So pretty!'],['반짝반짝!','Sparkly!'],['우와, 멋지다!','Wow, lovely!']][doneCount()%3];
-  say(nice[0],nice[1]);
+  const dr=k==='deco'&&M.Items&&M.Items.get(c);
+  if(dr)say(dr.ko+'! 예쁘다!','A pretty '+dr.en+'!');else say(nice[0],nice[1]);
   tray.innerHTML='';
   later(()=>next(),1300);
 }
@@ -368,10 +388,12 @@ function hitItem(p){
   for(let i=0;i<t.orn.length;i++)if(d(p,ornAt(t.orn[i].s))<=16)return{key:'orn:'+i,k:'orn',c:t.orn[i].c};
   for(let i=0;i<t.stock.length;i++){const [x,y]=hookAt(t.stock[i].h);if(p[0]>=x-12&&p[0]<=x+22&&p[1]>=y&&p[1]<=y+58)return{key:'stock:'+i,k:'stock',c:t.stock[i].c}}
   if(t.wreath&&d(p,wreathAt())<=32)return{key:'wreath',k:'wreath',c:t.wreath};
+  if(t.deco&&Math.abs(p[0]-decoPos()[0])<=34&&p[1]<=decoPos()[1]+4&&p[1]>=decoPos()[1]-72)return{key:'deco',k:'deco',c:t.deco};
   return null;
 }
 function wiggle(h){
   const g=art.querySelector(`.xm-item[data-k="${h.key}"]`);if(g){g.classList.remove('pop','wig');void g.getBBox;requestAnimationFrame(()=>g.classList.add('wig'));setTimeout(()=>g.classList.remove('wig'),600)}
+  if(h.k==='deco'){const r=M.Items&&M.Items.get(h.c);if(r)say(r.ko+'!',r.en+'!');tone(1318,.25,'sine',.06);return}
   const C=col(h.c),K=KIND[h.k];if(K)say(`${C.ko} ${K.ko}!`,`${cap(C.en)} ${K.en}!`);
   tone(1318,.25,'sine',.06);
 }
