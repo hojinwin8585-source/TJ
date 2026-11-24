@@ -72,6 +72,7 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
   /* clothes helpers */
   const cst=()=>p.evaluate(()=>window.ML.__cl());
   const clothesHead=async()=>{await go('home',300);await p.evaluate(()=>window.ML.__clLevel(4));await go('clothes',900);await until(()=>window.ML.__cl().view==='lobby'||window.ML.__cl().mates.length>0,null,8000);
+    await p.evaluate(()=>window.ML.__clLobby([{d:'mina',th:'rain'},{d:'jun',th:'snow'},{d:'sora',th:'pool'}]));await W(500);   // no princess friend: that one goes to the palace wardrobe
     let s=await cst();await W(600);s=await cst();await tap(s.mates[0][0],s.mates[0][1]);
     for(let k=0;k<3;k++){try{await until(()=>window.ML.__cl().phase==='dress',null,7000);break}catch(e){s=await cst();if(s.mates.length)await tap(s.mates[0][0],s.mates[0][1])}}
     await until(()=>window.ML.__cl().phase==='dress',null,9000);await W(900);s=await cst();return s};
