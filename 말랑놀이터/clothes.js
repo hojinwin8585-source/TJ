@@ -87,7 +87,7 @@ function hairFront(d){
 function eyes(d,px){
   return ['l','r'].map(s=>{const ex=s==='l'?98:142,ey=106,k=s==='l'?-1:1;
     return `<g class="al-eye al-eye-${s} al-open"><g class="al-pupil"><ellipse cx="${ex}" cy="${ey}" rx="10" ry="12.5" fill="url(#${px}gi)" stroke="${OL}" stroke-width="2"/><circle cx="${ex-3.5}" cy="${ey-4.5}" r="4" fill="#fff"/><circle cx="${ex+3.6}" cy="${ey+5}" r="1.9" fill="#fff"/>${A.vol.glass(ex,ey,10,12.5)}</g>
-      <path d="M${ex-11} ${ey-7}Q${ex} ${ey-17} ${ex+11} ${ey-7}" stroke="${OL}" stroke-width="3" fill="none" stroke-linecap="round"/>${d.hair!=='short'?`<path d="M${ex+k*10} ${ey-9}l${k*4} -3" stroke="${OL}" stroke-width="2.2" stroke-linecap="round"/>`:''}</g>
+      <path d="M${ex-10.5} ${ey-10}Q${ex} ${ey-19.5} ${ex+10.5} ${ey-10}" stroke="${OL}" stroke-width="2.4" fill="none" stroke-linecap="round"/>${d.hair!=='short'?`<path d="M${ex+k*10} ${ey-9}l${k*4} -3" stroke="${OL}" stroke-width="2.2" stroke-linecap="round"/>`:''}</g>
       <path class="al-lid al-lid-${s}" opacity="0" d="M${ex-12} ${ey}Q${ex} ${ey+7} ${ex+12} ${ey}" stroke="${OL}" stroke-width="3" fill="none" stroke-linecap="round"/>`}).join('');
 }
 function head(d,px,wear,o={}){
