@@ -3,9 +3,13 @@
    출동(탈것이 와서 콕 하면 타고 감) → 일 해 보기(도구가 손가락을 따라옴, ML.P2.makeTool, 닿은 곳만 바뀜) + 콕 하는 일 →
    고마워하는 장면 → 진짜 사진 카드(사진이 아직 없어서 그린 카드) → 도장, 별 1칸.
    일(jobs[].mission): 소방관 = 물줄기로 불 3곳 끄기 + 지붕 위 고양이 구하기 / 의사 = 청진기로 두근두근 + 아픈 곳 3군데 반창고 /
-   요리사 = 국자로 수프 젓기 + 그릇에 세 번 떠 담아 손님에게 / 경찰관 = 멈춤 표지판으로 차 2대 세우기 + 호루라기 불며 오리 가족 건너기.
-   단계(levels): 1 = 소방관·의사, 옷 카드는 맞는 것만 / 2 = 요리사·경찰관, 옷 카드 3장 중 하나는 다른 직업 것(누르면 붙지 않고 이름을 말해 줌).
-   3~5단계(집배원·농부·수의사, 도와주세요 고르기, 가족 얼굴)는 아직 만들지 않아 단계 엔진에는 2단계까지만 등록합니다.
+   요리사 = 국자로 수프 젓기 + 그릇에 세 번 떠 담아 손님에게 / 경찰관 = 멈춤 표지판으로 차 2대 세우기 + 호루라기 불며 오리 가족 건너기 /
+   집배원 = (일 1) 편지 그림을 보고 같은 그림 우체통 3개에 넣기 (일 2) 자전거를 타고 가서 소포 그림과 같은 그림의 집 문에 배달 /
+   농부 = (일 1) 삽으로 땅 파기 · 씨앗 심기 · 물뿌리개로 물 주기(닿은 만큼 싹이 자람) · 당근 3개 뽑아 토토에게 (일 2) 암탉 모이 주고 달걀 담기 /
+   수의사 = (일 1) 청진기로 강아지 두근두근 · 아픈 발에 붕대 세 번 감기 (일 2) 물약을 스포이트로 세 방울 → 강아지가 폴짝폴짝.
+   단계(levels): 1 = 소방관·의사, 옷 카드는 맞는 것만 / 2 = 요리사·경찰관, 옷 카드 3장 중 하나는 다른 직업 것(누르면 붙지 않고 이름을 말해 줌) /
+   3 = 집배원·농부(일이 두 가지) / 4 = 수의사, 친구가 그림 말풍선으로 '도와주세요' → 알맞은 직업 카드 고르기(틀리면 "어?" 하고 다시 물어봄, 실패 없음) /
+   5 = 가족 얼굴(ML.Faces)이 있으면 가족이 직업 옷을 입고 일함("엄마 소방관 출동!"). 얼굴이 없으면 늘 하던 인형.
    숫자와 문구는 MLCFG.games.jobs, motion, rules, shell, calm, touch, voice 에서 읽습니다. 그림은 모두 이 파일 안에서 그림(인형 그림은 clothes.js 의 방식을 옮겨 옴). */
 (()=>{
 'use strict';
@@ -35,13 +39,20 @@ const rnd=(a,b)=>a+Math.random()*(b-a);
 
 /* ---------- jobs and levels (games.jobs.jobs / levels) ---------- */
 const CJOBS=JB.jobs||[];
-const BUILT=['firefighter','doctor','chef','police'];
+const BUILT=['firefighter','doctor','chef','police','mail','farmer','vet'];
 const LEVELS=JB.levels&&JB.levels.length?JB.levels:[{level:1,new:'소방관·의사'}];
 const jobOf=k=>CJOBS.find(j=>j.id===k)||{id:k,ko:k,en:k,wear:['','','']};
-const levelJobs=l=>CJOBS.filter(j=>(l.new||'').includes(j.ko)).map(j=>j.id);
-/* a level counts as made when every job it brings is drawn here and it adds nothing else we have not made */
-const MADE=(()=>{let n=0;for(const l of LEVELS){const js=levelJobs(l),t=l.new||'';if(!js.length||!js.every(j=>BUILT.includes(j))||/두 가지|도와주세요|가족 얼굴/.test(t))break;n++}return Math.max(1,n)})();
-function levelInfo(n){const f={level:n,jobs:[],decoy:false};LEVELS.slice(0,n).forEach(l=>{levelJobs(l).forEach(j=>{if(BUILT.includes(j)&&!f.jobs.includes(j))f.jobs.push(j)});if(/골라내기|다른 직업/.test(l.new||''))f.decoy=true});if(!f.jobs.length)f.jobs=BUILT.slice(0,2);return f}
+/* the jobs a level brings: the names written before the first comma of levels[].new (so '수의사' is not read as '의사', and '불이 났어요 → 소방관' is only an example) */
+const levelJobs=l=>{const w=String(l.new||'').split(',')[0].split(/[^가-힣]+/);return CJOBS.filter(j=>w.includes(j.ko)).map(j=>j.id)};
+/* a level counts as made when every job it brings is drawn here (a level without jobs, like the family faces, is made by this file) */
+const MADE=(()=>{let n=0;for(const l of LEVELS){if(!levelJobs(l).every(j=>BUILT.includes(j)))break;n++}return Math.max(1,n)})();
+/* what a level has: its jobs so far, the jobs it brings (fresh), and the extras it turns on */
+function levelInfo(n){const f={level:n,jobs:[],fresh:[],decoy:false,two:false,ask:false,family:false};
+  LEVELS.slice(0,n).forEach((l,i)=>{const t=l.new||'',js=levelJobs(l).filter(j=>BUILT.includes(j));js.forEach(j=>{if(!f.jobs.includes(j))f.jobs.push(j)});if(i===n-1)f.fresh=js;
+    if(/골라내기|다른 직업/.test(t))f.decoy=true;if(/두 가지/.test(t))f.two=true;if(/도와주세요|알맞은 직업/.test(t))f.ask=true;if(/가족 얼굴/.test(t))f.family=true});
+  if(!f.jobs.length)f.jobs=BUILT.slice(0,2);return f}
+/* the doctor and the vet both make friends feel better: never offered side by side (job cards, other-job clothes) */
+const PAIR={doctor:'vet',vet:'doctor'};
 const PRG=()=>M.Progress&&typeof M.Progress.get==='function'?M.Progress:null;
 const DATA=Object.assign({level:1,done:0,last:''},store.get('mallang_jobs',{}));
 const save=()=>store.set('mallang_jobs',DATA);
@@ -94,7 +105,17 @@ function head(d,px){
     ${eyes(d,px)}<path d="M118 121Q120 123 122 121" stroke="${d.shade}" stroke-width="2.4" fill="none" stroke-linecap="round"/>
     <g class="al-mouth"><path d="M111 131Q120 142 129 131Z" stroke="${OL}" stroke-width="2.6" fill="#F08A96" stroke-linejoin="round" stroke-linecap="round"/></g>
     <g class="al-mouth-o" opacity="0"><ellipse cx="120" cy="135" rx="6" ry="7.5" fill="#F08A96" ${S3}/></g>
+    ${d.photo?`<clipPath id="${px}fc"><path d="${FACE}"/></clipPath><image class="jb-photo-face" href="${d.photo}" x="58" y="36" width="124" height="122" preserveAspectRatio="xMidYMid slice" clip-path="url(#${px}fc)"/><path d="${FACE}" fill="none" stroke="${OL}" stroke-width="3"/>`:''}
     ${A.vol.litAll(hairFront(d))}${A.vol.off?'':A.vol.shine(94,50,24,11,-24)}`;
+}
+/* level 5: a family face (ML.Faces, P4) on the doll — the photo in the face, the drawn hair in the family member's colour */
+const famList=()=>{try{return M.Faces&&typeof M.Faces.list==='function'?M.Faces.list().filter(r=>r&&r.photo):[]}catch(e){return[]}};
+const mixHex=(a,b,t)=>{const p=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)),x=p(a),y=p(b);return '#'+x.map((v,i)=>Math.round(v+(y[i]-v)*t).toString(16).padStart(2,'0')).join('')};
+const HEX6=/^#[0-9a-f]{6}$/i;
+function famDoll(r){
+  const L=(M.Faces.look&&M.Faces.look(r))||{},hs=L.hairStyle||'short',base=DOLLS[{long:2,bun:0,curl:1,short:1}[hs]!=null?{long:2,bun:0,curl:1,short:1}[hs]:1];
+  const hc=HEX6.test(L.hair||'')?L.hair:base.hc,skin=HEX6.test(L.skin||'')?L.skin:base.skin;
+  return Object.assign({},base,{id:'fam_'+r.id,hc,hh:mixHex(hc,'#FFFFFF',.3),skin,shade:mixHex(skin,'#C9906E',.35),photo:r.photo,fam:{id:r.id,ko:M.Faces.nameKo(r),en:M.Faces.nameEn(r)}});
 }
 const sleeve=(s,t,c,w=21)=>{const a=ARM[s];return line(a.s,lerp(a.s,a.h,t),w,c,5)};
 const band=(s,t0,t1,c,w)=>{const a=ARM[s];return line(lerp(a.s,a.h,t0),lerp(a.s,a.h,t1),w,c,5)};
@@ -178,8 +199,59 @@ const GEAR={
       armL:sleeve('l',.9,c,23)+band('l',.82,.9,'#3E3A4F',23),armR:sleeve('r',.9,c,23)+band('r',.82,.9,'#3E3A4F',23)})},
     tool:{en:'whistle',short:['호루라기','whistle'],nc:false,cols:['yellow','red','sky blue'],vb:'92 152 66 84',neck:true,d:(c,l)=>({neck:`<path d="M102 162Q104 196 124 210" stroke="${OL}" stroke-width="6" fill="none" stroke-linecap="round"/><path d="M102 162Q104 196 124 210" stroke="${c}" stroke-width="3" fill="none" stroke-linecap="round"/>
       <path d="M118 204H140Q150 204 150 215Q150 226 139 226Q128 226 126 217H118Z" fill="#E1E5EA" ${S3}/><circle cx="139" cy="215" r="4" fill="#B9BFC8"/>`})}
+  },
+  mail:{
+    hat:{en:'mail cap',short:['모자','cap'],nc:true,cols:['red','green','blue'],vb:'40 18 164 96',d:(c,l)=>({hat:`<path d="M60 82Q56 28 120 24Q184 28 180 82Z" fill="${c}" ${S3}/>
+      <path d="M120 26V80" stroke="${OL}" stroke-opacity=".25" stroke-width="3"/><path d="M78 52Q92 38 112 34" stroke="#fff" stroke-width="6" fill="none" stroke-linecap="round" opacity=".45"/>
+      <path d="M62 78Q120 68 178 78Q182 96 120 98Q58 96 62 78Z" fill="${c}" ${S3}/><path d="M70 86Q120 78 170 86" stroke="${OL}" stroke-opacity=".22" stroke-width="3" fill="none"/>
+      <rect x="102" y="40" width="36" height="25" rx="5" fill="#FFFDF9" ${S3}/><path d="M104 43L120 55L136 43" stroke="${OL}" stroke-width="2.4" fill="none" stroke-linejoin="round"/>`})},
+    top:{en:'mail vest',short:['조끼','vest'],nc:true,cols:['red','orange','green'],vb:'50 146 140 222',d:(c,l)=>({
+      torso:`<path d="M88 160Q100 155 107 157L114 200L112 247Q96 249 82 245L79 186Q77 166 88 160Z" fill="${c}" ${S3}/><path d="M152 160Q140 155 133 157L126 200L128 247Q144 249 158 245L161 186Q163 166 152 160Z" fill="${c}" ${S3}/>
+        ${refBand('M81 226Q97 230 112 228')}${refBand('M128 228Q143 230 159 226')}
+        <rect x="86" y="194" width="22" height="18" rx="3" fill="${l}" ${S3}/><path d="M88 196L97 203L106 196" stroke="${OL}" stroke-width="2" fill="none"/>
+        <path d="M86 176Q84 200 84 220" stroke="#fff" stroke-width="4" opacity=".35" fill="none" stroke-linecap="round"/>`,
+      hip:`<path d="${HIP}" fill="#8C97BE" ${S3}/>`,legL:legPiece('l',.05,.88,'#8C97BE',28),legR:legPiece('r',.05,.88,'#8C97BE',28),footL:shoe('l','#6B5A52','#fff','mj'),footR:shoe('r','#6B5A52','#fff','mj')})},
+    tool:{en:'mail bag',short:['가방','bag'],nc:false,cols:['yellow','orange','sky blue'],vb:'86 150 118 136',d:(c,l)=>({front:`<path d="M98 160Q132 196 168 232" stroke="${OL}" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M98 160Q132 196 168 232" stroke="${c}" stroke-width="5.5" fill="none" stroke-linecap="round"/>
+      <g transform="rotate(-10 162 226)"><rect x="146" y="210" width="32" height="22" rx="3" fill="#FFFDF9" stroke="${OL}" stroke-width="2.4"/><path d="M148 212L162 222L176 212" stroke="${OL}" stroke-width="2" fill="none"/></g>
+      <path d="M140 230H194Q199 230 199 236V271Q199 279 191 279H144Q136 279 136 271V236Q136 230 140 230Z" fill="${c}" ${S3}/>
+      <path d="M136 234Q136 228 142 228H193Q199 228 199 234V240Q167 256 136 240Z" fill="${l}" ${S3}/><circle cx="167" cy="246" r="4.5" fill="#F0D58A" stroke="${OL}" stroke-width="2"/>
+      <path d="M142 252Q142 266 146 274" stroke="#fff" stroke-width="3.5" opacity=".4" fill="none" stroke-linecap="round"/>`})}
+  },
+  farmer:{
+    hat:{en:'straw hat',short:['밀짚모자','straw hat'],nc:false,cols:['red','sky blue','green'],vb:'14 8 212 100',d:(c,l)=>({hat:`<ellipse cx="120" cy="82" rx="102" ry="17" fill="#EED692" ${S3}/>
+      <path d="M36 84Q120 100 204 84M50 76Q120 88 190 76" stroke="#D6B565" stroke-width="2.5" fill="none" opacity=".8"/>
+      <path d="M70 84Q66 28 120 26Q174 28 170 84Z" fill="#F4DE9E" ${S3}/><path d="M84 44Q120 36 156 44M78 60Q120 52 162 60" stroke="#D6B565" stroke-width="2.5" fill="none" opacity=".8"/>
+      <path d="M70 70Q120 80 170 70L170 84Q120 94 70 84Z" fill="${c}" ${S3}/><path d="M86 40Q98 32 112 30" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" opacity=".5"/>`})},
+    top:{en:'overalls',short:['멜빵바지','overalls'],nc:true,cols:['blue','green','orange'],vb:'50 146 140 222',d:(c,l)=>({
+      torso:`<path d="M98 160L104 202M142 160L136 202" stroke="${OL}" stroke-width="10" stroke-linecap="round"/><path d="M98 160L104 202M142 160L136 202" stroke="${c}" stroke-width="5.5" stroke-linecap="round"/>
+        <path d="M98 196H142L145 234H95Z" fill="${c}" ${S3}/><rect x="108" y="204" width="24" height="16" rx="4" fill="${l}" stroke="${OL}" stroke-width="2.4"/>
+        ${[104,136].map(x=>`<circle cx="${x}" cy="200" r="4" fill="#F0D58A" stroke="${OL}" stroke-width="1.8"/>`).join('')}`,
+      hip:`<path d="${HIP}" fill="${c}" ${S3}/>`,legL:legPiece('l',.05,.86,c,30)+`<rect x="94" y="290" width="16" height="16" rx="3" fill="${l}" stroke="${OL}" stroke-width="2" transform="rotate(-6 102 298)"/>`,legR:legPiece('r',.05,.86,c,30),
+      footL:shoe('l','#A97C5A','#D9BFA6','boot'),footR:shoe('r','#A97C5A','#D9BFA6','boot')})},
+    tool:{en:'watering can',short:['물뿌리개','watering can'],nc:false,cols:['green','sky blue','yellow'],vb:'130 210 110 104',hand:true,d:(c,l)=>({handR:`<path d="M194 264L222 236" stroke="${OL}" stroke-width="12" stroke-linecap="round"/><path d="M194 264L222 236" stroke="${c}" stroke-width="6.5" stroke-linecap="round"/>
+      <ellipse cx="225" cy="232" rx="10" ry="6.5" fill="${c}" ${S3} transform="rotate(-45 225 232)"/>
+      <path d="M156 252Q173 222 190 252" stroke="${OL}" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M156 252Q173 222 190 252" stroke="${c}" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <path d="M150 250H197L193 296Q191 305 182 305H165Q156 305 154 296Z" fill="${c}" ${S3}/><path d="M152 262H195" stroke="${l}" stroke-width="5"/>
+      <path d="M160 270Q158 284 162 296" stroke="#fff" stroke-width="4" opacity=".4" fill="none" stroke-linecap="round"/>`})}
+  },
+  vet:{
+    hat:{en:'headband',short:['머리띠','headband'],nc:false,cols:['pink','mint','purple'],vb:'44 30 152 72',d:(c,l)=>({hat:`<path d="M58 88Q120 58 182 88" stroke="${OL}" stroke-width="13" fill="none" stroke-linecap="round"/><path d="M58 88Q120 58 182 88" stroke="${c}" stroke-width="8" fill="none" stroke-linecap="round"/>
+      <circle cx="146" cy="62" r="18" fill="#FFFDF9" ${S3}/>${PAW(146,64,1,c)}`})},
+    top:{en:'vet scrubs',short:['가운','scrubs'],nc:true,cols:['mint','sky blue','purple'],vb:'50 146 140 222',d:(c,l)=>({
+      torso:`<path d="M86 158Q120 150 154 158Q168 164 166 186L164 262Q120 272 76 262L74 186Q72 164 86 158Z" fill="${c}" ${S3}/>
+        <path d="M102 157L120 184L138 157Z" fill="#FFF3E2" ${S3}/><path d="M100 158L120 188L140 158" stroke="${l}" stroke-width="4" fill="none"/>
+        <rect x="128" y="196" width="24" height="22" rx="4" fill="${l}" ${S3}/>${PAW(140,208,.62,c)}
+        <path d="M84 192Q80 224 80 252" stroke="#fff" stroke-width="4" opacity=".35" fill="none" stroke-linecap="round"/>`,
+      hip:`<path d="${HIP}" fill="${c}" ${S3}/>`,legL:legPiece('l',.05,.9,c,28),legR:legPiece('r',.05,.9,c,28),
+      armL:sleeve('l',.5,c,24)+band('l',.42,.5,l,24),armR:sleeve('r',.5,c,24)+band('r',.42,.5,l,24)})},
+    tool:{en:'stethoscope',short:['청진기','stethoscope'],nc:false,cols:['pink','purple','yellow'],vb:'84 150 72 104',neck:true,d:(c,l)=>{const t='M98 162Q94 200 110 214Q120 220 130 214Q146 200 142 162';
+      return{neck:`<path d="${t}" stroke="${OL}" stroke-width="8" fill="none" stroke-linecap="round"/><path d="${t}" stroke="${c}" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+        <path d="M120 217V226" stroke="${OL}" stroke-width="7"/><path d="M120 217V226" stroke="${c}" stroke-width="3.5"/>${heart(120,238,10,STEEL,S3)}${heart(120,238,5,'#F4F6F8')}
+        <circle cx="98" cy="162" r="4" fill="${STEEL}" stroke="${OL}" stroke-width="2"/><circle cx="142" cy="162" r="4" fill="${STEEL}" stroke="${OL}" stroke-width="2"/>`}}}
   }
 };
+/* a paw print (vet pictures) */
+function PAW(x,y,k,f){return `<g transform="translate(${x} ${y}) scale(${k})"><ellipse cx="0" cy="3" rx="7.5" ry="6.5" fill="${f}"/>${[[-8,-6],[-3,-11],[3,-11],[8,-6]].map(([a,b])=>`<circle cx="${a}" cy="${b}" r="3.2" fill="${f}"/>`).join('')}</g>`}
 const SLOTS=['hat','top','tool'];
 const gearOf=(job,slot)=>((GEAR[job]||{})[slot])||null;
 const itemKo=(job,slot)=>(jobOf(job).wear||[])[SLOTS.indexOf(slot)]||'';
@@ -296,8 +368,11 @@ function carSVG(col,flip){return `<svg viewBox="0 0 200 110" style="overflow:vis
 /* ============================== vehicles for 출동 (side view facing left, viewBox 0 0 300 170) ============================== */
 const wheel=x=>`<circle cx="${x}" cy="138" r="21" fill="#5B4A42" ${S3}/><circle cx="${x}" cy="138" r="8" fill="${STEEL}"/>`;
 const WINP='M28 102V76Q28 66 38 64L56 58H98V102Z';
+/* the driver's window of each vehicle: [path, x, y] of the head picture inside it */
+const WINS={police:['M28 102V90L60 86L96 62H140V102Z',56,50],tractor:['M136 98V50Q136 44 142 44H200Q206 44 206 50V98Z',140,40]};
 function vehicleSVG(kind,headIn){
-  const hd=headIn?`<clipPath id="jbWin${UID}"><path d="${WINP}"/></clipPath><g clip-path="url(#jbWin${UID})"><svg x="34" y="50" width="62" height="64" viewBox="50 14 140 140">${headIn}</svg></g>`:'';
+  const wv=WINS[kind]||[WINP,34,50];
+  const hd=headIn?`<clipPath id="jbWin${UID}"><path d="${wv[0]}"/></clipPath><g clip-path="url(#jbWin${UID})"><svg x="${wv[1]}" y="${wv[2]}" width="62" height="64" viewBox="50 14 140 140">${headIn}</svg></g>`:'';
   const cab=(c)=>`<path d="M14 136V88Q14 66 34 60L56 52H112V136Z" fill="${c}" ${S3}/><path d="${WINP}" fill="#D8EBF2" ${S3}/>`;
   const top=`<ellipse cx="150" cy="160" rx="142" ry="8" fill="rgba(91,58,41,.15)"/>`;
   let s='';
@@ -309,11 +384,22 @@ function vehicleSVG(kind,headIn){
   else if(kind==='food')s=`${top}<rect x="106" y="34" width="184" height="102" rx="12" fill="#F7E8B8" ${S3}/><rect x="130" y="54" width="130" height="44" rx="6" fill="#FFFDF9" ${S3}/>
     <path d="M124 54H266L274 40H116Z" fill="#E89AAE" ${S3}/>${[140,170,200,230].map(x=>`<path d="M${x} 40L${x-4} 54" stroke="#FFFDF9" stroke-width="10"/>`).join('')}<path d="M180 92Q180 70 196 70Q212 70 212 92Z" fill="#E0786F" ${S3}/>${heart(150,80,7,'#F2B48C')}
     ${cab('#F2B48C')}`;
+  else if(kind==='mail')s=`${top}<rect x="106" y="34" width="184" height="102" rx="12" fill="#E0786F" ${S3}/><path d="M106 108H290" stroke="#FFFDF9" stroke-width="8"/>
+    <rect x="160" y="50" width="78" height="50" rx="6" fill="#FFFDF9" ${S3}/><path d="M162 53L199 80L236 53" stroke="${OL}" stroke-width="3" fill="none" stroke-linejoin="round"/>${heart(199,88,6,'#E89AAE')}
+    ${cab('#E0786F')}<path d="M14 108H112" stroke="#FFFDF9" stroke-width="8"/>`;
+  else if(kind==='vet')s=`${top}<rect x="106" y="34" width="184" height="102" rx="12" fill="#BFE3D8" ${S3}/><path d="M106 108H290" stroke="#E89AAE" stroke-width="10"/>
+    <circle cx="198" cy="70" r="26" fill="#FFFDF9" ${S3}/>${PAW(198,74,1.7,'#E89AAE')}
+    ${cab('#BFE3D8')}<path d="M14 108H112" stroke="#E89AAE" stroke-width="10"/>`;
+  else if(kind==='tractor')s=`${top}<path d="M14 136V96Q14 84 26 82L128 78V136Z" fill="#8FC48A" ${S3}/><rect x="36" y="88" width="70" height="8" rx="4" fill="#79AE74"/><rect x="46" y="100" width="54" height="8" rx="4" fill="#79AE74"/>
+    <rect x="94" y="50" width="12" height="32" rx="4" fill="${STEEL}" ${S3}/><path d="M92 50H108" stroke="${OL}" stroke-width="4" stroke-linecap="round"/>
+    <path d="M124 136V44Q124 32 136 32H206Q218 32 218 44V136Z" fill="#8FC48A" ${S3}/><path d="${wv[0]}" fill="#D8EBF2" ${S3}/><path d="M118 32H224" stroke="${OL}" stroke-width="6" stroke-linecap="round"/><path d="M118 32H224" stroke="#E0786F" stroke-width="3" stroke-linecap="round"/>
+    <path d="M218 112H262" stroke="${OL}" stroke-width="8" stroke-linecap="round"/>`;
   else s=`${top}<path d="M10 136V112Q10 98 26 96L70 90L100 60Q108 52 120 52H200Q212 52 220 60L246 90L280 96Q292 98 292 112V136Z" fill="#FBF8F4" ${S3}/><path d="M10 120H292" stroke="#3E56A6" stroke-width="12"/>
     <path d="M${WINP.slice(1)}" fill="none"/><path d="M28 102V90L60 86L96 62H140V102Z" fill="#D8EBF2" ${S3}/><path d="M150 62H196Q206 62 212 70L230 92H150Z" fill="#D8EBF2" ${S3}/>
     <g class="jb-beacon"><rect x="120" y="40" width="22" height="13" rx="6" fill="#A7CFE8" ${S3}/><rect x="142" y="40" width="22" height="13" rx="6" fill="#F3A7A0" ${S3}/></g>${star5(250,112,8,'#F0D58A')}`;
-  const w=kind==='police'?wheel(70)+wheel(232):wheel(62)+wheel(236);
-  return `<svg viewBox="0 0 300 170" style="overflow:visible">${s}${kind!=='police'?`<circle cx="20" cy="104" r="6" fill="#FFF3C8" ${S3}/><rect x="8" y="128" width="40" height="10" rx="4" fill="${STEEL}" ${S3}/>`:''}${kind==='police'?(headIn?`<clipPath id="jbPw${UID}"><path d="M28 102V90L60 86L96 62H140V102Z"/></clipPath><g clip-path="url(#jbPw${UID})"><svg x="56" y="50" width="62" height="64" viewBox="50 14 140 140">${headIn}</svg></g>`:''):hd}${w}</svg>`;
+  const w=kind==='police'?wheel(70)+wheel(232):kind==='tractor'?`<circle cx="62" cy="144" r="15" fill="#5B4A42" ${S3}/><circle cx="62" cy="144" r="6" fill="#F0D58A"/><circle cx="190" cy="126" r="34" fill="#5B4A42" ${S3}/><circle cx="190" cy="126" r="22" fill="none" stroke="#6E5C53" stroke-width="5" stroke-dasharray="6 6"/><circle cx="190" cy="126" r="12" fill="#F0D58A" ${S3}/>`:wheel(62)+wheel(236);
+  const lamp=kind!=='police'&&kind!=='tractor'?`<circle cx="20" cy="104" r="6" fill="#FFF3C8" ${S3}/><rect x="8" y="128" width="40" height="10" rx="4" fill="${STEEL}" ${S3}/>`:kind==='tractor'?`<circle cx="22" cy="98" r="6" fill="#FFF3C8" ${S3}/>`:'';
+  return `<svg viewBox="0 0 300 170" style="overflow:visible">${s}${lamp}${hd}${w}</svg>`;
 }
 const MIRROR=`<svg viewBox="0 0 120 300" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%"><rect x="4" y="4" width="112" height="282" rx="56" fill="#E3BE98" ${S3}/><rect x="14" y="14" width="92" height="262" rx="46" fill="#E6F1F4" stroke="${OL}" stroke-width="2.5"/></svg>`;
 const ICON={back:`<svg viewBox="0 0 48 48"><path d="M17 13H29Q40 13 40 25Q40 37 29 37H16" fill="none" stroke="${OL}" stroke-width="6" stroke-linecap="round"/><path d="M19 4L8 13L19 22" fill="none" stroke="${OL}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>`};
@@ -332,6 +418,144 @@ const JOB={
   police:{car:'police',siren:'police',scene:'street',tool:'sign',step2:WHISTLE,
     hello:['오리 가족이 길을 건너고 싶어요. 멈춤 표지판으로 차를 세워 줘!','The ducks want to cross. Hold up the stop sign to stop the cars!'],
     thanks:['꽥꽥! 고마워요, 경찰관님!','Quack quack! Thank you, officer!']}
+};
+
+/* ============================== P15 3~5단계: pictures of the new jobs (mail carrier, farmer, vet) and the 'help me' bubbles ============================== */
+/* the three sorting pictures (star · heart · flower), drawn at (0,0) with radius r */
+const SORTP={
+  star:{ko:'별',en:'star',col:'#F0D58A',d:(r)=>A.star(0,0,r,'#F0D58A',S3)},
+  heart:{ko:'하트',en:'heart',col:'#E89AAE',d:(r)=>heart(0,r*.05,r*.62,'#E89AAE',S3)},
+  flower:{ko:'꽃',en:'flower',col:'#C3B4E6',d:(r)=>`${[0,72,144,216,288].map(a=>`<ellipse cx="0" cy="${(-r*.5).toFixed(1)}" rx="${(r*.34).toFixed(1)}" ry="${(r*.46).toFixed(1)}" fill="#C3B4E6" ${S3} transform="rotate(${a})"/>`).join('')}<circle r="${(r*.3).toFixed(1)}" fill="#F0D58A" ${S3}/>`}
+};
+const SORT_KEYS=Object.keys(SORTP);
+const MAILBOX=(k,flag)=>`<svg viewBox="0 0 100 150" style="overflow:visible"><ellipse cx="50" cy="146" rx="34" ry="5" fill="rgba(91,58,41,.15)"/><rect x="42" y="96" width="16" height="50" rx="4" fill="#C9A98A" ${S3}/>
+  <g class="jb-flag" style="transform-origin:88px 66px;transform-box:view-box;transition:transform .45s cubic-bezier(.3,1.5,.5,1),opacity .2s;transform:${flag?"none":"scale(.2)"};opacity:${flag?1:0}"><path d="M88 66V30" stroke="${OL}" stroke-width="6" stroke-linecap="round"/><path d="M88 32H104V46H88Z" fill="#F0D58A" ${S3}/></g>
+  <path d="M10 100V44Q10 12 50 12Q90 12 90 44V100Z" fill="#E0786F" ${S3}/><path d="M20 40Q22 22 42 18" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" opacity=".4"/>
+  <rect x="26" y="34" width="48" height="9" rx="4.5" fill="#5B4A42"/><circle cx="50" cy="72" r="21" fill="#FFFDF9" ${S3}/><g transform="translate(50 72)">${SORTP[k].d(15)}</g></svg>`;
+const LETTER=k=>`<svg viewBox="0 0 100 72" style="overflow:visible"><ellipse cx="50" cy="69" rx="40" ry="4" fill="rgba(91,58,41,.13)"/><rect x="6" y="6" width="88" height="58" rx="7" fill="#FFFDF9" ${S3}/><path d="M8 9L50 40L92 9" stroke="${OL}" stroke-width="3" fill="none" stroke-linejoin="round"/><path d="M8 62L38 34M92 62L62 34" stroke="#E3D8CC" stroke-width="3"/>
+  <circle cx="50" cy="44" r="17" fill="#FFF6E8" stroke="${OL}" stroke-width="2.4"/><g transform="translate(50 44)">${SORTP[k].d(12)}</g></svg>`;
+const LETTER_PILE=n=>`<svg viewBox="0 0 120 90" style="overflow:visible"><ellipse cx="60" cy="84" rx="50" ry="6" fill="rgba(91,58,41,.13)"/><path d="M10 40H110L102 82H18Z" fill="#D9BFA6" ${S3}/>${[0,1,2].slice(0,n).map(i=>`<g transform="translate(${18+i*8} ${30-i*9}) rotate(${-8+i*7} 40 20)"><rect width="66" height="40" rx="5" fill="#FFFDF9" ${S3}/><path d="M2 3L33 24L64 3" stroke="${OL}" stroke-width="2.4" fill="none"/></g>`).join('')}<path d="M10 40H110L106 56H14Z" fill="#E9D3BF" ${S3}/></svg>`;
+/* a friend's house with the friend's face on the door (parcel delivery) */
+const FACE_VB='16 -8 168 160';
+const animalFace=(k,mood)=>A.animal(k,mood||'happy').replace(/viewBox="[^"]*"/,`viewBox="${FACE_VB}"`).replace(/style="overflow:visible"/,'style="overflow:hidden"');
+const HOUSE_COL={cat:['#F3D6B4','#E0A27A'],dog:['#CFE5F4','#9DBAD6'],bunny:['#F6D3DB','#DDA0AE'],bear:['#CFE6CB','#A3C79C']};
+const friendHouse=(k,open)=>{const [w,r]=HOUSE_COL[k]||HOUSE_COL.cat;return `<svg viewBox="0 0 120 150" style="overflow:visible"><ellipse cx="60" cy="146" rx="54" ry="5" fill="rgba(91,58,41,.14)"/>
+  <g ${PF}><rect x="12" y="58" width="96" height="88" rx="6" fill="${w}"/></g><g ${PF}><path d="M2 64L60 14L118 64Z" fill="${r}"/></g>
+  <rect x="20" y="74" width="24" height="22" rx="4" fill="#F8E6C4" stroke="${OL}" stroke-width="2"/><path d="M32 74V96M20 85H44" stroke="${w}" stroke-width="3"/>
+  <rect class="jb-door-in" x="58" y="84" width="40" height="62" rx="18" fill="#7A5A44"/>
+  <g class="jb-door" style="transform-origin:58px 115px;transform-box:view-box;transition:transform .5s ease-out;transform:${open?'scaleX(.15)':'none'}"><rect x="58" y="84" width="40" height="62" rx="18" fill="#B9876A" ${S3}/><circle cx="91" cy="118" r="3.5" fill="#F0D58A"/></g>
+  <circle cx="60" cy="50" r="19" fill="#FFFDF9" ${S3}/><svg x="42" y="32" width="36" height="36" viewBox="${FACE_VB}" style="overflow:hidden">${A.animal(k,'happy').replace(/^<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'')}</svg></svg>`};
+const PARCEL=k=>`<svg viewBox="0 0 100 90" style="overflow:visible"><ellipse cx="50" cy="86" rx="40" ry="4" fill="rgba(91,58,41,.14)"/><path d="M10 30L50 14L90 30V78L50 88L10 78Z" fill="#E3BE98" ${S3}/><path d="M10 30L50 44L90 30M50 44V88" stroke="${OL}" stroke-width="3" fill="none" stroke-linejoin="round"/>
+  <path d="M30 22L70 37V50" stroke="#C99E78" stroke-width="7" fill="none"/><circle cx="72" cy="64" r="15" fill="#FFFDF9" stroke="${OL}" stroke-width="2.4"/><svg x="58" y="50" width="28" height="28" viewBox="${FACE_VB}" style="overflow:hidden">${A.animal(k,'happy').replace(/^<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'')}</svg></svg>`;
+/* the bicycle (facing right) with the worker on it; the head is the worker's own head */
+function bikeSVG(headIn,vest,parcelK){
+  const wl=(x)=>`<g class="jb-wheel" style="transform-origin:${x}px 112px;transform-box:view-box"><circle cx="${x}" cy="112" r="28" fill="none" stroke="${OL}" stroke-width="6"/><circle cx="${x}" cy="112" r="28" fill="none" stroke="#5B4A42" stroke-width="3"/>${[0,60,120].map(a=>`<path d="M${x} 86V138" stroke="#B9BFC8" stroke-width="2.5" transform="rotate(${a} ${x} 112)"/>`).join('')}<circle cx="${x}" cy="112" r="5" fill="${STEEL}" stroke="${OL}" stroke-width="2"/></g>`;
+  return `<svg viewBox="0 0 200 150" style="overflow:visible"><ellipse cx="100" cy="144" rx="88" ry="6" fill="rgba(91,58,41,.15)"/>${wl(42)}${wl(158)}
+    <path d="M42 112L82 112L120 70L158 112M82 112L66 66M120 70L64 70M120 70L136 50" stroke="${OL}" stroke-width="9" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M42 112L82 112L120 70L158 112M82 112L66 66M120 70L64 70M120 70L136 50" stroke="#E0786F" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M126 50H146" stroke="${OL}" stroke-width="6" stroke-linecap="round"/><path d="M54 64H78" stroke="${OL}" stroke-width="7" stroke-linecap="round"/>
+    <path d="M140 54H182L176 80H146Z" fill="#D9BFA6" ${S3}/>${parcelK?`<g transform="translate(142 18) scale(.42)">${PARCEL(parcelK).replace(/^<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'')}</g>`:''}<path d="M140 62H182" stroke="#C9A98A" stroke-width="3"/>
+    <g class="jb-crank" style="transform-origin:82px 112px;transform-box:view-box"><path d="M82 112L82 128M82 112L82 96" stroke="${OL}" stroke-width="5" stroke-linecap="round"/><rect x="74" y="126" width="16" height="6" rx="3" fill="#5B4A42"/><rect x="74" y="92" width="16" height="6" rx="3" fill="#5B4A42"/></g>
+    <path d="M70 66Q80 92 82 100" stroke="${OL}" stroke-width="16" stroke-linecap="round" fill="none"/><path d="M70 66Q80 92 82 100" stroke="#8C97BE" stroke-width="11" stroke-linecap="round" fill="none"/>
+    <path d="M60 30Q58 52 68 64L84 62Q84 40 76 28Z" fill="${vest}" ${S3}/><path d="M74 36Q104 40 128 50" stroke="${OL}" stroke-width="12" stroke-linecap="round" fill="none"/><path d="M74 36Q104 40 128 50" stroke="#FFF3E2" stroke-width="7" stroke-linecap="round" fill="none"/><circle cx="130" cy="51" r="6" fill="#F6D5B8" stroke="${OL}" stroke-width="2.4"/>
+    <svg x="34" y="-34" width="74" height="74" viewBox="50 14 140 140" style="overflow:visible">${headIn}</svg></svg>`;
+}
+/* the farm: a soil patch that becomes a hole, a seed, a sprout and a carrot (states by class on the wrapper) */
+const SOILP=`<svg viewBox="-50 -80 100 110" style="overflow:visible"><ellipse class="g-flat" cx="0" cy="12" rx="44" ry="14" fill="#C9A27E"/><path class="g-flat" d="M-30 6Q-20 0 -10 6M8 4Q18 -2 28 4" stroke="#B48C68" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <g class="g-hole"><ellipse cx="0" cy="12" rx="28" ry="10" fill="#7A5A44" stroke="${OL}" stroke-width="2.4"/><path d="M24 14Q34 -2 46 12Z" fill="#B48C68" stroke="${OL}" stroke-width="2.4" stroke-linejoin="round"/></g>
+  <g class="g-seed"><ellipse cx="0" cy="12" rx="26" ry="9" fill="#9E7A5C" stroke="${OL}" stroke-width="2.4"/><ellipse class="g-seed1" cx="0" cy="6" rx="6" ry="4.2" fill="#F0D58A" stroke="${OL}" stroke-width="2"/></g>
+  <g class="g-sprout" style="transform-origin:0px 8px;transform-box:view-box"><path d="M0 8V-26" stroke="${OL}" stroke-width="6" stroke-linecap="round"/><path d="M0 8V-26" stroke="#8FC48A" stroke-width="3" stroke-linecap="round"/>
+    <path d="M0 -14Q-24 -22 -26 -44Q-6 -40 0 -18Z" fill="#9CCB8E" ${S3}/><path d="M0 -20Q20 -34 30 -54Q8 -50 0 -24Z" fill="#8FC48A" ${S3}/><path d="M0 -24Q-4 -50 6 -66Q12 -46 2 -26Z" fill="#A7D49B" ${S3}/></g>
+  <g class="g-top"><path d="M-14 12Q-14 -2 0 -4Q14 -2 14 12Z" fill="#F2A55A" ${S3}/><path d="M-8 4H-2M4 8H9" stroke="#D9853F" stroke-width="2.4" stroke-linecap="round"/></g></svg>`;
+const CARROT=`<svg viewBox="-40 -70 80 140" style="overflow:visible"><path d="M0 -26Q-22 -34 -24 -58Q-4 -54 0 -30Z" fill="#9CCB8E" ${S3}/><path d="M0 -30Q20 -44 28 -64Q6 -60 0 -34Z" fill="#8FC48A" ${S3}/><path d="M0 -32Q-4 -56 6 -68Q12 -50 2 -34Z" fill="#A7D49B" ${S3}/>
+  <path d="M-16 -26Q0 -34 16 -26Q14 20 2 60Q-2 62 -4 58Q-14 20 -16 -26Z" fill="#F2A55A" ${S3}/><path d="M-8 -6H0M2 12H9M-6 28H1" stroke="#D9853F" stroke-width="2.6" stroke-linecap="round"/><path d="M-10 -16Q-8 10 -4 30" stroke="#fff" stroke-width="3" opacity=".4" fill="none" stroke-linecap="round"/></svg>`;
+const BASKET=n=>`<svg viewBox="0 0 120 80" style="overflow:visible"><ellipse cx="60" cy="76" rx="50" ry="5" fill="rgba(91,58,41,.14)"/><path d="M26 34Q60 -6 94 34" stroke="${OL}" stroke-width="7" fill="none" stroke-linecap="round"/><path d="M26 34Q60 -6 94 34" stroke="#D9BFA6" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  ${Array.from({length:Math.min(3,n.c||0)},(_,i)=>`<g transform="translate(${38+i*20} 30) rotate(${-24+i*24}) scale(.42)">${CARROT.replace(/^<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'')}</g>`).join('')}${n.e?`<ellipse cx="60" cy="34" rx="11" ry="14" fill="#FFF6E8" ${S3}/>`:''}
+  <path d="M12 34H108L98 72H22Z" fill="#E3BE98" ${S3}/><path d="M18 46H102M22 58H98" stroke="#C99E78" stroke-width="3"/></svg>`;
+/* the hen (Alive-ready: al-root / al-breathe / al-head), viewBox like the animals */
+const HEN=`<svg viewBox="0 0 200 230" style="overflow:visible"><ellipse cx="100" cy="222" rx="70" ry="7" fill="rgba(91,58,41,.15)"/><g class="al-root" style="transform-origin:50% 96%"><g class="al-breathe" style="transform-origin:50% 96%">
+  <path d="M84 196V214M116 196V214" stroke="#F2A55A" stroke-width="6" stroke-linecap="round"/><path d="M76 216H92M108 216H124" stroke="#F2A55A" stroke-width="5" stroke-linecap="round"/>
+  <path d="M150 120Q186 92 178 64Q164 96 150 104Z" fill="#FFF6E8" ${S3}/><ellipse cx="102" cy="150" rx="66" ry="54" fill="#FFF6E8" ${S3}/><path d="M60 140Q100 120 130 150Q100 176 70 164Z" fill="#F3E3CF" stroke="${OL}" stroke-width="2.6"/>
+  <g class="al-head" style="transform-origin:72px 110px"><g class="al-head-s" style="transform-origin:72px 110px"><path d="M58 60Q60 44 72 50Q76 38 88 46Q98 44 92 60Z" fill="#E0786F" ${S3}/><circle cx="74" cy="84" r="32" fill="#FFF6E8" ${S3}/>
+    <path d="M44 84L28 92L44 98Z" fill="#F2A55A" stroke="${OL}" stroke-width="2.6" stroke-linejoin="round"/><path d="M48 100Q44 114 52 116Q58 108 54 100Z" fill="#E0786F" stroke="${OL}" stroke-width="2.2"/>
+    <g class="al-eye al-eye-l al-open"><g class="al-pupil"><circle cx="64" cy="78" r="5" fill="${OL}"/><circle cx="62.5" cy="76.5" r="1.8" fill="#fff"/></g></g><path class="al-lid al-lid-l" opacity="0" d="M58 78Q64 82 70 78" stroke="${OL}" stroke-width="2.6" fill="none"/>
+    <ellipse cx="82" cy="94" rx="7" ry="4.5" fill="#FF9AAE" opacity=".5"/></g></g></g></g></svg>`;
+const EGG=`<svg viewBox="-30 -36 60 70" style="overflow:visible"><ellipse cx="0" cy="30" rx="18" ry="3.5" fill="rgba(91,58,41,.15)"/><path d="M0 -32Q22 -30 22 4Q22 28 0 28Q-22 28 -22 4Q-22 -30 0 -32Z" fill="#FFF6E8" ${S3}/><path d="M-10 -14Q-14 -2 -12 8" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round"/></svg>`;
+const NEST=`<svg viewBox="0 0 160 50" style="overflow:visible"><ellipse cx="80" cy="30" rx="74" ry="18" fill="#E3C68C" ${S3}/><path d="M14 26Q40 14 80 18Q120 14 146 26M20 36Q60 28 100 34Q130 30 144 36" stroke="#C9A55E" stroke-width="3" fill="none" stroke-linecap="round"/></svg>`;
+/* vet: the exam table, the sore paw, the bandage turns, the medicine bottle */
+const VTABLE=`<svg viewBox="0 0 300 120"><g ${PF}><rect x="30" y="56" width="16" height="62" rx="6" fill="#C9CED6"/><rect x="254" y="56" width="16" height="62" rx="6" fill="#C9CED6"/></g><g ${PF}><rect x="8" y="30" width="284" height="34" rx="14" fill="#FFFDF9"/></g><path d="M20 46H280" stroke="#E3F0EA" stroke-width="10" stroke-linecap="round"/></svg>`;
+const SOREPAW=`<svg viewBox="-20 -20 40 40"><ellipse rx="13" ry="10" fill="#F3A7A0" opacity=".8"/><path d="M-6 -3h12M-4 3h8" stroke="#E0786F" stroke-width="2.6" stroke-linecap="round"/></svg>`;
+const WRAP=(n)=>`<svg viewBox="-24 -24 48 48" style="overflow:visible">${[0,1,2].slice(0,n).map(i=>`<path d="M-17 ${-10+i*9}Q0 ${-15+i*9} 17 ${-10+i*9}L17 ${-3+i*9}Q0 ${-8+i*9} -17 ${-3+i*9}Z" fill="#FFFDF9" stroke="${OL}" stroke-width="2.2" stroke-linejoin="round"/>`).join('')}${n>=3?heart(12,-14,5,'#E89AAE'):''}</svg>`;
+const BANDAGE=`<svg viewBox="0 0 100 100"><path d="M68 70Q86 66 92 80" stroke="${OL}" stroke-width="13" fill="none" stroke-linecap="round"/><path d="M68 70Q86 66 92 80" stroke="#FFFDF9" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <ellipse cx="46" cy="56" rx="30" ry="30" fill="#FFFDF9" ${S3}/><ellipse cx="46" cy="56" rx="11" ry="11" fill="#E3F0EA" ${S3}/><path d="M24 40Q34 30 46 28M20 60Q22 74 34 82" stroke="#E3E6EA" stroke-width="4" fill="none" stroke-linecap="round"/>${heart(70,30,8,'#E89AAE')}</svg>`;
+const MEDS=(n)=>`<svg viewBox="0 0 100 100"><ellipse cx="44" cy="94" rx="28" ry="4" fill="rgba(91,58,41,.13)"/><path d="M24 44Q24 36 32 36H56Q64 36 64 44V86Q64 92 58 92H30Q24 92 24 86Z" fill="#F6D3DB" ${S3}/>
+  <rect x="26" y="${(88-n*14).toFixed(0)}" width="36" height="${(n*14).toFixed(0)}" rx="4" fill="#E89AAE" opacity=".8"/>${[0,1,2].map(i=>`<path d="M24 ${60+i*14}H32" stroke="${OL}" stroke-width="2"/>`).join('')}
+  <rect x="34" y="24" width="20" height="14" rx="4" fill="${STEEL}" ${S3}/><path d="M44 24V6" stroke="${OL}" stroke-width="8" stroke-linecap="round"/><path d="M44 24V6" stroke="#FFFDF9" stroke-width="4" stroke-linecap="round"/>
+  <path d="M60 22Q74 10 86 20Q80 32 70 30" fill="#F3C6C1" stroke="${OL}" stroke-width="2.4"/>${heart(44,66,6,'#FFFDF9')}</svg>`;
+const DROPPER=`<svg viewBox="0 0 100 100"><path d="M50 98L44 84H56Z" fill="#E89AAE" stroke="${OL}" stroke-width="2"/><rect x="40" y="40" width="20" height="46" rx="6" fill="#F4F6F8" ${S3}/><rect x="42" y="62" width="16" height="22" rx="4" fill="#E89AAE" opacity=".8"/>
+  <path d="M38 40H62" stroke="${OL}" stroke-width="5" stroke-linecap="round"/><path d="M42 40Q38 14 50 6Q62 14 58 40Z" fill="#E0786F" ${S3}/>${TFACE(50,58,.7)}</svg>`;
+const DROP_PINK=`<path d="M0 -10Q8 2 0 8Q-8 2 0 -10Z" fill="#E89AAE" stroke="${OL}" stroke-width="1.5"/>`;
+const GRAIN=`<svg viewBox="0 0 100 100"><path d="M20 50Q20 92 50 92Q80 92 80 50Z" fill="#E3BE98" ${S3}/><ellipse cx="50" cy="50" rx="30" ry="9" fill="#F0D58A" ${S3}/>${[[38,48],[48,46],[58,49],[44,52],[54,52],[64,51]].map(([x,y])=>`<ellipse cx="${x}" cy="${y}" rx="3" ry="2" fill="#D6B565"/>`).join('')}<path d="M78 56L96 44" stroke="${OL}" stroke-width="8" stroke-linecap="round"/><path d="M78 56L96 44" stroke="#C9A98A" stroke-width="4" stroke-linecap="round"/></svg>`;
+const SHOVEL=`<svg viewBox="0 0 100 100"><path d="M64 10L46 60" stroke="${OL}" stroke-width="10" stroke-linecap="round"/><path d="M64 10L46 60" stroke="#C9A98A" stroke-width="6" stroke-linecap="round"/><path d="M54 6H76" stroke="${OL}" stroke-width="8" stroke-linecap="round"/><path d="M54 6H76" stroke="#8FC48A" stroke-width="4" stroke-linecap="round"/>
+  <path d="M36 54L58 62L52 86Q42 98 30 88Z" fill="${STEEL}" ${S3}/><path d="M40 62L36 82" stroke="#fff" stroke-width="3" opacity=".6" stroke-linecap="round"/>${TFACE(46,74,.6)}</svg>`;
+const SEEDS=`<svg viewBox="0 0 100 100"><path d="M22 24H78L74 90H26Z" fill="#F7E8B8" ${S3}/><path d="M22 24L32 14H68L78 24" fill="#EED692" ${S3}/><g transform="translate(50 54) scale(.55)">${CARROT.replace(/^<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'')}</g>
+  ${[[30,94],[44,98],[60,95]].map(([x,y])=>`<ellipse cx="${x}" cy="${y}" rx="4.5" ry="3" fill="#F0D58A" stroke="${OL}" stroke-width="1.6"/>`).join('')}</svg>`;
+const PULL=`<svg viewBox="0 0 100 100"><g transform="translate(50 52) scale(.62)">${CARROT.replace(/^<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'')}</g><path d="M74 26Q86 18 92 30M76 40Q90 40 94 50" stroke="#A7CFE8" stroke-width="4" fill="none" stroke-linecap="round"/></svg>`;
+const BIKE_ICON=`<svg viewBox="0 0 100 100"><circle cx="24" cy="66" r="16" fill="none" stroke="${OL}" stroke-width="5"/><circle cx="76" cy="66" r="16" fill="none" stroke="${OL}" stroke-width="5"/><path d="M24 66H46L66 42L76 66M46 66L38 40M66 42L36 42M66 42L72 30" stroke="#E0786F" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M68 30H80" stroke="${OL}" stroke-width="4" stroke-linecap="round"/></svg>`;
+/* the finger tools of the new jobs (with the small face, touch.tool.face) */
+TOOL.can=`<svg viewBox="0 0 100 100"><path d="M40 52L14 82" stroke="${OL}" stroke-width="11" stroke-linecap="round"/><path d="M40 52L14 82" stroke="#8FC48A" stroke-width="6" stroke-linecap="round"/><ellipse cx="12" cy="85" rx="9" ry="6" fill="#8FC48A" ${S3} transform="rotate(-50 12 85)"/>
+  <path d="M52 30Q70 6 90 30" stroke="${OL}" stroke-width="9" fill="none" stroke-linecap="round"/><path d="M52 30Q70 6 90 30" stroke="#8FC48A" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+  <path d="M38 34H94L90 80Q88 88 80 88H54Q46 88 44 80Z" fill="#8FC48A" ${S3}/><path d="M40 46H92" stroke="#CFE6CB" stroke-width="5"/>${TFACE(67,64,.85)}</svg>`;
+TOOL.vscope=`<svg viewBox="0 0 100 100"><path d="M50 60Q50 20 30 4M50 60Q50 20 72 0" stroke="${OL}" stroke-width="9" fill="none" stroke-linecap="round"/><path d="M50 60Q50 20 30 4M50 60Q50 20 72 0" stroke="#E89AAE" stroke-width="5" fill="none" stroke-linecap="round"/>
+  ${heart(50,78,20,STEEL,S3)}${heart(50,78,11,'#F4F6F8')}${TFACE(50,74,.7)}</svg>`;
+/* the 'help me!' bubble pictures (level 4), viewBox 0 0 120 100 */
+const bubbleIn=html=>html.replace(/^<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'');
+const PROBLEM={
+  firefighter:()=>`<g ${PF}><rect x="26" y="46" width="62" height="46" rx="4" fill="#F3DCC4"/></g><g ${PF}><path d="M18 50L57 20L96 50Z" fill="#C98A7A"/></g><rect x="36" y="56" width="18" height="16" rx="3" fill="#F8E6C4"/><rect x="62" y="64" width="16" height="28" rx="8" fill="#B9876A"/>
+    <g transform="translate(46 60) scale(.42)">${bubbleIn(FLAME)}</g><g transform="translate(86 50) scale(.34)">${bubbleIn(FLAME)}</g>`,
+  doctor:()=>`<svg x="10" y="0" width="100" height="100" viewBox="-10 -10 220 250" style="overflow:hidden">${bubbleIn(A.animal('bear','sad'))}</svg><g transform="translate(70 58) rotate(-60)"><rect x="-4" y="-22" width="8" height="30" rx="4" fill="#FFFDF9" ${S3}/><circle cx="0" cy="10" r="6" fill="#E0786F" ${S3}/></g><g transform="translate(46 30) rotate(-20) scale(.42)">${bubbleIn(PLASTER(0))}</g>`,
+  chef:()=>`<g transform="translate(16 30)">${bubbleIn(BOWL(0)).replace(/<ellipse cx="50" cy="64"[^>]*>/,'')}</g><path d="M30 24Q36 16 30 8M58 22Q64 12 58 4M86 24Q92 16 86 8" stroke="#D9CFC4" stroke-width="4" fill="none" stroke-linecap="round" stroke-dasharray="4 6"/>`,
+  police:()=>`<rect x="6" y="66" width="108" height="26" rx="4" fill="#C9C6C2"/>${[0,1,2,3,4].map(i=>`<rect x="${12+i*21}" y="70" width="13" height="18" rx="2" fill="#FAF8F3"/>`).join('')}<svg x="40" y="18" width="50" height="50" viewBox="-40 -50 80 80" style="overflow:hidden">${bubbleIn(DUCK(true))}</svg><svg x="76" y="40" width="32" height="32" viewBox="-40 -50 80 80">${bubbleIn(DUCK(false))}</svg><svg x="4" y="40" width="44" height="26" viewBox="0 0 200 110">${bubbleIn(carSVG('#CFE5F4',false))}</svg>`,
+  mail:()=>`<g transform="translate(18 22) scale(.86)">${bubbleIn(LETTER('heart'))}</g>`,
+  farmer:()=>`<path d="M4 80Q60 66 116 80V96H4Z" fill="#C9A27E"/>${[24,60,96].map(x=>`<ellipse cx="${x}" cy="80" rx="14" ry="6" fill="#9E7A5C" stroke="${OL}" stroke-width="2"/>`).join('')}<g transform="translate(60 40) scale(.5)">${bubbleIn(CARROT)}</g>`,
+  vet:()=>`<svg x="10" y="0" width="100" height="100" viewBox="-10 -10 220 250" style="overflow:hidden">${bubbleIn(A.animal('dog','sad'))}</svg><g transform="translate(83 84) scale(1.1)">${bubbleIn(SOREPAW)}</g>`
+};
+const BUBBLE=(job)=>`<svg viewBox="0 0 160 130" style="overflow:visible"><path d="M14 8H146Q156 8 156 18V98Q156 108 146 108H96L84 126L76 108H14Q4 108 4 98V18Q4 8 14 8Z" fill="#FFFDF9" ${S3}/><svg x="20" y="10" width="120" height="96" viewBox="0 0 120 100" style="overflow:hidden">${PROBLEM[job]()}</svg></svg>`;
+
+/* new backgrounds (calm paper layers, viewBox 0 0 400 520) */
+Object.assign(BG,{
+  post:`<rect width="400" height="520" fill="#F5E8DD"/><rect y="236" width="400" height="94" fill="#EFDCCD"/><path d="M0 236H400" stroke="#E6CDB9" stroke-width="5"/>
+    <g ${PF}><rect y="330" width="400" height="190" fill="#E8D7C6"/></g><path d="M0 330H400" stroke="#DCC2A8" stroke-width="6"/><g ${PF}><ellipse cx="300" cy="446" rx="100" ry="18" fill="#EAC7B4"/></g>`,
+  village:`<rect width="400" height="520" fill="#E7F0EC"/><circle cx="56" cy="50" r="24" fill="#F7E1C2"/><g ${PF}><path d="M-20 214Q100 170 210 200Q300 172 420 204V520H-20Z" fill="#D6E7CC"/></g>${[[40,300],[200,318],[350,296]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="20" fill="#C3DDB9"/><rect x="${x-3}" y="${y+14}" width="6" height="18" fill="#C9A98A"/>`).join("")}
+    <g ${PF}><rect y="372" width="400" height="148" fill="#DCD3C6"/></g><rect y="364" width="400" height="14" fill="#EADFCF"/><path d="M0 446H400" stroke="#EFE8DC" stroke-width="6" stroke-dasharray="34 26"/>`,
+  farm:`<rect width="400" height="520" fill="#E9F1F2"/><circle cx="330" cy="46" r="24" fill="#F7E1C2"/><g ${PF}><path d="M-20 116Q90 78 200 104Q300 78 420 108V520H-20Z" fill="#D6E7CC"/></g>
+    ${[0,1,2,3,4,5,6,7,8].map(i=>`<rect x="${6+i*48}" y="100" width="10" height="44" rx="3" fill="#E3C9A8"/>`).join('')}<rect x="0" y="110" width="400" height="8" rx="3" fill="#E3C9A8"/><rect x="0" y="128" width="400" height="8" rx="3" fill="#E3C9A8"/>
+    <g ${PF}><rect y="150" width="400" height="370" fill="#E2CDB3"/></g>${[300,350].map(y=>`<path d="M0 ${y}H400" stroke="#D8C0A2" stroke-width="5" stroke-dasharray="40 30"/>`).join('')}`,
+  vet:`<rect width="400" height="520" fill="#ECE8F4"/><g ${PF}><rect x="30" y="44" width="90" height="96" rx="12" fill="#D9BFA6"/></g><rect x="38" y="52" width="74" height="80" rx="8" fill="#DCEEF5"/><path d="M38 116Q60 98 82 110Q100 100 112 112V132H38Z" fill="#B5D6AC"/>
+    <g ${PF}><rect x="160" y="50" width="80" height="80" rx="40" fill="#FFFDF9"/></g>${PAW(200,94,2.2,'#E8C3CF')}
+    <g ${PF}><rect x="276" y="66" width="104" height="12" rx="5" fill="#C9A98A"/></g><g ${PF}><rect x="286" y="36" width="20" height="30" rx="6" fill="#CFE6CB"/><rect x="312" y="44" width="16" height="22" rx="5" fill="#F6D3DB"/><circle cx="350" cy="52" r="14" fill="#F7E8B8"/></g>
+    <g ${PF}><rect y="396" width="400" height="124" fill="#E3DACB"/></g><path d="M0 396H400" stroke="#D6CBB8" stroke-width="6"/>`
+});
+/* the new jobs' own pieces (vehicle, scene, the strip pictures of the two tasks, words). ask/hint: the level-4 'help me' bubble words, asker: who asks */
+Object.assign(JOB,{
+  mail:{car:'mail',siren:'',scene:'post',tool:'',icon1:LETTER('star'),step2:BIKE_ICON,
+    hello:['편지가 왔어요! 편지 그림과 같은 그림 우체통에 넣어 줘!','Letters! Put each letter in the mailbox with the same picture!'],
+    thanks:['소포다! 고마워요, 집배원님!','A parcel for me! Thank you, mail carrier!']},
+  farmer:{car:'tractor',siren:'',scene:'farm',tool:'can',icon1:TOOL.can,step2:EGG,
+    hello:['토토가 당근이 먹고 싶대요! 삽으로 땅을 파 줘!','Toto wants carrots! Dig the ground with the shovel!'],
+    thanks:['꼬꼬댁! 고마워요, 농부님!','Cluck cluck! Thank you, farmer!']},
+  vet:{car:'vet',siren:'',scene:'vet',tool:'vscope',step2:MEDS(3),
+    hello:['강아지가 아파요. 청진기를 가슴에 대 봐!','The puppy feels sick. Put the stethoscope on the tummy!'],
+    thanks:['멍멍! 고마워요, 수의사 선생님!','Woof woof! Thank you, vet!']}
+});
+const ASK={
+  firefighter:{asker:'cat',ask:['불이 났어요! 누가 도와줄까?','Fire! Who can help?'],hint:['불을 끄는 사람은 누구지?','Who puts out fires?']},
+  doctor:{asker:'bear',ask:['곰이 아파요! 누가 도와줄까?','Teddy is sick! Who can help?'],hint:['아픈 곳을 낫게 해 주는 사람은 누구지?','Who makes ouchies better?']},
+  chef:{asker:'bunny',ask:['배가 고파요! 누가 도와줄까?','I am hungry! Who can help?'],hint:['맛있는 음식을 만드는 사람은 누구지?','Who cooks yummy food?']},
+  police:{asker:'bunny',ask:['오리가 길을 못 건너요! 누가 도와줄까?','The ducks cannot cross! Who can help?'],hint:['차를 세워 주는 사람은 누구지?','Who stops the cars?']},
+  mail:{asker:'bunny',ask:['편지를 보내고 싶어요! 누가 도와줄까?','I want to send letters! Who can help?'],hint:['편지를 배달하는 사람은 누구지?','Who brings the letters?']},
+  farmer:{asker:'bunny',ask:['밭이 텅 비었어요! 누가 도와줄까?','The field is empty! Who can help?'],hint:['밭에서 당근을 키우는 사람은 누구지?','Who grows carrots?']},
+  vet:{asker:'dog',ask:['강아지가 발을 다쳤어요! 누가 도와줄까?','The puppy hurt its paw! Who can help?'],hint:['동물 친구를 낫게 해 주는 사람은 누구지?','Who helps sick animals?']}
 };
 
 /* ============================== screen ============================== */
@@ -424,6 +648,22 @@ const css=`
 .jb-show span{height:86%;aspect-ratio:.9;border-radius:22px;background:var(--paper);padding:8px;box-shadow:0 3px 10px rgba(91,74,66,.1)}
 .jb-show span svg{width:100%;height:100%}
 .jb-ic .al-lid,.jb-ic .al-mouth-o{opacity:0}
+.jb-bubble{pointer-events:none;transform-origin:70% 100%}
+.jb-bubble>svg{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 4px 6px rgba(91,74,66,.16))}
+.jb-box,.jb-house2,.jb-pile,.jb-bike,.jb-soil,.jb-basket,.jb-nest,.jb-egg{pointer-events:none}
+.jb-bike{transition:left .65s ease-in-out}
+.jb-bike.ride .jb-wheel,.jb-bike.ride .jb-crank{animation:jbspin .65s linear}
+@keyframes jbspin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+.jb-bike.ride>svg{animation:jbbump .32s ease-in-out 2}
+.jb-soil .g-hole,.jb-soil .g-seed,.jb-soil .g-sprout,.jb-soil .g-top{display:none}
+.jb-soil.hole .g-hole,.jb-soil.pulled .g-hole{display:inline}
+.jb-soil.seed .g-seed,.jb-soil.grow .g-seed,.jb-soil.grow .g-sprout,.jb-soil.carrot .g-sprout,.jb-soil.carrot .g-top{display:inline}
+.jb-soil.grow .g-seed1,.jb-soil.carrot .g-seed1{display:none}
+.jb-soil.carrot .g-sprout{transform:none!important;transition:transform .3s}
+.jb-soil .g-sprout{transition:transform .25s ease-out}
+.jb-hen.peck>svg{animation:jbpeck .6s ease-in-out;transform-origin:30% 90%}
+@keyframes jbpeck{0%,100%{transform:none}30%{transform:rotate(-14deg) translateY(4%)}55%{transform:rotate(-4deg)}75%{transform:rotate(-14deg) translateY(4%)}}
+.jb-wrap svg,.jb-spot svg{width:100%;height:100%;overflow:visible}
 `;
 const stEl=document.createElement('style');stEl.textContent=css;document.head.appendChild(stEl);
 
@@ -456,7 +696,15 @@ const SND={
   stamp(){noise(.14,{type:'lowpass',freq:420,vol:.4});tone(150,.14,'sine',.28)},
   screech(){noise(.4,{freq:2600,q:4,vol:.06,sweep:-900})},
   pour(){noise(.45,{type:'lowpass',freq:1400,vol:.18,sweep:-700})},
-  stick(){tone(520,.06,'triangle',.12);noise(.08,{freq:2200,vol:.08})}
+  stick(){tone(520,.06,'triangle',.12);noise(.08,{freq:2200,vol:.08})},
+  bell(){tone(1320,.12,'sine',.12);tone(1320,.18,'sine',.1,.16)},
+  pedal(){tone(180,.05,'triangle',.1);tone(210,.05,'triangle',.08,.18)},
+  knock(){tone(140,.06,'sine',.3);tone(140,.06,'sine',.28,.16)},
+  dig(){noise(.22,{type:'lowpass',freq:600,vol:.3,sweep:-200})},
+  seed(){tone(880,.05,'sine',.08);tone(660,.06,'sine',.07,.08)},
+  peck(){tone(900,.03,'square',.03)},
+  cluck(){sweepTone(500,700,.08,'triangle',.08);sweepTone(520,760,.08,'triangle',.08,.12);sweepTone(480,900,.16,'triangle',.08,.26)},
+  slurp(){sweepTone(400,900,.18,'sine',.1)}
 };
 
 /* ---------- layout ---------- */
@@ -470,6 +718,7 @@ function placeDoll(){
   const r=stR(),W=r.width,H=r.height;if(!W||!S)return;const m=S.dollMode||'center';
   let h,left,bottom=H*.02;
   if(m==='side'){h=H*.52;left=-W*.04}
+  else if(m==='ask'){h=Math.min(H*.56,W*.5*VBH/VBW);left=-W*.03}
   else if(m==='left'){h=Math.min(H*.74,W*.6*VBH/VBW);left=W*.0}
   else if(m==='mirror'){h=Math.min(H*.8,W*.66*VBH/VBW);left=W*.02}
   else{h=Math.min(H*.9,W*.86*VBH/VBW);left=(W-h*VBW/VBH)/2}
@@ -482,7 +731,7 @@ const STEPS=['suit','car','m1','m2','stamp'];
 function stepIndex(){if(!S||!S.job)return -1;if(phase==='dress')return 0;if(['mirror','car','ride'].includes(phase))return 1;if(phase==='mission')return S.mstep?3:2;return 4}
 function strip(){
   if(!S||!S.job){stripEl.innerHTML='';return}const j=S.job,J=JOB[j],k=stepIndex();
-  const pics=[cardSVG(j,'top',gearOf(j,'top').cols[0]),vehicleSVG(J.car),TOOL[J.tool],J.step2,STAMP_ICON];
+  const pics=[cardSVG(j,'top',gearOf(j,'top').cols[0]),vehicleSVG(J.car),J.icon1||TOOL[J.tool],J.step2,STAMP_ICON];
   const star=`<i><svg viewBox="0 0 20 20"><path d="M10 1l2.6 5.6 6 .7-4.5 4.1 1.2 6L10 14.5 4.7 17.4l1.2-6L1.4 7.3l6-.7z" fill="${PAL.butter||'#F0D58A'}" stroke="${OL}" stroke-width="1.2"/></svg></i>`;
   stripEl.innerHTML=pics.map((p,i)=>`<span class="${i===k?'on':i<k?'done':''}">${p}${i<k?star:''}</span>`).join('');
 }
@@ -510,38 +759,63 @@ function attachHelp(el,kind,o={}){if(!M.Alive||!el)return null;const h=M.Alive.a
 function showPick(o={}){
   L.begin();gen++;G.stop();clearTool();helpOff();fxEl.innerHTML='';dd=null;cd=null;busy=false;canGo=false;MS=null;mirrorT=0;
   phase='pick';lv=levelInfo(levelNo());
-  S={d:pick(DOLLS),job:null,wear:{},wrong:0,idle:0,dollMode:'center',t0:performance.now()};
+  /* level 5: a family face does the job (one of the saved faces each round); no faces → the usual doll */
+  const fam=lv.family?famList():[],fr=fam.length?fam[Math.floor(Math.random()*fam.length)]:null;
+  S={d:fr?famDoll(fr):pick(DOLLS),job:null,wear:{},wrong:0,idle:0,dollMode:lv.ask?'ask':'center',t0:performance.now(),ask:null};
   bgEl.innerHTML=bgSVG(BG.locker);world.innerHTML='';mirrorEl.classList.remove('on');carEl.className='jb-car';carEl.innerHTML='';photoEl.hidden=true;photoEl.innerHTML='';
   dollEl.style.opacity='1';homeBtn.hidden=false;backBtn.hidden=true;size();drawDoll();attachDoll();strip();
-  let pool=lv.jobs.slice();if(pool.length>3)pool=pool.filter(j=>j!==DATA.last);shown=shuffle(pool).slice(0,3);LOG.push('cards:'+shown.join('+'));
+  if(lv.ask){/* level 4: a friend shows its problem in a picture bubble; the child picks the job that helps (three cards at most) */
+    let pool=lv.jobs.filter(j=>j!==DATA.last);if(!pool.length)pool=lv.jobs.slice();
+    const fresh=lv.fresh.filter(j=>pool.includes(j)),ans=fresh.length&&Math.random()<.4?pick(fresh):pick(pool);
+    S.ask=ans;shown=shuffle([ans].concat(shuffle(lv.jobs.filter(j=>j!==ans&&j!==PAIR[ans])).slice(0,2)));
+    const A2=ASK[ans]||ASK.firefighter,ak=mk('jb-help jb-asker',A.animal(A2.asker,'sad'));Object.assign(ak.style,{right:'1%',bottom:'3%',width:'50%',aspectRatio:'200/230',zIndex:'2'});
+    const bb=mk('jb-bubble',BUBBLE(ans));Object.assign(bb.style,{right:'2%',top:'8%',width:'68%',aspectRatio:'160/130',zIndex:'2'});
+    const akAl=attachHelp(ak,A2.asker);if(akAl)akAl.setMood('sad');S.asker={el:ak,al:akAl,bubble:bb};
+    try{bb.animate([{transform:'scale(.4)',opacity:0},{transform:'scale(1.05)',opacity:1,offset:.7},{transform:'none'}],{duration:500,delay:500,easing:'ease-out',fill:'backwards'})}catch(_){}
+  }else{/* the jobs this level brings come first, so the child meets them */
+    const fresh=lv.fresh.slice(0,2);let rest=lv.jobs.filter(j=>!fresh.includes(j));if(rest.length>3-fresh.length)rest=rest.filter(j=>j!==DATA.last);
+    shown=shuffle(fresh.concat(shuffle(rest)).slice(0,3));
+  }
+  LOG.push('cards:'+shown.join('+'));
   setTray(shown.map(j=>`<button class="jb-card slide" data-job="${j}" aria-label="${jobOf(j).ko}">${jobCardSVG(j,S.d)}</button>`).join(''));
   tray.querySelectorAll('.jb-card').forEach((b,k)=>setTimeout(()=>b.classList.remove('slide'),60+k*110));
   const R=o.result;stars(R?R.filled-1:undefined);if(R)L.later(()=>{const pr=PRG();if(pr)pr.fillStars($('#jbStars'),R.filled);LOG.push('star:'+R.filled)},400);
   if(R&&R.up)L.later(()=>levelUp(R.level),1500);
-  L.later(()=>{speak('어떤 일을 해 볼까? 카드를 콕 눌러 봐!','Which job shall we try? Tap a card!');if(al)al.play('wave');
+  L.later(()=>{if(S.ask){const q=ASK[S.ask].ask;speak(q[0],q[1]);if(S.asker&&S.asker.al)S.asker.al.play('wave')}else speak('어떤 일을 해 볼까? 카드를 콕 눌러 봐!','Which job shall we try? Tap a card!');if(al)al.play('wave');
     G.start({type:'tap',at:()=>{const b=tray.querySelector('.jb-card');if(!b)return[sec.clientWidth/2,sec.clientHeight*.85];const [x,y]=ctr(b);return secXY(x,y)}})},R&&R.up?4400:R?2000:400);
 }
-function levelUp(n){const a=levelInfo(n-1),b=levelInfo(n),nj=b.jobs.find(j=>!a.jobs.includes(j))||b.jobs[0];LOG.push('levelup:'+n);const pr=PRG();if(!pr)return;
-  pr.moment(stage,{art:jobCardSVG(nj,S.d).replace(/"vivid"/,''),ko:'새 직업이 왔어요!',en:'New jobs are here!'},()=>stars(0))}
+function levelUp(n){const a=levelInfo(n-1),b=levelInfo(n);LOG.push('levelup:'+n);const pr=PRG();if(!pr)return;
+  let m;
+  if(b.family&&!a.family){const f=famList()[0];m=f?{art:A.personHead(f.photo,M.Faces.look(f)),ko:'우리 가족도 일해요!',en:'Our family can work too!'}:{art:jobCardSVG(pick(b.jobs),S.d),ko:'다 같이 일해요!',en:'Everyone works together!'}}
+  else{const nj=b.fresh[0]||b.jobs.find(j=>!a.jobs.includes(j))||b.jobs[0];m={art:jobCardSVG(nj,S.d),ko:'새 직업이 왔어요!',en:'New jobs are here!'}}
+  pr.moment(stage,m,()=>stars(0))}
+const famKo=()=>S&&S.d&&S.d.fam?S.d.fam.ko:'',famEn=()=>S&&S.d&&S.d.fam?cap(S.d.fam.en):'';
 function pickJob(j,b){
-  if(phase!=='pick'||busy)return;busy=true;G.touch();G.stop();actx();sfx.pop();LOG.push('pick:'+j);const J=jobOf(j);speak(J.ko+'!',cap(J.en)+'!');
+  if(phase!=='pick'||busy)return;G.touch();actx();sfx.pop();const J=jobOf(j);
+  if(S.ask&&j!==S.ask){/* not the job for this problem: a gentle 어? and the friend asks again (never a fail) */
+    S.wrong++;LOG.push('askwrong:'+j);b.classList.remove('nope');void b.offsetWidth;b.classList.add('nope');tone(330,.18,'sine',.12);
+    const h=ASK[S.ask].hint;speak(`어? ${J.ko}? ${h[0]}`,`Oh? The ${J.en}? ${h[1]}`);if(al)al.play('oops');if(S.asker&&S.asker.al)S.asker.al.play('shiver');G.nudge();return}
+  busy=true;G.stop();LOG.push('pick:'+j);
+  if(S.ask){speak(`맞아, ${J.ko}!`,`Yes! The ${J.en}!`);if(S.asker&&S.asker.al){S.asker.al.setMood('happy');S.asker.al.play('hop')}const r=b.getBoundingClientRect();sparkles(r.left+r.width/2,r.top+r.height/2,.7)}
+  else speak(J.ko+'!',cap(J.en)+'!');
   b.classList.add('chosen');tray.querySelectorAll('.jb-card').forEach(x=>{if(x!==b)x.classList.add('out')});if(al)al.play('hop');
-  S.job=j;DATA.last=j;save();L.later(()=>{busy=false;startDress()},1300);
+  S.job=j;DATA.last=j;save();L.later(()=>{busy=false;startDress()},S.ask?1700:1300);
 }
 
 /* ============================== 2. dress up: hat, clothes, tool (tap or drag; drag off; tap a worn one = new colour) ============================== */
 function startDress(){
-  phase='dress';S.wear={};S.decoy=null;homeBtn.hidden=true;backBtn.hidden=false;strip();renderItems(true);drawDoll();
+  phase='dress';S.wear={};S.decoy=null;homeBtn.hidden=true;backBtn.hidden=false;helpOff();world.innerHTML='';S.asker=null;S.dollMode='center';placeDoll();strip();renderItems(true);drawDoll();
   const J=jobOf(S.job);
-  speak(`${J.ko} 옷을 입어 보자! 카드를 콕 누르거나 끌어 봐.`,`Let's dress up as a ${J.en}! Tap or drag a card.`);
+  if(famKo())speak(`${famKo()} ${J.ko} 옷을 입혀 보자! 카드를 콕 누르거나 끌어 봐.`,`Let's dress ${famEn()} as a ${J.en}! Tap or drag a card.`);
+  else speak(`${J.ko} 옷을 입어 보자! 카드를 콕 누르거나 끌어 봐.`,`Let's dress up as a ${J.en}! Tap or drag a card.`);
   G.start({type:'tap',at:()=>{const b=tray.querySelector('.jb-card:not(.out)');if(!b)return[sec.clientWidth/2,sec.clientHeight*.85];const [x,y]=ctr(b);return secXY(x,y)}});
 }
 function renderItems(first){
   if(!S||!S.job||!GEAR[S.job])return;
   const need=SLOTS.filter(s=>!S.wear[s]),list=need.map(s=>({job:S.job,slot:s}));
   if(lv.decoy&&need.length){
-    const others=lv.jobs.filter(j=>j!==S.job&&BUILT.includes(j));let dec=S.decoy;
-    if(!dec||!need.includes(dec.slot)||dec.job===S.job||!gearOf(dec.job,dec.slot)){const sl=pick(need),pool=(others.length?others:BUILT.filter(j=>j!==S.job)).filter(j=>gearOf(j,sl));dec=pool.length?{job:pick(pool),slot:sl}:null}
+    const others=lv.jobs.filter(j=>j!==S.job&&j!==PAIR[S.job]&&BUILT.includes(j));let dec=S.decoy;
+    if(!dec||!need.includes(dec.slot)||dec.job===S.job||!gearOf(dec.job,dec.slot)){const sl=pick(need),pool=(others.length?others:BUILT.filter(j=>j!==S.job&&j!==PAIR[S.job])).filter(j=>gearOf(j,sl));dec=pool.length?{job:pick(pool),slot:sl}:null}
     S.decoy=dec;if(dec){if(list.length>2)list.splice(2);list.push(Object.assign({decoy:true},dec))}
   }
   const order=(first?shuffle(list):list).filter(c=>gearOf(c.job,c.slot));
@@ -616,7 +890,7 @@ tray.addEventListener('pointerup',endCard);tray.addEventListener('pointercancel'
 function mirrorBeat(){
   phase='mirror';LOG.push('mirror');G.stop();strip();showWorn();const J=jobOf(S.job);
   S.dollMode='mirror';placeDoll();mirrorEl.querySelector('.jb-refl').innerHTML=doll(S.d,S.job,S.wear,{});mirrorEl.classList.add('on');
-  L.later(()=>{if(al)al.play('twirl');speak(`우와, 멋진 ${J.ko}!`,`Wow! A super ${J.en}!`);const r=mirrorEl.getBoundingClientRect();sparkles(r.left+r.width/2,r.top+r.height*.4)},700);
+  L.later(()=>{if(al)al.play('twirl');(famKo()?speak(`우와, 멋진 ${famKo()} ${J.ko}!`,`Wow! ${famEn()} the super ${J.en}!`):speak(`우와, 멋진 ${J.ko}!`,`Wow! A super ${J.en}!`));const r=mirrorEl.getBoundingClientRect();sparkles(r.left+r.width/2,r.top+r.height*.4)},700);
   L.later(()=>{if(al)al.play('wave')},2300);
   L.later(()=>{mirrorEl.classList.remove('on');carArrive()},3900);
 }
@@ -625,7 +899,8 @@ function carArrive(){
   carEl.innerHTML=vehicleSVG(J.car);carEl.className='jb-car';void carEl.offsetWidth;carEl.classList.add('in','go');
   if(J.siren)siren(J.siren,1.4);else SND.horn();
   L.later(()=>{carEl.classList.remove('go');canGo=true;phase='car';strip();SND.horn();LOG.push('car');
-    speak(`출동! 차를 콕 눌러서 타자!`,`Let's go, ${jo.en}! Tap the car to hop in!`);
+    if(famKo())speak(`${famKo()} ${jo.ko} 출동! 차를 콕 눌러서 타자!`,`${famEn()} the ${jo.en}, let's go! Tap the car to hop in!`);
+    else speak(`출동! 차를 콕 눌러서 타자!`,`Let's go, ${jo.en}! Tap the car to hop in!`);
     G.start({type:'tap',at:()=>{const [x,y]=ctr(carEl);return secXY(x,y)}})},1500);
 }
 function tryGo(){if(!canGo||!allWorn()||phase!=='car')return false;board();return true}
@@ -643,7 +918,7 @@ function startMission(){
   phase='mission';S.mstep=0;S.dollMode='side';carEl.className='jb-car';carEl.innerHTML='';helpOff();clearTool();
   const J=JOB[S.job];bgEl.innerHTML=bgSVG(BG[J.scene],J.scene==='street'?'none':undefined);world.innerHTML='';placeDoll();dollEl.style.opacity='1';drawDoll();
   try{dollEl.animate([{transform:'scale(.6)',opacity:0},{transform:'scale(1)',opacity:1}],{duration:450,easing:'cubic-bezier(.3,1.4,.5,1)'})}catch(_){}
-  strip();MS=MISSION[S.job]();LOG.push('mission:'+S.job);
+  strip();MS=MS_BASE();const m=MISSION[S.job]();['tap','trayDown','trayMove','trayUp','up'].forEach(k=>{if(MS[k]&&!m[k])m[k]=MS[k]});MS=m;LOG.push('mission:'+S.job);
 }
 function nextStep(){S.mstep=1;clearTool();strip();LOG.push('step2:'+S.job);if(al)al.play('clap')}
 /* the generic finger-following tool: only the cells it touches change (holding still keeps working where it is) */
@@ -671,7 +946,8 @@ const inRect=(e,r,m=0)=>e.clientX>=r.left-m&&e.clientX<=r.right+m&&e.clientY>=r.
 function thanks(helpEl,h,line){
   phase='thanks';clearTool();G.stop();strip();LOG.push('thanks');showWorn();const [x,y]=ctr(helpEl);
   if(h){h.setMood&&h.setMood('happy');h.play('hop',{n:2})}SFX.ding();celebrate(x,y);
-  L.later(()=>{speak(line[0],line[1]);if(al)al.play('wave')},500);
+  const jo=jobOf(S.job),fl=famKo()?[line[0].replace(/고마워요, .*$/,`고마워요, ${famKo()} ${jo.ko}님!`),line[1].replace(/Thank you, .*$/,`Thank you, ${famEn()} the ${jo.en}!`)]:line;
+  L.later(()=>{speak(fl[0],fl[1]);if(al)al.play('wave')},500);
   L.later(()=>{if(h)h.play('dance');if(al)al.play('dance')},2600);
   L.later(photoCard,5200);
 }
@@ -681,7 +957,7 @@ function photoCard(){
   photoEl.innerHTML=`<div class="jb-pcard"><div class="jb-pic"><div class="pbg">${bgSVG(BG[J.scene],J.scene==='street'?'none':undefined)}</div><div class="pcar" style="right:-6%;bottom:6%;width:78%;aspect-ratio:300/170">${vehicleSVG(J.car)}</div><div class="pdoll" style="left:2%;bottom:2%;height:80%;aspect-ratio:240/400">${doll(S.d,S.job,S.wear,{})}</div></div><div class="jb-stamp">${STAMP_ICON}</div></div>`;
   const sr=stR(),cw=Math.min(sr.width*.7,sr.height*.86*.8);Object.assign(photoEl.querySelector('.jb-pcard').style,{width:cw+'px',height:(cw/.8)+'px'});
   photoEl.hidden=false;requestAnimationFrame(()=>photoEl.classList.add('on'));SFX.shutter&&SFX.shutter();
-  L.later(()=>speak(`진짜 ${jo.ko}!`,`A real ${jo.en}!`),500);
+  L.later(()=>famKo()?speak(`${famKo()} ${jo.ko}!`,`${famEn()} the ${jo.en}!`):speak(`진짜 ${jo.ko}!`,`A real ${jo.en}!`),500);
   L.later(()=>{const s=photoEl.querySelector('.jb-stamp');s.classList.add('on');setTimeout(SND.stamp,280);LOG.push('stamp');phase='stamp';strip();
     const r=s.getBoundingClientRect();setTimeout(()=>sparkles(r.left+r.width/2,r.top+r.height/2),320)},2400);
   L.later(()=>{if(!S)return;DATA.done++;save();let result=null;const pr=PRG();
@@ -744,7 +1020,7 @@ function mFire(){
   }
   return Object.assign({R,get fires(){const hr=house.getBoundingClientRect();return fires.map(f=>({lv:+f.lv.toFixed(3),out:f.out,pt:ctr(f.el),aim:[hr.left+f.x/300*hr.width,hr.top+(f.y-16)/340*hr.height]}))},get cat(){return ctr(cat)}},MS_BASE());
 }
-function MS_BASE(){return{tap:null,trayDown:null,trayMove:null,trayUp:null}}
+function MS_BASE(){return{tap:null,trayDown:null,trayMove:null,trayUp:null,up:null}}
 
 /* ---------- doctor: listen to the heartbeat, then a plaster on each sore spot ---------- */
 function mDoctor(){
@@ -824,7 +1100,7 @@ function mChef(){
   function scoop(){
     if(scooping||scoops>=3)return;scooping=true;G.touch();LOG.push('scoop');const [px,py]=potC(),[bx,by]=ctr(bowl);
     const f=floatHTML(TOOL.ladle,px,py,110);SND.bubble();
-    try{const a=f.animate([{transform:'none'},{transform:`translate(${(bx-px)*.5}px,${(by-py)*.5-70}px) rotate(-10deg)`,offset:.5},{transform:`translate(${bx-px}px,${by-py-40}px) rotate(-60deg)`}],{duration:700,easing:'ease-in-out',fill:'forwards'});a.onfinish=pour}catch(_){setTimeout(pour,700)}
+    try{const a=f.animate([{transform:'none'},{transform:`translate(${(bx-px)*.5}px,${(by-py)*.5-70}px) rotate(-10deg)`,offset:.5},{transform:`translate(${bx-px}px,${by-py-40}px) rotate(-60deg)`}],{duration:700,easing:'ease-in-out',fill:'forwards'});a.onfinish=gd(pour)}catch(_){L.later(pour,700)}
     function pour(){f.remove();scoops++;potLv=1-scoops/3;SND.pour();bowl.innerHTML=BOWL(scoops);bowl.classList.remove('jbsq');try{bowl.animate([{transform:'scale(1.06,.9)'},{transform:'none'}],{duration:350})}catch(_){}
       for(let k=0;k<3;k++)spawn(`<circle r="5" fill="#FF9A3C" stroke="${OL}" stroke-width="1"/>`,bx+rnd(-20,20),by-10,{dy:-20,sz:20,ms:500});
       pot.querySelector('.jb-broth').setAttribute('ry',(34*(.55+.45*potLv)).toFixed(1));pcs.forEach(g=>g.querySelector('.jb-soup').setAttribute('opacity',(.95*(.4+.6*potLv)).toFixed(2)));
@@ -869,13 +1145,242 @@ function mPolice(){
   function cross(d){
     if(d.across)return;d.across=true;G.touch();SND.whistle();setTimeout(SND.quack,250);LOG.push('duck');const k=ducks.indexOf(d);
     d.el.classList.add('walk');d.el.style.top=(12+k%2*4)+'%';d.el.style.left=(30+k*10)+'%';
-    setTimeout(()=>{d.el.classList.remove('walk');crossed++;const [x,y]=ctr(d.el);spawn(HEART,x,y-10,{dy:-40,sz:28});
+    L.later(()=>{d.el.classList.remove('walk');crossed++;const [x,y]=ctr(d.el);spawn(HEART,x,y-10,{dy:-40,sz:28});
       if(crossed>=ducks.length){MS.tap=null;MS.trayDown=null;G.stop();setTray('');L.later(()=>{cars.forEach(c=>{c.el.classList.remove('stop');c.el.style.left=(c.o.flip?-50:120)+'%'});SND.horn()},600);L.later(()=>thanks(mom,null,J.thanks),1400)}},1750);
     if(crossed===0&&ducks.filter(x=>x.across).length===1)speak('삐익! 건너가요!','Tweet! Off you go!');
   }
   return Object.assign({R,get cars(){return cars.map(c=>({lv:+c.lv.toFixed(3),stop:c.stop,pt:ctr(c.el)}))},get ducks(){return ducks.map(d=>({across:d.across,pt:ctr(d.el)}))},get zone(){return ctr(zone)}},MS_BASE());
 }
-const MISSION={firefighter:mFire,doctor:mDoctor,chef:mChef,police:mPolice};
+/* ---------- helpers for the new jobs: a hit box at least 110px (rules.bigAndFew), a tray card you can tap or drag ---------- */
+const MINHIT=110;
+const gd=fn=>{const t=L.tok;return(...a)=>{if(L.ok(t))fn(...a)}};   /* a callback that does nothing once the round was left */
+function hitOf(el,e,min=MINHIT){const r=el.getBoundingClientRect(),mx=Math.max(8,(min-r.width)/2),my=Math.max(8,(min-r.height)/2);return e.clientX>=r.left-mx&&e.clientX<=r.right+mx&&e.clientY>=r.top-my&&e.clientY<=r.bottom+my}
+function nearestOf(list,e,ok){let b=null,bd=1e9;list.forEach(x=>{if(ok&&!ok(x))return;if(!hitOf(x.el,e))return;const [cx,cy]=ctr(x.el),d=Math.hypot(cx-e.clientX,cy-e.clientY);if(d<bd){bd=d;b=x}});return b}
+/* a tray card: tap = o.onTap(button), drag onto the stage = o.onDrop(event, float) → true when it was used (else the picture flies back) */
+function cardDrag(o){
+  let pd=null;
+  MS.trayDown=(e,b)=>{pd={id:e.pointerId,x0:e.clientX,y0:e.clientY,moved:false,f:null,b};try{b.setPointerCapture(e.pointerId)}catch(_){}};
+  MS.trayMove=e=>{if(!pd||e.pointerId!==pd.id)return;const sz=o.size||100;
+    if(!pd.moved&&Math.hypot(e.clientX-pd.x0,e.clientY-pd.y0)>12){pd.moved=true;pd.f=floatHTML(o.icon(),e.clientX,e.clientY,sz);pd.b.classList.add('lift')}
+    if(pd.f){const [x,y]=secXY(e.clientX,e.clientY);pd.f.style.left=(x-sz/2)+'px';pd.f.style.top=(y-sz/2)+'px'}};
+  MS.trayUp=e=>{if(!pd||e.pointerId!==pd.id)return;const d=pd;pd=null;d.b.classList.remove('lift');
+    if(!d.moved){G.touch();o.onTap(d.b);return}
+    if(e.type!=='pointercancel'&&o.onDrop(e,d.f))return;
+    if(d.f){const r=d.b.getBoundingClientRect();fly(d.f,r.left+r.width/2,r.top+r.height/2,r.width*.6,260,null,true)}};
+}
+const cardBtn=(act,html,extra)=>`<button class="jb-card" data-act="${act}"${extra||''} aria-label="${act}">${html}</button>`;
+const trayCtr=()=>{const b=tray.querySelector('.jb-card');if(!b){const r=tray.getBoundingClientRect();return[r.left+r.width/2,r.top+r.height/2]}return ctr(b)};
+const PET={cat:['고양이','kitty'],dog:['강아지','puppy'],bear:['곰','bear'],bunny:['토끼','bunny']};
+const shake=el=>{try{el.animate([{transform:'translateX(0)'},{transform:'translateX(-7px) rotate(-2deg)'},{transform:'translateX(7px) rotate(2deg)'},{transform:'translateX(0)'}],{duration:450,easing:'ease-in-out'})}catch(_){}};
+const squash=el=>{try{el.animate([{transform:'scale(1.08,.9)'},{transform:'scale(.96,1.05)'},{transform:'none'}],{duration:420,easing:'ease-out'})}catch(_){}};
+
+/* ---------- mail carrier: (1) each letter into the mailbox with the same picture (2) ride the bike, the parcel to the door with the same picture ---------- */
+function mMail(){
+  const J=JOB.mail,R={sub:'sort'};
+  const boxes=shuffle(SORT_KEYS.slice()).map((k,i)=>{const e=mk('jb-box',MAILBOX(k,false));Object.assign(e.style,{left:(2+i*33)+'%',top:'4%',width:'30%',aspectRatio:'100/150',zIndex:'1'});return{k,el:e,full:false}});
+  const order=shuffle(SORT_KEYS.slice());   /* three letters for three mailboxes (made = used: none is left over) */
+  const pile=mk('jb-pile',LETTER_PILE(2));Object.assign(pile.style,{right:'3%',bottom:'5%',width:'40%',aspectRatio:'120/90',zIndex:'1'});
+  let cur=0,sending=false;
+  L.later(()=>{speak(J.hello[0],J.hello[1])},400);
+  const now=()=>order[cur];
+  function showLetter(){if(cur>=order.length)return;setTray(cardBtn('letter',LETTER(now()),` data-pic="${now()}"`));pile.innerHTML=LETTER_PILE(order.length-cur-1);
+    const b=tray.querySelector('.jb-card');try{b.animate([{transform:'translateY(110%)'},{transform:'none'}],{duration:380,easing:'cubic-bezier(.3,1.3,.5,1)'})}catch(_){}
+    G.start({type:'tap',at:()=>{const x=boxes.find(q=>q.k===now());if(!x)return[0,0];const [cx,cy]=ctr(x.el);return secXY(cx,cy)}})}
+  showLetter();
+  function send(box,f){
+    if(sending||!box)return false;G.touch();const k=now(),P=SORTP[k];
+    if(box.k!==k){S.wrong++;LOG.push('mailwrong:'+box.k);shake(box.el);tone(330,.18,'sine',.12);const Q=SORTP[box.k];
+      speak(`어? 여기는 ${Q.ko} 우체통이야. ${P.ko} 그림을 찾아 봐!`,`Oh? This is the ${Q.en} mailbox. Find the ${P.en}!`);if(al)al.play('oops');return false}
+    sending=true;LOG.push('letter:'+k);const r=box.el.getBoundingClientRect(),tx=r.left+r.width*.5,ty=r.top+r.height*.26;
+    if(!f){const [cx,cy]=trayCtr();f=floatHTML(LETTER(k),cx,cy,100)}setTray('');
+    fly(f,tx,ty,30,420,gd(()=>{box.full=true;box.el.innerHTML=MAILBOX(box.k,false);requestAnimationFrame(()=>requestAnimationFrame(()=>{const fl=box.el.querySelector('.jb-flag');if(fl){fl.style.opacity='1';fl.style.transform='none'}}));
+      squash(box.el);SND.stick();sparkles(tx,ty,.6);cur++;sending=false;
+      if(cur<order.length){const p=praise();speak(`쏙! ${p[0]} 다음 편지는 ${SORTP[now()].ko}!`,`In it goes! ${p[1]} Next, the ${SORTP[now()].en}!`);showLetter()}
+      else{G.stop();MS.tap=null;cardDrag({icon:()=>'',onTap:()=>{},onDrop:()=>false});L.later(()=>{speak('편지를 다 넣었어! 이제 자전거를 타고 소포를 배달해요. 자전거를 콕콕!','All the letters are in! Now ride the bike with the parcel. Tap the bike!');task2()},900)}}),true);
+    return true;
+  }
+  MS.tap=e=>{if(R.sub!=='sort')return;const b=nearestOf(boxes,e,x=>!x.full);if(b)send(b,null);else miss()};
+  cardDrag({icon:()=>LETTER(now()),size:100,onTap:()=>{const P=SORTP[now()];speak(`${P.ko} 편지! ${P.ko} 우체통은 어디 있지?`,`A ${P.en} letter! Where is the ${P.en} mailbox?`);G.nudge()},
+    onDrop:(e,f)=>{const b=nearestOf(boxes,e,x=>!x.full);if(!b)return false;return send(b,f)}});
+  /* task 2: ride and deliver */
+  let bike=null,houses=[],pk=null,pos=0,riding=false,holdT=0,delivered=false,vest='#E0786F';
+  function task2(){
+    nextStep();R.sub='ride';bgEl.innerHTML=bgSVG(BG.village);world.innerHTML='';dollEl.style.opacity='0';
+    const kinds=shuffle(['cat','dog','bear']);pk=pick(kinds);R.parcel=pk;
+    houses=kinds.map((k,i)=>{const e=mk('jb-house2',friendHouse(k,false));Object.assign(e.style,{left:(1+i*33)+'%',top:'12%',width:'32%',aspectRatio:'120/150',zIndex:'1'});return{k,el:e}});
+    vest=S.wear.top?pal(S.wear.top.col).vivid:'#E0786F';
+    bike=mk('jb-bike',bikeSVG(headSVG(S.d,S.job,S.wear),vest,pk));Object.assign(bike.style,{left:'-4%',bottom:'3%',width:'58%',aspectRatio:'200/150',zIndex:'3'});
+    try{bike.animate([{transform:'translateX(-60%)',opacity:0},{transform:'none',opacity:1}],{duration:600,easing:'ease-out'})}catch(_){}
+    setTray(`<div class="jb-toolpic">${BIKE_ICON}</div>`);
+    G.start({type:'tap',at:()=>{const [x,y]=ctr(bike);return secXY(x,y)}});
+    MS.tap=e=>{if(R.sub==='ride'){if(hitOf(bike,e,140)){push();clearInterval(holdT);holdT=setInterval(()=>{if(R.sub==='ride')push();else clearInterval(holdT)},560)}else miss();return}
+      if(R.sub==='deliver'){const h=nearestOf(houses,e);if(h)deliver(h,null);else miss()}};
+    MS.up=()=>{clearInterval(holdT);holdT=0};L.onEnd(()=>clearInterval(holdT));
+    MS.trayDown=null;MS.trayMove=null;MS.trayUp=null;
+  }
+  function push(){
+    if(riding||pos>=1)return;riding=true;G.touch();pos=Math.min(1,pos+1/3);LOG.push('pedal');
+    bike.style.left=(-4+pos*46)+'%';bike.classList.add('ride');SND.pedal();if(pos===1/3)SND.bell();
+    const [x,y]=ctr(bike);spawn(PUFF,x-bike.offsetWidth*.45,y+bike.offsetHeight*.35,{dy:-10,dx:-30,sz:26,ms:700});
+    L.later(()=>{bike.classList.remove('ride');riding=false;if(pos>=1&&R.sub==='ride')arrive()},650);
+  }
+  function arrive(){
+    R.sub='deliver';clearInterval(holdT);SND.bell();G.stop();const P=PET[pk];
+    speak(`도착! 소포에 ${P[0]} 그림이 있네. ${P[0]} 그림 집 문을 콕!`,`We're here! The parcel has a ${P[1]}. Tap the door with the ${P[1]}!`);
+    setTray(cardBtn('parcel',PARCEL(pk),` data-pic="${pk}"`));
+    G.start({type:'tap',at:()=>{const h=houses.find(q=>q.k===pk);const [x,y]=ctr(h.el);return secXY(x,y)}});
+    cardDrag({icon:()=>PARCEL(pk),size:96,onTap:()=>{const P2=PET[pk];speak(`${P2[0]} 소포! ${P2[0]} 집은 어디 있지?`,`A parcel for the ${P2[1]}! Where does the ${P2[1]} live?`);G.nudge()},
+      onDrop:(e,f)=>{const h=nearestOf(houses,e);if(!h)return false;return deliver(h,f)}});
+  }
+  function deliver(h,f){
+    if(delivered)return false;G.touch();
+    if(h.k!==pk){S.wrong++;LOG.push('doorwrong:'+h.k);shake(h.el);tone(330,.18,'sine',.12);const a=PET[h.k],b=PET[pk];
+      speak(`어? 여기는 ${a[0]}네 집이야. ${b[0]} 그림을 찾아 봐!`,`Oh? The ${a[1]} lives here. Find the ${b[1]}!`);return false}
+    delivered=true;R.sub='done';LOG.push('parcel');G.stop();MS.tap=null;const r=h.el.getBoundingClientRect(),tx=r.left+r.width*.65,ty=r.top+r.height*.78;
+    if(!f){const r0=bike.getBoundingClientRect();f=floatHTML(PARCEL(pk),r0.left+r0.width*.8,r0.top+r0.height*.3,60)}setTray('');SND.knock();bike.innerHTML=bikeSVG(headSVG(S.d,S.job,S.wear),vest,null);
+    fly(f,tx,ty,r.width*.32,520,gd(()=>{h.el.innerHTML=friendHouse(h.k,true);SND.stick();
+      const fr=mk('jb-help',A.animal(h.k,'happy'));Object.assign(fr.style,{left:(parseFloat(h.el.style.left)+8)+'%',top:'26%',width:'26%',aspectRatio:'200/230',zIndex:'4'});
+      try{fr.animate([{transform:'scale(.3) translateY(30%)',opacity:0},{transform:'scale(1.08)',opacity:1,offset:.7},{transform:'none'}],{duration:520,easing:'ease-out'})}catch(_){}
+      const fa=attachHelp(fr,h.k);L.later(()=>thanks(fr,fa,J.thanks),700)}));
+    return true;
+  }
+  return Object.assign({R,get sub(){return R.sub},get boxes(){return boxes.map(b=>({k:b.k,full:b.full,pt:ctr(b.el)}))},get letter(){return cur<order.length?now():null},get sorted(){return cur},
+    get bike(){return bike?ctr(bike):null},get ride(){return pos},get parcel(){return pk},get houses(){return houses.map(h=>({k:h.k,pt:ctr(h.el)}))},get delivered(){return delivered}},MS_BASE());
+}
+
+/* ---------- farmer: (1) dig, plant, water (only the watered patch grows), pull three carrots for Toto (2) feed the hen, put the egg in the basket ---------- */
+function mFarmer(){
+  const J=JOB.farmer,R={sub:'dig'};
+  const bunny=mk('jb-help',A.animal('bunny','sad'));Object.assign(bunny.style,{right:'1%',bottom:'3%',width:'40%',aspectRatio:'200/230',zIndex:'2'});
+  const bAl=attachHelp(bunny,'bunny',{waiting:true});if(bAl)bAl.setMood('sad');
+  const basket=mk('jb-basket',BASKET({c:0}));Object.assign(basket.style,{left:'40%',bottom:'3%',width:'24%',aspectRatio:'120/80',zIndex:'2'});
+  const SP=[22,50,78];
+  const spots=SP.map((x,i)=>{const e=mk('jb-soil',SOILP);Object.assign(e.style,{left:(x-14)+'%',top:'21%',width:'28%',aspectRatio:'100/110',zIndex:'1'});return{i,el:e,st:'flat',g:0}});
+  const setSt=(s,st)=>{s.st=st;s.el.className='jb-soil '+st};
+  const cellOf=s=>{const r=s.el.getBoundingClientRect(),sr=stR();return[(r.left-sr.left+r.width/2)/sr.width,(r.top-sr.top+r.height*.84)/sr.height]};
+  let carrots=0;
+  L.later(()=>{speak(J.hello[0],J.hello[1])},400);
+  function tapStep(sub,card,want,act,next,guideKo){
+    R.sub=sub;setTray(card);
+    G.start({type:'tap',at:()=>{const s=spots.find(x=>x.st===want);if(!s)return[0,0];const [x,y]=ctr(s.el);return secXY(x,y+s.el.offsetHeight*.3)}});
+    MS.tap=e=>{if(R.sub!==sub)return;const s=nearestOf(spots,e,x=>x.st===want);if(s)act(s);else miss()};
+    cardDrag({icon:()=>card.replace(/^<button[^>]*>/,'').replace(/<\/button>$/,''),size:90,onTap:()=>{const s=spots.find(x=>x.st===want);if(s)act(s)},onDrop:(e,f)=>{const s=nearestOf(spots,e,x=>x.st===want);if(!s)return false;if(f)f.remove();act(s);return true}});
+  }
+  function dig(s){if(s.st!=='flat')return;G.touch();LOG.push('dig');const [x,y]=ctr(s.el),yy=y+s.el.offsetHeight*.3;
+    const f=floatHTML(SHOVEL,x+20,yy-50,96);try{f.animate([{transform:'rotate(-20deg)'},{transform:'translate(-6px,22px) rotate(10deg)',offset:.45},{transform:'translate(10px,-10px) rotate(-30deg)'}],{duration:520,easing:'ease-in-out'}).onfinish=()=>f.remove()}catch(_){f.remove()}setTimeout(()=>f.remove(),700);
+    L.later(()=>{setSt(s,'hole');SND.dig();for(let k=0;k<5;k++)spawn(`<circle r="${4+k%3}" fill="#9E7A5C"/>`,x+rnd(-10,30),yy,{dx:rnd(10,50),dy:-30-rnd(0,20),sz:20,ms:600});squash(s.el);
+      if(spots.every(q=>q.st!=='flat')){speak('구멍 세 개! 이제 씨앗을 콕콕 심어요.','Three holes! Now plant the seeds.');tapStep('seed',cardBtn('seeds',SEEDS),'hole',plant)}},260)}
+  function plant(s){if(s.st!=='hole')return;G.touch();LOG.push('seed');const [x,y]=ctr(s.el),yy=y+s.el.offsetHeight*.3;
+    spawn(`<ellipse rx="5" ry="3.5" fill="#F0D58A" stroke="${OL}" stroke-width="1.5"/>`,x,yy-60,{dy:56,sz:22,ms:380,s0:1,s1:1});SND.seed();
+    L.later(()=>{setSt(s,'seed');squash(s.el);
+      if(spots.every(q=>q.st==='seed')){speak('씨앗을 다 심었어! 물뿌리개로 물을 줘요.','All planted! Water them with the watering can.');stepWater()}},380)}
+  tapStep('dig',cardBtn('shovel',SHOVEL),'flat',dig);
+  function stepWater(){
+    R.sub='water';MS.tap=null;MS.trayDown=null;MS.trayMove=null;MS.trayUp=null;
+    const cells=[],group=[];spots.forEach((s,k)=>{const [cx,cy]=cellOf(s);[[-.07,0],[0,-.02],[.07,0]].forEach(([dx,dy])=>{cells.push([cx+dx,cy+dy]);group.push(k)})});const cv=cells.map(()=>0);
+    toolStep({icon:'can',effect:'water',anchor:[.12,.86],gap:.95,radius:.1,rate:.5,cells,target:()=>stR(),say:['물뿌리개! 쪼르르 물을 줘요.','The watering can! Water the seeds.'],
+      guideAt:()=>{const s=spots.find(x=>x.g<1)||spots[0];const [x,y]=ctr(s.el);return secXY(x,y+s.el.offsetHeight*.3)},
+      sound:()=>P.holdSound('shower'),
+      onCell:(i,v)=>{cv[i]=v;const k=group[i],s=spots[k];const g=[0,1,2].map(q=>cv[k*3+q]).reduce((a,b)=>a+b,0)/3;s.g=g;
+        if(s.st==='seed'&&g>0)setSt(s,'grow');const sp=s.el.querySelector('.g-sprout');if(sp)sp.style.transform=`scale(${(.2+.8*g).toFixed(2)})`;
+        if(g>=1&&s.st==='grow'){setSt(s,'carrot');const [x,y]=ctr(s.el);sparkles(x,y,.6);sfx.pop()}},
+      onDone:()=>{spots.forEach(s=>{if(s.st!=='carrot')setSt(s,'carrot')});L.later(()=>{speak('쑥쑥 자랐다! 당근을 쏙 뽑아요. 콕!','They grew! Pull up the carrots. Tap!');
+        tapStep('pull',cardBtn('pull',PULL),'carrot',pull)},700)}});
+  }
+  function pull(s){if(s.st!=='carrot')return;G.touch();LOG.push('carrot');setSt(s,'pulled');const [x,y]=ctr(s.el);
+    const f=floatHTML(CARROT,x,y,90),b=basket.getBoundingClientRect();sfx.pop();
+    try{f.animate([{transform:'rotate(-8deg)'},{transform:'rotate(8deg)',offset:.15},{transform:'rotate(-6deg)',offset:.3},{transform:'translateY(-50px) rotate(0)',offset:.55},{transform:`translate(${b.left+b.width/2-x}px,${b.top+b.height*.3-y}px) scale(.45) rotate(30deg)`}],{duration:900,easing:'ease-in-out',fill:'forwards'}).onfinish=()=>f.remove()}catch(_){f.remove()}setTimeout(()=>f.remove(),1100);
+    L.later(()=>{carrots++;basket.innerHTML=BASKET({c:carrots});squash(basket);SND.stick();
+      if(carrots<3){speak(carrots===1?'하나!':'둘!',carrots===1?'One!':'Two!')}else{speak('셋! 당근 세 개!','Three! Three carrots!');feedBunny()}},900)}
+  function feedBunny(){
+    R.sub='munch';MS.tap=null;MS.trayDown=null;setTray('');G.stop();
+    L.later(()=>{if(bAl){bAl.setMood('happy');bAl.play('hop',{n:2})}let n=0;const chomp=()=>{if(n++<3){SFX.chomp();const [x,y]=ctr(bunny);spawn(HEART,x,y-20,{dy:-50,sz:30});L.later(chomp,420)}};chomp();basket.innerHTML=BASKET({c:0});speak('토토가 냠냠! 고마워!','Toto says yum yum! Thank you!')},500);
+    L.later(task2,3200);
+  }
+  /* task 2: the hen */
+  let hen=null,hAl=null,feeds=0,egg=null,eggIn=false;
+  function task2(){
+    nextStep();R.sub='feed';
+    try{bunny.animate([{transform:'none',opacity:1},{transform:'translate(40%,-10%) scale(.8)',opacity:0}],{duration:600,fill:'forwards'})}catch(_){bunny.style.opacity='0'}
+    const nest=mk('jb-nest',NEST);Object.assign(nest.style,{right:'4%',bottom:'4%',width:'44%',aspectRatio:'160/50',zIndex:'1'});
+    hen=mk('jb-help jb-hen',HEN);Object.assign(hen.style,{right:'6%',bottom:'6%',width:'40%',aspectRatio:'200/230',zIndex:'2'});
+    try{hen.animate([{transform:'translateX(80%)',opacity:0},{transform:'none',opacity:1}],{duration:700,easing:'ease-out'})}catch(_){}
+    L.later(()=>{helpAl=helpAl.filter(h=>{if(h===bAl){h.detach();return false}return true});hAl=attachHelp(hen,'hen')},700);
+    speak('암탉이 배고프대요. 모이를 콕콕 주세요!','The hen is hungry. Give it some grain!');
+    setTray(cardBtn('grain',GRAIN));
+    G.start({type:'tap',at:()=>{const [x,y]=ctr(hen);return secXY(x,y+hen.offsetHeight*.2)}});
+    MS.tap=e=>{if(R.sub==='feed'){if(hitOf(hen,e,140))feed();else miss()}else if(R.sub==='egg'){if(egg&&hitOf(egg,e))takeEgg();else miss()}};
+    cardDrag({icon:()=>GRAIN,size:90,onTap:()=>{if(R.sub==='feed')feed();else if(R.sub==='egg')takeEgg()},onDrop:(e,f)=>{if(R.sub==='feed'&&hitOf(hen,e,160)){if(f)f.remove();feed();return true}if(R.sub==='egg'&&egg&&hitOf(basket,e,160)){if(f)f.remove();takeEgg();return true}return false}});
+  }
+  let pecking=false;
+  function feed(){if(pecking||feeds>=3)return;pecking=true;G.touch();feeds++;LOG.push('feed');const r=hen.getBoundingClientRect();
+    for(let k=0;k<6;k++)spawn(`<ellipse rx="3.4" ry="2.2" fill="#D6B565" stroke="${OL}" stroke-width="1"/>`,r.left+r.width*rnd(.05,.4),r.top+r.height*.9,{dy:-14,dx:rnd(-16,16),sz:16,ms:700,s0:1,s1:1});
+    hen.classList.remove('peck');void hen.offsetWidth;hen.classList.add('peck');L.later(()=>{SND.peck();L.later(SND.peck,170)},180);
+    L.later(()=>{pecking=false;if(feeds<3){speak('콕콕 냠냠!','Peck peck!')}else layEgg()},700)}
+  function layEgg(){
+    R.sub='egg';G.stop();SND.cluck();if(hAl)hAl.play('hop',{n:2});speak('꼬꼬댁! 달걀을 낳았어요! 달걀을 콕!','Cluck! The hen laid an egg! Tap the egg!');
+    egg=mk('jb-egg',EGG);Object.assign(egg.style,{right:'21%',bottom:'3%',width:'16%',aspectRatio:'60/70',zIndex:'4'});
+    try{egg.animate([{transform:'translateY(-30px) scale(.5)',opacity:0},{transform:'scale(1.1,.88)',opacity:1,offset:.7},{transform:'none'}],{duration:500,easing:'ease-out'})}catch(_){}
+    setTray(cardBtn('egg',BASKET({c:0})));
+    G.start({type:'tap',at:()=>{const [x,y]=ctr(egg);return secXY(x,y)}});
+  }
+  function takeEgg(){if(eggIn||!egg)return;eggIn=true;G.touch();G.stop();LOG.push('egg');MS.tap=null;MS.trayDown=null;setTray('');const b=basket.getBoundingClientRect();
+    fly(egg,b.left+b.width/2,b.top+b.height*.35,b.width*.25,600,gd(()=>{basket.innerHTML=BASKET({c:0,e:true});squash(basket);SND.stick();sparkles(b.left+b.width/2,b.top,.6);L.later(()=>thanks(hen,hAl,J.thanks),500)}))}
+  return Object.assign({R,get sub(){return R.sub},get spots(){return spots.map(s=>({st:s.st,g:+s.g.toFixed(2),pt:(()=>{const [x,y]=ctr(s.el);return[x,y+s.el.offsetHeight*.3]})()}))},get carrots(){return carrots},
+    get hen(){return hen?ctr(hen):null},get feeds(){return feeds},get egg(){return egg&&!eggIn?ctr(egg):null},get eggIn(){return eggIn}},MS_BASE());
+}
+
+/* ---------- vet: (1) listen to the puppy, wrap the sore paw three times (2) three drops of medicine, the puppy jumps for joy ---------- */
+function mVet(){
+  const J=JOB.vet,R={sub:'listen'};
+  const table=mk('',VTABLE);Object.assign(table.style,{right:'-4%',bottom:'5%',width:'84%',aspectRatio:'300/120',zIndex:'1'});
+  const pup=mk('jb-help',A.animal('dog','sad'));Object.assign(pup.style,{right:'6%',bottom:'17%',width:'56%',aspectRatio:'200/230',zIndex:'2'});
+  const pAl=attachHelp(pup,'dog');if(pAl)pAl.setMood('sad');
+  const PAWXY=[156,197];
+  const sore=document.createElement('div');sore.className='jb-spot';Object.assign(sore.style,{left:(PAWXY[0]/200*100)+'%',top:(PAWXY[1]/230*100)+'%',width:'20%',aspectRatio:'1'});sore.innerHTML=SOREPAW;pup.appendChild(sore);
+  const wrapEl=document.createElement('div');wrapEl.className='jb-spot jb-wrap';Object.assign(wrapEl.style,{left:sore.style.left,top:sore.style.top,width:'24%',aspectRatio:'1'});pup.appendChild(wrapEl);
+  let wraps=0,drops=0;
+  L.later(()=>{speak(J.hello[0],J.hello[1]);tone(300,.3,'sine',.08)},400);
+  const chestR=()=>{const r=pup.getBoundingClientRect();return{x:r.left+100/200*r.width,y:r.top+182/230*r.height,rx:42/200*r.width,ry:30/230*r.height}};
+  const mouth=()=>{const r=pup.getBoundingClientRect();return[r.left+100/200*r.width,r.top+128/230*r.height]};
+  let lastBeat=0,said=false;
+  toolStep({icon:'vscope',anchor:[.5,.78],gap:.18,radius:.1,rate:.42,cells:CHEST.map(([x,y])=>[x/200,(y+8)/230]),target:()=>pup.getBoundingClientRect(),face:()=>{const r=pup.getBoundingClientRect();return{left:r.left+r.width*.15,right:r.right-r.width*.15,top:r.top+r.height*.1,bottom:r.top+r.height*.62,width:r.width*.7,height:r.height*.52}},say:['청진기! 강아지 가슴에 대 봐요.','The stethoscope! Listen to the puppy.'],
+    guideAt:()=>{const c=chestR();return secXY(c.x,c.y)},
+    onFrame:(F)=>{const s=stR(),c=chestR(),x=s.left+F.x,y=s.top+F.y;const on=((x-c.x)/c.rx)**2+((y-c.y)/c.ry)**2<=1.6;const n=performance.now();
+      if(on&&n-lastBeat>700){lastBeat=n;SND.thump();LOG.push('beat');spawn(HEART,c.x+rnd(-10,10),c.y-10,{dy:-60,sz:34,ms:1000});if(pAl)pAl.setMood('wow');if(!said){said=true;speak('두근두근!','Thump thump!')}}},
+    onRelease:()=>{if(pAl)pAl.setMood('sad')},
+    onTap:()=>{const c=chestR();SND.thump();spawn(HEART,c.x,c.y-10,{dy:-60,sz:34,ms:1000})},
+    onCell:()=>{},
+    onDone:()=>{L.later(()=>{speak('튼튼한 소리! 이제 아픈 발에 붕대를 감아 줘. 콕콕!','A strong heart! Now wrap the sore paw. Tap tap!');stepWrap()},700)}});
+  function stepWrap(){
+    R.sub='wrap';nextStep();setTray(cardBtn('bandage',BANDAGE));
+    G.start({type:'tap',at:()=>{const [x,y]=ctr(sore);return secXY(x,y)}});
+    MS.tap=e=>{if(R.sub!=='wrap')return;if(hitOf(sore,e))wrap();else miss()};
+    cardDrag({icon:()=>BANDAGE,size:90,onTap:wrap,onDrop:(e,f)=>{if(!hitOf(sore,e,140))return false;if(f)f.remove();wrap();return true}});
+  }
+  let wrapping=false;
+  function wrap(){if(wrapping||wraps>=3||R.sub!=='wrap')return;wrapping=true;G.touch();wraps++;LOG.push('wrap');
+    const [x,y]=ctr(sore),f=floatHTML(BANDAGE,x,y,70);try{f.animate([{transform:'translateX(-30px) rotate(0)'},{transform:'translateX(30px) rotate(200deg)',offset:.5},{transform:'translateX(-20px) rotate(360deg) scale(.6)',opacity:0}],{duration:520,easing:'ease-in-out'}).onfinish=()=>f.remove()}catch(_){f.remove()}setTimeout(()=>f.remove(),700);
+    L.later(()=>{wrapEl.innerHTML=WRAP(wraps);if(wraps>=3)sore.style.opacity='0';SND.stick();squash(wrapEl);if(pAl)pAl.play('hop');wrapping=false;
+      if(wraps<3)speak(wraps===1?'한 번!':'두 번!',wraps===1?'Once!':'Twice!');else{speak('붕대를 다 감았어! 이제 약을 먹여요. 스포이트로 세 방울!','All wrapped! Now the medicine. Three drops!');MS.tap=null;stepMeds()}},460)}
+  function stepMeds(){
+    R.sub='meds';setTray(cardBtn('meds',MEDS(3)));
+    G.start({type:'tap',at:()=>{const [x,y]=mouth();return secXY(x,y)}});
+    MS.tap=e=>{if(R.sub!=='meds')return;const [x,y]=mouth();if(Math.hypot(e.clientX-x,e.clientY-y)<Math.max(70,pup.offsetWidth*.32))drop();else miss()};
+    cardDrag({icon:()=>DROPPER,size:90,onTap:drop,onDrop:(e,f)=>{const [x,y]=mouth();if(Math.hypot(e.clientX-x,e.clientY-y)>Math.max(90,pup.offsetWidth*.4))return false;if(f)f.remove();drop();return true}});
+  }
+  let dropping=false;
+  function drop(){if(dropping||drops>=3||R.sub!=='meds')return;dropping=true;G.touch();LOG.push('drop');const [mx,my]=mouth(),[cx,cy]=trayCtr();
+    const f=floatHTML(DROPPER,cx,cy,80);fly(f,mx+8,my-46,80,420,()=>{});
+    L.later(()=>{drops++;spawn(DROP_PINK,mx+8,my-14,{dy:14,sz:22,ms:400,s0:1,s1:.6});SND.slurp();if(pAl){pAl.setMood('wow')}const b=tray.querySelector('.jb-card');if(b)b.innerHTML=MEDS(3-drops);
+      L.later(()=>{if(pAl)pAl.setMood('sad');dropping=false;if(drops<3){speak(drops===1?'한 방울!':'두 방울!',drops===1?'One drop!':'Two drops!')}else healed()},480)},460)}
+  function healed(){R.sub='done';G.stop();MS.tap=null;MS.trayDown=null;setTray('');
+    if(pAl){pAl.setMood('happy');pAl.play('hop',{n:3})}SFX.ding&&SFX.ding();const [x,y]=ctr(pup);celebrate(x,y);speak('다 나았다! 폴짝폴짝!','All better! Jump jump!');
+    try{pup.animate([{transform:'none'},{transform:'translateY(-18%)'},{transform:'none'},{transform:'translateY(-14%)'},{transform:'none'},{transform:'translateY(-10%)'},{transform:'none'}],{duration:1500,easing:'ease-in-out'})}catch(_){}
+    L.later(()=>thanks(pup,pAl,J.thanks),1600)}
+  return Object.assign({R,get sub(){return R.sub},get chest(){const c=chestR();return[c.x,c.y]},get paw(){return ctr(sore)},get mouth(){return mouth()},get wraps(){return wraps},get drops(){return drops}},MS_BASE());
+}
+const MISSION={firefighter:mFire,doctor:mDoctor,chef:mChef,police:mPolice,mail:mMail,farmer:mFarmer,vet:mVet};
 
 /* ---------- touches on the stage ---------- */
 stage.addEventListener('pointerdown',e=>{
@@ -885,6 +1390,7 @@ stage.addEventListener('pointerdown',e=>{
   if(phase==='mission'&&MS&&MS.tap){e.preventDefault();MS.tap(e);return}
   if(phase==='pick'){G.nudge()}
 });
+const upMS=e=>{if(phase==='mission'&&MS&&MS.up)MS.up(e)};window.addEventListener('pointerup',upMS);window.addEventListener('pointercancel',upMS);
 backBtn.addEventListener('click',()=>{if(phase==='pick')return;actx();sfx.pop();showPick()});
 
 /* ============================== test hooks ============================== */
@@ -893,13 +1399,17 @@ M.__jbGo=()=>tryGo();
 M.__jb=()=>{
   const cards=[...tray.querySelectorAll('.jb-card:not(.out)')].map(b=>{const r=b.getBoundingClientRect();return{job:b.dataset.job||null,slot:b.dataset.slot||null,decoy:!!b.dataset.decoy,act:b.dataset.act||null,pt:[r.left+r.width/2,r.top+r.height/2],w:r.width,h:r.height}});
   const cr=carEl.getBoundingClientRect(),carOn=!!carEl.innerHTML&&carEl.classList.contains('in')&&!carEl.classList.contains('out');
-  const ms={};if(MS){['fires','cat','spots','bear','chest','pot','potAim','stir','scoops','bowl','cars','ducks','zone'].forEach(k=>{try{const v=MS[k];if(v!==undefined)ms[k]=v}catch(_){}})}
+  const ms={};if(MS){['fires','cat','spots','bear','chest','pot','potAim','stir','scoops','bowl','cars','ducks','zone','sub','boxes','letter','sorted','bike','ride','parcel','houses','delivered','carrots','hen','feeds','egg','eggIn','paw','mouth','wraps','drops'].forEach(k=>{try{const v=MS[k];if(v!==undefined)ms[k]=v}catch(_){}})}
   return{phase,mstep:S?S.mstep||0:0,level:lv.level,levelJobs:lv.jobs.slice(),decoyLevel:lv.decoy,job:S?S.job:null,shown:shown.slice(),wear:S?Object.fromEntries(Object.entries(S.wear).map(([k,w])=>[k,pal(w.col).en])):{},
     cards,slotPts:S&&S.job?{hat:dpt(...SLOT_PT.hat),top:dpt(...SLOT_PT.top),tool:dpt(...toolPt(S.job))}:{},doll:(()=>{const r=dR();return[r.left,r.top,r.width,r.height]})(),
     car:carOn?[cr.left+cr.width/2,cr.top+cr.height/2,cr.width,cr.height]:null,canGo,allWorn:allWorn(),busy,misses,tool:!!tool,toolDone:tool?tool.done:null,ms,said:SAID,log:LOG.slice(),
-    alive:al?al.state():null,helpers:helpAl.length,photo:!photoEl.hidden,guide:G.state()};
+    alive:al?al.state():null,helpers:helpAl.length,photo:!photoEl.hidden,guide:G.state(),
+    ask:S?S.ask:null,askLevel:lv.ask,family:lv.family,fam:S&&S.d&&S.d.fam?S.d.fam.id:null,famName:famKo()||null,photoFace:!!dollEl.querySelector('image.jb-photo-face'),made:MADE,fresh:lv.fresh.slice()};
 };
-M.__jbDepth=()=>LEVELS.slice(0,MADE).map((l,i)=>{const v=levelInfo(i+1);return{level:i+1,jobs:v.jobs,processes:5,steps:['job card','dress ×3','mirror · ride','mission tool','mission tap','thanks · photo · stamp'],hands:['tap','drag','tool(makeTool)','card'],someone:!!M.Alive,choice:true,decoy:v.decoy,ending:'고마워 · 사진 카드 · 도장'}});
+/* rules.depth: what each made level has (the steps of one round, the hand actions, the friend, the choice, the ending) */
+M.__jbDepth=()=>LEVELS.slice(0,MADE).map((l,i)=>{const v=levelInfo(i+1);const steps=[v.ask?'friend asks · pick the job':'job card','dress ×3','mirror · ride','task 1','task 2','thanks · photo · stamp'];
+  if(v.fresh.some(j=>['mail','farmer'].includes(j))||v.two)steps.splice(4,0,'task 1 · more steps');
+  return{level:i+1,jobs:v.jobs,fresh:v.fresh,processes:steps.length-1,steps,hands:['tap','drag','tool(makeTool)','card'],someone:!!M.Alive,choice:true,decoy:v.decoy,two:v.two,ask:v.ask,family:v.family,ending:'고마워 · 사진 카드 · 도장'}});
 games[id]={enter:()=>{requestAnimationFrame(()=>{if(cur()===id)showPick()})},
   exit:()=>{L.begin();gen++;G.stop();clearTool();helpOff();fxEl.innerHTML='';if(al){al.detach();al=null}dd=null;cd=null;busy=false;phase='';MS=null;canGo=false;sec.querySelectorAll('.jb-float').forEach(f=>f.remove())},resize:size};
 window.addEventListener('resize',()=>{if(cur()===id)size()});
