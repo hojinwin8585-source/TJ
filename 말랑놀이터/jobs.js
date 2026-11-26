@@ -767,7 +767,7 @@ function showPick(o={}){
   if(lv.ask){/* level 4: a friend shows its problem in a picture bubble; the child picks the job that helps (three cards at most) */
     let pool=lv.jobs.filter(j=>j!==DATA.last);if(!pool.length)pool=lv.jobs.slice();
     const fresh=lv.fresh.filter(j=>pool.includes(j)),ans=fresh.length&&Math.random()<.4?pick(fresh):pick(pool);
-    S.ask=ans;shown=shuffle([ans].concat(shuffle(lv.jobs.filter(j=>j!==ans&&j!==PAIR[ans])).slice(0,2)));
+    S.ask=ans;const pickd=[ans];shuffle(lv.jobs.slice()).forEach(j=>{if(pickd.length<3&&!pickd.includes(j)&&!pickd.some(q=>PAIR[q]===j))pickd.push(j)});shown=shuffle(pickd);
     const A2=ASK[ans]||ASK.firefighter,ak=mk('jb-help jb-asker',A.animal(A2.asker,'sad'));Object.assign(ak.style,{right:'1%',bottom:'3%',width:'50%',aspectRatio:'200/230',zIndex:'2'});
     const bb=mk('jb-bubble',BUBBLE(ans));Object.assign(bb.style,{right:'2%',top:'8%',width:'68%',aspectRatio:'160/130',zIndex:'2'});
     const akAl=attachHelp(ak,A2.asker);if(akAl)akAl.setMood('sad');S.asker={el:ak,al:akAl,bubble:bb};
