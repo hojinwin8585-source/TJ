@@ -239,12 +239,12 @@ const ok=(name,cond,info)=>{if(!cond)fails++;console.log((cond?'통과':'실패'
     ok("8) 틀린 직업을 누르면 '어?' 하고 다시 물어봄 (실패 없이 그대로 고르기)",t.phase==='pick'&&t.log.includes('askwrong:'+w.job)&&/^어\?/.test(t.said)&&t.cards.length===3,t.said);await shot('l4_2wrong')}
   s=await st();{const r=s.cards.find(c=>c.job===s.ask);await tap(...r.pt);await waitPhase('dress');await W(900)}s=await st();
   ok('8) 맞는 직업을 누르면 그 직업 옷 입히기로',s.phase==='dress'&&s.job===s.ask&&s.log.some(l=>l.startsWith('say:맞아')),s.job);
-  {const job=s.job;await dressAll();await rideByTap();await playMission(job,'l4_'+job)}
-  /* make sure the vet comes up and plays through */
-  let vetOk=false;
-  for(let k=0;k<20&&!vetOk;k++){s=await st();if(s.ask==='vet'){vetOk=true;break}await p.evaluate(()=>window.ML.go('home'));await W(300);await p.evaluate(()=>window.ML.go('jobs'));await waitPhase('pick');await W(900)}
+  let firstJob=s.job;{const job=s.job;await dressAll();await rideByTap();await playMission(job,'l4_'+job)}
+  /* make sure the vet comes up and plays through (the first round counts when it already was the vet) */
+  let vetOk=firstJob==='vet';
+  for(let k=0;k<40&&!vetOk;k++){s=await st();if(s.ask==='vet'){vetOk=true;break}await p.evaluate(()=>window.ML.go('home'));await W(300);await p.evaluate(()=>window.ML.go('jobs'));await waitPhase('pick');await W(900)}
   ok('8) 강아지가 아파요 → 수의사가 정답으로 나옴',vetOk,'');
-  if(vetOk){await W(800);await shot('l4_3vet_ask');s=await st();await tap(...s.cards.find(c=>c.job==='vet').pt);await waitPhase('dress');await W(900);await check('vet dress');
+  if(vetOk&&firstJob!=='vet'){await W(800);await shot('l4_3vet_ask');s=await st();await tap(...s.cards.find(c=>c.job==='vet').pt);await waitPhase('dress');await W(900);await check('vet dress');
     await dressAll();await shot('vet_2mirror');await rideByTap();s=await st();await check('vet clinic');await shot('vet_4listen');
     await touch('touchStart',[s.ms.chest]);for(let k=0;k<20;k++){await touch('touchMove',[[s.ms.chest[0]+Math.cos(k)*5,s.ms.chest[1]+Math.sin(k)*5]]);await W(60)}await shot('vet_4listen_mid');await touch('touchEnd',[]);
     await holdUntil(s.ms.chest,()=>window.ML.__jb().mstep===1,null,12000);await W(200);s=await st();
